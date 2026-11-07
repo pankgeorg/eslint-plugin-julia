@@ -1,6 +1,6 @@
 # julia/no-undefined-exports
 
-Reports export/public names absent from the same file's module bindings, explicit
+Reports export/public names absent from the same module across resolved includes bindings, explicit
 imports and implicit Base/Core exports. Later definitions satisfy an export;
 child/sibling modules do not. Opt-in (`all`); no edits.
 
@@ -12,11 +12,12 @@ end
 ```
 
 Options: `includes: "skip"` (default) suppresses reports in a module containing
-include/eval/include_string; `"report"` uses strict file semantics. It recognizes
+unresolved includes/eval/include_string anywhere in its include tree; `"report"` checks anyway.
+Resolved literal includes contribute names and do not suppress checks. It recognizes
 qualified calls, conservatively without evaluating their receiver.
-`unknownModules: "skip"` (default) suppresses a module with unconfigured bare using;
+`unknownModules: "skip"` (default) suppresses a module with unresolved bare using/import;
 `"report"` checks anyway. `moduleExports: {M:["x"]}` supplies known exports;
-`globals: []` exempts supplied names. No dependency or included file is loaded.
+`globals: []` exempts supplied names. Dependency syntax is parsed through [module resolution](../module-resolution.md); no Julia code is run.
 
 Export statements never define bindings. Macro-generated definitions do not count;
 `@enum Color red` followed by `export red` is unresolved under this model. Macro
