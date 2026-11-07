@@ -4,3 +4,4 @@ import './rules/first-rules.test.js';
 import './parser/parser.test.js';
 import './integration/eslint.test.js';
 import './scope/bindings.test.js';
+import './rules/prefer-isempty.test.js';
