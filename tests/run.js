@@ -3,3 +3,5 @@ import './rules/prototype.test.js';
 import './rules/first-rules.test.js';
 import './parser/parser.test.js';
 import './integration/eslint.test.js';
+
+import './rules/no-unused-expressions.test.js';
