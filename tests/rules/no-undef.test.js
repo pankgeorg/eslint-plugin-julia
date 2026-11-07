@@ -2,6 +2,7 @@ import { tester, plugin } from '../helpers.js';
 const bad=(code,names,options)=>({code,...(options?{options:[options]}:{}),errors:names.map(name=>({messageId:'undefined',data:{name}}))});
 tester.run('no-undef',plugin.rules['no-undef'],{
  valid:[
+  '@dsl [unknown for i in xs]', '@dsl for i in xs; unknown; end',
   '@isdefined(x)', 'f() = @isdefined(local_name)',
   'using Dates; year(now())', 'import LinearAlgebra; norm([1, 2])',
   'module M; module Sub; export α; α=1; end; using .Sub; α; end',
