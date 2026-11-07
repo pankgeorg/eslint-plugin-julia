@@ -127,3 +127,69 @@ test('scope: outer iteration reuses enclosing local', () => {
 test('scope: index begin and end are syntax, not names', () => {
   const [m]=analyze('A[begin:end]'); assert.deepEqual(m.references.map(r=>r.name),['A', ':']);
 });
+
+test('scope: logging and test macro metadata labels never bind locals', () => {
+  const [m]=analyze('f(x)=(@error "oops" exception=x; @test x≈1 atol=0.1)');
+  assert.ok(!m.definitions.some(d=>["exception","atol"].includes(d.name)));
+});
+
+test('scope: arbitrary macro DSL keyword operands are not bindings', () => {
+  const [m]=analyze('@cuda blocks=1 f(x); @parameters p=1; p; blocks');
+  assert.ok(!m.definitions.some(d=>['blocks','p'].includes(d.name)));
+  assert.equal(m.references.at(-1).binding,null);
+});
+
+test('scope: indexing keyword labels are not assignments or reads', () => {
+  const [m]=analyze('f(x,i)=x[dim=i]');
+  assert.ok(!m.definitions.some(d=>d.name==='dim'));
+  assert.ok(!m.references.some(r=>r.name==='dim'));
+  assert.ok(m.references.some(r=>r.name==='i' && r.binding));
+});
+
+test('scope: explicit global compound writes resolve the module binding', () => {
+  const [m]=analyze('x=1; f()=(global x+=1)');
+  const ds=m.definitions.filter(d=>d.name==='x');
+  assert.equal(ds[0].binding,ds[1].binding);
+  assert.equal(m.references.find(r=>r.name==='x').binding,ds[0].binding);
+});
+test('scope: qualified dynamic calls mark containing scopes', () => {
+  const [m]=analyze('f()=Base.eval(Main,:x)');
+  assert.ok(m.functions[0].scope.dynamic);
+});
+
+test('scope: empty generic function declarations bind their name', () => {
+  const [m]=analyze('function f end; f');
+  assert.equal(m.references[0].binding.kind,'function');
+});
+test('scope: baremodule can explicitly use Base exports', () => {
+  const [m]=analyze('baremodule M; using Base; sin(1); end');
+  assert.equal(m.references.find(r=>r.name==='sin').binding.kind,'builtin');
+});
+test('scope: dynamic module names create no fabricated binding', () => {
+  const [m]=analyze('@eval module $name; end');
+  assert.ok(m.definitions.every(d=>d.name!==null));
+  assert.ok(m.references.some(r=>r.name==='name'));
+});
+test('scope: builtin helpers accept var wrappers', () => {
+  const [m,s]=analyze('var"sin"(1)');
+  const call=s.ast.children[0].children[0];
+  assert.ok(m.isUnshadowedBuiltin(call.children[0],'sin'));
+});
+
+test('scope: explicit Base imports and namespace aliases preserve builtin identity', () => {
+  const [m,s]=analyze('using Base: sin; import Base as B; sin(1); B.sin(1)');
+  const calls=[]; const walk=n=>{if(n.kind==='call')calls.push(n);n.children.forEach(walk);};walk(s.ast);
+  assert.ok(m.isUnshadowedBuiltin(calls[0].children[0],'sin'));
+  assert.ok(m.isUnshadowedBuiltin(calls[1].children[0],'sin'));
+});
+test('scope: assigning an imported builtin defeats builtin trust', () => {
+  const [m]=analyze('using Base: sin; sin=1; sin');
+  assert.ok(!m.isUnshadowedBuiltin(m.references.at(-1).node,'sin'));
+});
+
+test('scope: recovered parse errors leave an empty conservative manager', () => {
+  const code='struct end'; const parsed=parseJulia(code);
+  assert.ok(parsed.diagnostics.some(d=>d.level===1));
+  const m=getScopeManager(new JuliaSourceCode(code,parsed));
+  assert.equal(m.definitions.length,0); assert.equal(m.references.length,0);
+});

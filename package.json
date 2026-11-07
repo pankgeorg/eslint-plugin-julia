@@ -32,7 +32,10 @@
       "types": "./types/ast.d.ts",
       "import": "./src/parser/flags.js"
     },
-    "./scope": "./src/scope.js"
+    "./scope": {
+      "types": "./types/scope.d.ts",
+      "import": "./src/scope.js"
+    }
   },
   "files": [
     "src/",

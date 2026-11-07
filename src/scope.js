@@ -45,7 +45,7 @@ function analyze(source) {
     references.push(r); nodeReferences.set(node, r); return r;
   }
   function define(node, s, kind, extra = {}) {
-    if (!node || /^_+$/u.test(identifierName(node) ?? '')) return;
+    if (!node || (extra.name ?? identifierName(node)) === null || /^_+$/u.test(identifierName(node) ?? '')) return;
     mark(node, s);
     const d = { node, name: identifierName(node), scope: s, kind, ...extra, binding: null };
     definitions.push(d); s.candidates.push(d); nodeDefinitions.set(node, d); return d;
@@ -169,11 +169,17 @@ function analyze(source) {
       case 'macrocall': {
         s.dynamic = true;
         // Written normal declarations still count; naked DSL operands are opaque reads.
-        for (const arg of c.slice(1)) visit(arg, s, { opaque: true });
+        const assignmentMacro = ['@views', '@view', '@inbounds', '@inline', '@noinline', '@time', '@elapsed',
+          '@allocated', '@allocations', '@sync', '@async', '@spawn', '@simd', '@fastmath', '@__dot__', '@eval'].includes(identifierName(c[0]));
+        for (const arg of c.slice(1)) {
+          if (!assignmentMacro && arg.kind === '=') visit(arg.children[1], s, { opaque: true });
+          else visit(arg, s, { opaque: true });
+        }
         return;
       }
       case 'module': {
         define(c[0], s.module, 'module', { force: true, assignment: node });
+        if (identifierName(c[0]) === null) visit(c[0], s, extra);
         const inner = scope('module', node, s, { bare: Boolean(node.flags & 256) });
         define(c[0], inner, 'module-self', { force: true });
         visit(c[1], inner); return;
@@ -181,7 +187,9 @@ function analyze(source) {
       case 'function': case 'macro': case '->': case 'do': {
         const inner = scope('function', node, s);
         const fn = { node, scope: inner, arguments: [], typeParameters: [], call: null }; functions.push(fn);
-        signature(c[0], inner, s, fn);
+        if (['function', 'macro'].includes(node.kind) && identifierName(c[0]) !== null)
+          define(c[0], s, node.kind, { assignment: node, name: node.kind === 'macro' ? `@${identifierName(c[0])}` : identifierName(c[0]) });
+        else signature(c[0], inner, s, fn);
         if (node.kind === 'macro') for (const name of ['__module__', '__source__'])
           define({ kind: 'Identifier', value: name, range: node.range, loc: node.loc }, inner, 'implicit-argument', { force: true });
         visit(c[1], inner); return;
@@ -255,8 +263,9 @@ function analyze(source) {
         if (node.kind === 'op=') { visit(c[1], s, extra); for (const n of bindingNames(c[0])) ref(n, s, true, extra); }
         pattern(c[0], s, 'assignment', { ...extra, assignment: node, initialized: true }); return;
       case '.': visit(c[0], s, extra); return;
-      case 'call': case 'dotcall':
-        if (identifierName(c[0]) && ['include', 'eval', 'include_string'].includes(identifierName(c[0]))) s.dynamic = true;
+      case 'ref': case 'call': case 'dotcall':
+        if (['include', 'eval', 'include_string'].includes(identifierName(c[0]))
+          || c[0]?.kind === '.' && ['include', 'eval', 'include_string'].includes(identifierName(c[0].children[1]))) s.dynamic = true;
         for (const arg of c) {
           if (arg.kind === '=' && identifierName(arg.children[0]) !== null) visit(arg.children[1], s, extra);
           else visit(arg, s, extra);
@@ -280,6 +289,10 @@ function analyze(source) {
     if (['const', 'global', 'local'].includes(node.kind)) {
       for (const n of node.children) declaration(n, s, { ...extra,
         ...(node.kind === 'const' ? { constant: true } : { declaration: node.kind }) });
+    } else if (node.kind === 'op=') {
+      visit(node.children.at(-1), s); visit(node.children[1], s);
+      for (const n of bindingNames(node.children[0])) ref(n, s);
+      pattern(node.children[0], s, 'assignment', { ...extra, assignment: node, initialized: true });
     } else if (node.kind === '=') {
       if (node.children[0]?.kind === 'curly') {
         const inner = scope('where', node, s); typeParameters(node.children[0].children.slice(1), inner);
@@ -291,7 +304,7 @@ function analyze(source) {
     for (let at = s; at; at = at.parent) {
       const b = at.bindings.get(name);
       if (b && (!visibility || at !== visibility.scope || visibility.names.has(name))) return b;
-      if (at.kind === 'module') return (!at.bare || core.has(name)) ? builtin.get(name) ?? null : null;
+      if (at.kind === 'module') return (!at.bare || at.bareUsing.includes('Base') || core.has(name)) ? builtin.get(name) ?? null : null;
     }
     return null;
   }
@@ -305,19 +318,29 @@ function analyze(source) {
     return s.bindings.get(d.name);
   }
   const manager = { scopes, references, definitions, functions, exports, imports, globalScope: root,
-    scopeFor: node => nodeScopes.get(node), referenceFor: node => nodeReferences.get(node),
+    scopeFor: node => nodeScopes.get(node), referenceFor: node => nodeReferences.get(node) ?? (node?.kind === 'var' ? nodeReferences.get(node.children[0]) : undefined),
     definitionFor: node => nodeDefinitions.get(node),
-    resolve(node) { return nodeDefinitions.get(node)?.binding ?? nodeReferences.get(node)?.binding ?? null; },
+    resolve(node) { return nodeDefinitions.get(node)?.binding ?? nodeReferences.get(node)?.binding
+      ?? (node?.kind === 'var' ? this.resolve(node.children[0]) : null); },
     lookup: (name, s = root) => lookup(name, s),
-    isReadReference: node => nodeReferences.get(node)?.read === true,
+    isReadReference(node) { return this.referenceFor(node)?.read === true; },
     isUnshadowedBuiltin(node, name) {
-      if (identifierName(node) === name) return this.resolve(node)?.kind === 'builtin';
+      const trusted = (binding, target) => {
+        if (!binding) return false;
+        if (binding.kind === 'builtin') return binding.name === target;
+        return !binding.writes.length && binding.definitions.some(d => d.kind === 'import'
+          && ['Base', 'Core'].includes(d.moduleName)
+          && d.imported.split(/\s+as\s+/u)[0].split('.').at(-1).trim() === target
+          && (d.moduleName === 'Core' ? core : base).has(target));
+      };
+      if (identifierName(node) !== null) return trusted(this.resolve(node), name);
       if (node?.kind !== '.' || identifierName(node.children[1]) !== name) return false;
       const receiver = this.resolve(node.children[0]);
-      return receiver?.kind === 'builtin' && ['Base', 'Core'].includes(receiver.name)
-        && (receiver.name === 'Core' ? core : base).has(name);
+      const namespace = ['Base', 'Core'].find(n => trusted(receiver, n));
+      return Boolean(namespace && (namespace === 'Core' ? core : base).has(name));
     },
   };
+  if (source.diagnostics.some(d => d.level === 1)) return manager;
   visit(source.ast, root);
   // Declarations are scope-wide, even when written after assignments.
   for (const d of definitions) if (d.declaration) d.scope.declarations.set(d.name, d.declaration);

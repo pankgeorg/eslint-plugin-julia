@@ -99,3 +99,11 @@ constructs can bind names, but expansion never supplies bindings. Opaque macro
 operands are marked for diagnostic rules to suppress. Includes/eval and bare using
 are recorded as dynamic information; they never invent definitions. The Base/Core
 inventory is pinned to Julia 1.13.2. Rules document their own uncertainty policies.
+
+Direct assignment operands of unknown macros are treated as DSL keyword operands,
+not binders. Expression decorators (views/inbounds/time/async/eval and related
+standard wrappers) retain written assignment binding behavior. Written function/
+type/module declarations and ordinary blocks remain analyzable inside macros.
+
+Files with parser errors receive an empty scope model, including in recovery mode.
+Name analysis cannot establish reliable binding structure from a recovered tree.
