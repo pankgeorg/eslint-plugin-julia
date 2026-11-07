@@ -1,0 +1,45 @@
+# Owner: move this file to .github/workflows/ci.yml when ready to enable it.
+name: Julia ESLint
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci && npm test
+  sarif:
+    # Demonstration, findings are intentional. GitHub upload needs code scanning
+    # enabled and suitable repository/token permissions; it is not a test gate.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      security-events: write
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Lint Julia fixtures
+        id: lint
+        continue-on-error: true
+        run: npx --no-install eslint 'tests/fixtures/*.jl' --format @microsoft/eslint-formatter-sarif --output-file julia.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: julia.sarif
