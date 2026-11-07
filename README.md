@@ -2,7 +2,7 @@
 
 Experimental v0.1 ESLint language plugin for Julia. It runs Julia 1.13.2's
 JuliaSyntax parser as bundled WebAssembly, without a Julia installation. It uses
-ESLint's native language API and Julia node kinds, with six syntax-based rules.
+ESLint's native language API and Julia node kinds, with syntax-based rules.
 It does not provide Julia name resolution, inference, or JavaScript core rules.
 
 Requires ESLint 10.14+ within major 10 and Node 22.23.3+ within major 22, or
@@ -44,7 +44,7 @@ export default [
 
 `recommended` selects `**/*.jl`, registers `julia`, and sets
 `language: 'julia/julia'`. `style` selects the same files and enables the two
-opt-in rules as warnings. `all` enables all six rules as errors, retaining the
+opt-in rules as warnings. `all` enables all registered rules as errors, retaining the
 default suggestion-only identity behavior. These are single flat config objects.
 For explicit registration, use `plugins: { julia }` and
 `language: 'julia/julia'` in a matching files entry. Keep JavaScript rules in
@@ -57,6 +57,7 @@ npx eslint --stdin --stdin-filename example.jl
 
 | Rule | Recommended | Edits |
 | --- | --- | --- |
+| [no-empty-block](docs/rules/no-empty-block.md) | Off | None |
 | [parse-errors](docs/rules/parse-errors.md) | Error | None |
 | [no-duplicate-struct-fields](docs/rules/no-duplicate-struct-fields.md) | Error | None |
 | [no-duplicate-keyword-arguments](docs/rules/no-duplicate-keyword-arguments.md) | Error | None |
@@ -65,7 +66,7 @@ npx eslint --stdin --stdin-filename example.jl
 | [no-empty-catch](docs/rules/no-empty-catch.md) | Off | None |
 
 Rules compare exact source spellings; Unicode normalization aliases can be missed.
-Macros and quoted code are excluded from the five non-parser rules. Rules cannot
+Macros and quoted code are excluded from the non-parser rules. Rules cannot
 predict macro expansion, dynamic splats, dispatch, or definitions in other files.
 
 ## Syntax errors and directives

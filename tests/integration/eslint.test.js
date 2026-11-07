@@ -110,7 +110,7 @@ test('all shipped rules operate on frozen AST, token, comment and diagnostic obj
     plugins: { julia: plugin, test: { rules: { freeze: mutationGuard } } },
     rules: { 'test/freeze': 'error', ...plugin.configs.all.rules } }] });
   const [r] = await eslint.lintText('struct S; x; x; end\nf(a=1;a=2)\ntry f(); catch; end\nfor i in xs; for i in ys; end; end\nx == nothing', { filePath: 'x.jl' });
-  assert.equal(r.messages.length, 5);
+  assert.equal(r.messages.length, 6); // Includes the new empty inner-loop diagnostic.
 });
 
 test('CLI: discovery, ignores, overrides, stdin, fix, cache and worker config loading', async () => {
