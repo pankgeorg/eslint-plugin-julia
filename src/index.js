@@ -7,16 +7,18 @@ import keywordArguments from './rules/no-duplicate-keyword-arguments.js';
 import emptyCatch from './rules/no-empty-catch.js';
 import shadowedLoopVar from './rules/no-shadowed-loop-var.js';
 
+import newRule from './rules/no-dupe-args.js';
+
 const plugin = {
   meta: { name: 'eslint-plugin-julia', version: `0.1.0+wasm.${manifest.sha256}` },
   languages: { julia: language },
-  rules: { 'parse-errors': parseErrors, 'prefer-identity-nothing': identity,
+  rules: { 'no-dupe-args': newRule, 'parse-errors': parseErrors, 'prefer-identity-nothing': identity,
     'no-duplicate-struct-fields': structFields, 'no-duplicate-keyword-arguments': keywordArguments,
     'no-empty-catch': emptyCatch, 'no-shadowed-loop-var': shadowedLoopVar },
   configs: {},
 };
 const config = rules => ({ files: ['**/*.jl'], plugins: { julia: plugin }, language: 'julia/julia', rules });
-plugin.configs.recommended = config(Object.fromEntries(['parse-errors', 'no-duplicate-struct-fields',
+plugin.configs.recommended = config(Object.fromEntries(['no-dupe-args', 'parse-errors', 'no-duplicate-struct-fields',
   'no-duplicate-keyword-arguments', 'no-shadowed-loop-var'].map(n => [`julia/${n}`, 'error'])));
 plugin.configs.style = config({ 'julia/prefer-identity-nothing': 'warn', 'julia/no-empty-catch': 'warn' });
 plugin.configs.all = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [`julia/${n}`, 'error'])));
