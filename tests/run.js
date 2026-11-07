@@ -5,3 +5,4 @@ import './parser/parser.test.js';
 import './integration/eslint.test.js';
 import './scope/bindings.test.js';
 import './scope/module-resolution.test.js';
+import './rules/no-undefined-exports.test.js';
