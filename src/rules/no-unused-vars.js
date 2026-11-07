@@ -1,8 +1,16 @@
 import { defineRule } from './common.js';
 import { getScopeManager } from '../scope.js';
 function macroOption(definition, source) {
-  const parent = source.getParent(definition.assignment);
-  return parent?.kind === 'macrocall' && parent.children.indexOf(definition.assignment) > 1;
+  const assignment = definition.assignment;
+  if (!assignment) return false;
+  let bracket = false;
+  for (let child = assignment, parent = source.getParent(child); parent;
+    child = parent, parent = source.getParent(parent)) {
+    if (['function', 'macro', '->', 'do'].includes(parent.kind)) return false;
+    if (parent.kind === 'macrocall') return bracket || child === assignment && parent.children.indexOf(child) > 1;
+    if (['vect', 'hcat', 'vcat', 'ncat'].includes(parent.kind)) bracket = true;
+  }
+  return false;
 }
 export default defineRule({
   meta: { type: 'problem', docs: { description: 'Report local bindings that are never read.' },

@@ -27,7 +27,8 @@ Literal includes contribute module-wide import uses through
 includes and eval prevent proving an affected module import unused. These
 conservative import fallbacks do not infer local reads. Quote names,
 property names, keyword labels, named-tuple keys, field declarations and direct
-macro option assignments after the first operand do not
+macro option assignments after the first operand (including bracketed metadata
+operands) do not
 count as reads. Unknown macro DSLs are treated conservatively: explicit identifiers
 can count as uses, even if expansion treats them as data. Exact spellings only.
 Intentional scaffolding and protocol arguments can need an underscore or option.

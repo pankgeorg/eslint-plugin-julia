@@ -27,6 +27,8 @@ tester.run('no-unused-vars',plugin.rules['no-unused-vars'],{
 tester.run('no-unused-vars imports',plugin.rules['no-unused-vars'],{
  valid:[
   'using LinearAlgebra: norm; @eval $(Symbol("generated"))()=1',
+  'f()=(@parameters x [description="a", misc="final"])',
+  'f()=(@variables (x(t)::Real), [input=true])',
   'f()=(@test true atol=1)', 'f()=(@error "message" exception=1)',
   'import Base: show; show(x::Int)=nothing',
   'using Test: @test; @test true', 'import Test as T; T.@test true',
@@ -38,6 +40,7 @@ tester.run('no-unused-vars imports',plugin.rules['no-unused-vars'],{
   'import LinearAlgebra: norm as _norm',
   {code:'using LinearAlgebra: norm',options:[{imports:'none'}]},
  ],invalid:[
+  {code:'f()=(@views tmp=1)',errors:[{messageId:'unused',data:{name:'tmp'}}]},
   {code:'using LinearAlgebra: norm',errors:[{messageId:'unusedImport',data:{name:'norm'}}]},
   {code:'using LinearAlgebra',errors:[{messageId:'unusedImport',data:{name:'LinearAlgebra'}}]},
   {code:'import LinearAlgebra: norm as α',errors:[{messageId:'unusedImport',data:{name:'α'}}]},
