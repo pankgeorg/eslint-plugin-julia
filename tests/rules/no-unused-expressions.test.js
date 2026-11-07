@@ -1,13 +1,14 @@
 import { tester, plugin } from '../helpers.js';
 tester.run('no-unused-expressions', plugin.rules['no-unused-expressions'], {
   "valid": [
+    "function f(x)\n    x == 1\nend",
+    "function f(x)\n    if x\n        a == b\n    else\n        c < d\n    end\nend",
     "function f(x); x; end",
     "function f(x); if x; 1; else; 2; end; end",
     "function f(); begin 42; end; end",
     "function f(); let x=1; x; end; end",
     "function f(); try 1; catch; 2; end; end",
     "function f(); nothing; return 1; end",
-    "function f(); x == y; return 1; end",
     "function f(); xs[1]; obj.x; return 1; end",
     "function f(); \"$(x)\"; return 1; end",
     "\"docs\"\nfunction f(); end",
@@ -27,6 +28,9 @@ tester.run('no-unused-expressions', plugin.rules['no-unused-expressions'], {
     "function f(); g = x -> x; return 1; end"
   ],
   "invalid": [
+    { code: "function f(); x == y; return 1; end", errors: [{ messageId: "comparison" }] },
+    { code: "function f(x)\n    x == 1\n    return x\nend", errors: [{ messageId: "comparison", line: 2 }] },
+    { code: "for i in 1:3\n    a[i] < 0\nend", errors: [{ messageId: "comparison", line: 2 }] },
     {
       "code": "function f(x); 42; return x; end",
       "errors": [
