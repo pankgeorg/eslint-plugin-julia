@@ -1,4 +1,5 @@
 import { defineRule } from './common.js';
+import { isInsideMacro } from '../parser/flags.js';
 import { getScopeManager } from '../scope.js';
 export default defineRule({
   meta: { type: 'problem', docs: { description: 'Report export/public names with no definition in this module.' },
@@ -11,7 +12,7 @@ export default defineRule({
     const dynamic = new Set(m.scopes.filter(s =>
       m.moduleResolution.scopes.get(s)?.some(model => model.unresolvedIncludes || model.dynamicEvaluation)));
     for (const e of m.exports) {
-      if (!e.name || globals.has(e.name) || m.lookup(e.name, e.scope)) continue;
+      if (!e.name || isInsideMacro(e.node, context.sourceCode) || globals.has(e.name) || m.lookup(e.name, e.scope)) continue;
       if (o.includes !== 'report' && dynamic.has(e.scope)) continue;
       if (e.scope.bareUsing.some(n => o.moduleExports?.[n]?.includes(e.name))) continue;
       if (o.unknownModules !== 'report' && e.scope.bareUsing.some(n => !['Base', 'Core'].includes(n) && !Object.hasOwn(o.moduleExports ?? {}, n))) continue;

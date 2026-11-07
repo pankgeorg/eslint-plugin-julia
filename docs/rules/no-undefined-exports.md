@@ -21,5 +21,5 @@ qualified calls, conservatively without evaluating their receiver.
 
 Export statements never define bindings. Macro-generated definitions do not count;
 `@enum Color red` followed by `export red` is unresolved under this model. Macro
-names defined by ordinary `macro` declarations do count. Literal quotes are data.
+names defined by ordinary `macro` declarations do count. Literal quotes and export syntax inside macro operands are data for this rule.
 Exact source spellings only. These fallbacks do not prove a runtime API is complete.

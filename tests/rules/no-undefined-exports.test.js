@@ -1,7 +1,7 @@
 import { tester, plugin } from '../helpers.js';
 const bad=(code,names,options)=>({code,...(options?{options:[options]}:{}),errors:names.map(name=>({messageId:'missing',data:{name}}))});
 tester.run('no-undefined-exports',plugin.rules['no-undefined-exports'],{
- valid:['export f; function f end','using LinearAlgebra; export norm', 'module M; module Sub; export α; α=1; end; using .Sub; export α; end','module M; export answer; const answer=42; end',
+ valid:['@data Shape begin export Circle; Circle(); end', '@eval module M; export generated; end','export f; function f end','using LinearAlgebra; export norm', 'module M; module Sub; export α; α=1; end; using .Sub; export α; end','module M; export answer; const answer=42; end',
  'module M; using Base: length; export length; end', 'public f; f()=1',
  'export @m; macro m(); end','module M; export length; end',
  'module M; include("a.jl"); export fromfile; end','using M; export maybe',
