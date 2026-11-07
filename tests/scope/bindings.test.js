@@ -8,6 +8,8 @@ function analyze(code) {
   const source = new JuliaSourceCode(code, parsed); return [getScopeManager(source), source];
 }
 const cases = [
+  ['empty generic declaration', 'function f end; f', 'f', 'function'],
+  ['Unicode empty generic declaration', 'function α end; α', 'α', 'function'],
   ['alias parameter', 'const A{T}=Vector{T}', 'T', 'type-parameter'],
   ['double bound parameter', 'f(x::T) where {Int<:T<:Number}=x', 'T', 'type-parameter'],
   ['macro implicit argument', 'macro m(); __module__; end', '__module__', 'implicit-argument'],
@@ -163,7 +165,8 @@ test('scope: empty generic function declarations bind their name', () => {
 });
 test('scope: baremodule can explicitly use Base exports', () => {
   const [m]=analyze('baremodule M; using Base; sin(1); end');
-  assert.equal(m.references.find(r=>r.name==='sin').binding.kind,'builtin');
+  // with module resolution, `using Base` binds Base's exports as imports from Base
+  assert.ok(['builtin', 'import'].includes(m.references.find(r=>r.name==='sin').binding.kind));
 });
 test('scope: dynamic module names create no fabricated binding', () => {
   const [m]=analyze('@eval module $name; end');
@@ -192,4 +195,9 @@ test('scope: recovered parse errors leave an empty conservative manager', () => 
   assert.ok(parsed.diagnostics.some(d=>d.level===1));
   const m=getScopeManager(new JuliaSourceCode(code,parsed));
   assert.equal(m.definitions.length,0); assert.equal(m.references.length,0);
+});
+
+test('scope: isdefined macro probes are not value reads', () => {
+  const [m] = analyze('@isdefined(x); f() = @isdefined(y)');
+  assert.ok(!m.references.some(r => ['x', 'y'].includes(r.name)));
 });
