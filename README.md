@@ -2,7 +2,7 @@
 
 Experimental v0.1 ESLint language plugin for Julia. It runs Julia 1.13.2's
 JuliaSyntax parser as bundled WebAssembly, without a Julia installation. It uses
-ESLint's native language API and Julia node kinds, with six syntax-based rules.
+ESLint's native language API and Julia node kinds, with syntax and scope rules.
 It includes an optional single-file syntactic scope analyzer; it does not provide
 Julia inference or JavaScript core rules.
 
@@ -45,7 +45,7 @@ export default [
 
 `recommended` selects `**/*.jl`, registers `julia`, and sets
 `language: 'julia/julia'`. `style` selects the same files and enables the two
-opt-in rules as warnings. `all` enables all six rules as errors, retaining the
+opt-in rules as warnings. `all` enables all registered rules as errors, retaining the
 default suggestion-only identity behavior. These are single flat config objects.
 For explicit registration, use `plugins: { julia }` and
 `language: 'julia/julia'` in a matching files entry. Keep JavaScript rules in
@@ -58,6 +58,7 @@ npx eslint --stdin --stdin-filename example.jl
 
 | Rule | Recommended | Edits |
 | --- | --- | --- |
+| [prefer-eachindex](docs/rules/prefer-eachindex.md) | Off | Suggestions |
 | [parse-errors](docs/rules/parse-errors.md) | Error | None |
 | [no-duplicate-struct-fields](docs/rules/no-duplicate-struct-fields.md) | Error | None |
 | [no-duplicate-keyword-arguments](docs/rules/no-duplicate-keyword-arguments.md) | Error | None |
