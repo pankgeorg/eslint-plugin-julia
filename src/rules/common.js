@@ -21,3 +21,19 @@ export function isSignature(node, source) {
   }
   return false;
 }
+
+// Coordinate-free syntax identity. Visitable children already omit trivia.
+// Strip redundant grouping only; retain kinds, exact leaf text, and parser
+// semantic flags, following the pinned normal-form oracle's flag mask.
+export function normalizedTreeKey(node) {
+  const parts = [], stack = [node];
+  while (stack.length) {
+    let n = stack.pop();
+    while (n.kind === 'parens' && n.interior && n.children.length === 1) n = n.children[0];
+    let flags = (n.flags ?? 0) & ~(1 | 128);
+    if (n.kind === 'toplevel') flags &= ~256;
+    parts.push([n.kind, Boolean(n.interior), flags, n.value ?? null, n.children.length]);
+    stack.push(...n.children.toReversed());
+  }
+  return JSON.stringify(parts);
+}
