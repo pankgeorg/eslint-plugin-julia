@@ -3,7 +3,8 @@
 Experimental v0.1 ESLint language plugin for Julia. It runs Julia 1.13.2's
 JuliaSyntax parser as bundled WebAssembly, without a Julia installation. It uses
 ESLint's native language API and Julia node kinds, with six syntax-based rules.
-It does not provide Julia name resolution, inference, or JavaScript core rules.
+It includes an optional single-file syntactic scope analyzer; it does not provide
+Julia inference or JavaScript core rules.
 
 Requires ESLint 10.14+ within major 10 and Node 22.23.3+ within major 22, or
 24.22.1+ within major 24, with Wasm GC and exception handling enabled. Those two

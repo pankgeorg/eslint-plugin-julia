@@ -77,3 +77,25 @@ leaf text and meaningful flags, equate operator/identifier symbols by text, spli
 comments with trailing whitespace trimmed. The identity rewrite intentionally
 changes the operator and is tested for exactly that delta; it is not claimed to
 preserve Julia semantics when equality is overloaded.
+
+The optional `eslint-plugin-julia/scope` entry point exposes `getScopeManager(sourceCode)`
+(cached by SourceCode identity), `resolve(identifierNode)`, `isReadReference(node)` and
+`isUnshadowedBuiltin(node, name)`. Call `getScopeManager` before standalone helpers.
+Managers expose `scopes`, `definitions`, `references`, `functions`, `imports`, `exports`,
+`scopeFor`, `definitionFor`, `referenceFor`, `lookup`, and the same helpers. Binding
+objects carry declaration, write and resolved-read records. This is a syntactic,
+single-file model, not Julia lowering or inference.
+
+All bindings are collected before resolving reads. Nested local assignments reuse
+an enclosing local; explicit local/argument/let/iteration/catch/type-parameter
+bindings create locals. File soft scopes create locals rather than update globals.
+Modules isolate their globals; baremodules inherit Core only. Let headers and
+iteration clauses evaluate against earlier bindings; defaults see earlier arguments.
+Properties, keyword labels, named-tuple keys and struct fields are not reads.
+Exact `var"..."` contents are supported without decoding escape sequences or Unicode
+normalization. Quotes are data except interpolation at the matching quote depth.
+Macro names are excluded; written arguments can be reads and written ordinary Julia
+constructs can bind names, but expansion never supplies bindings. Opaque macro
+operands are marked for diagnostic rules to suppress. Includes/eval and bare using
+are recorded as dynamic information; they never invent definitions. The Base/Core
+inventory is pinned to Julia 1.13.2. Rules document their own uncertainty policies.

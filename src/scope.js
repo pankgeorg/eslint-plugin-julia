@@ -1,0 +1,332 @@
+import { readFileSync } from 'node:fs';
+import { isInfixCall } from './parser/flags.js';
+
+const inventory = JSON.parse(readFileSync(new URL('../data/base-core-exports.json', import.meta.url)));
+const core = new Set(inventory.Core), base = new Set(inventory.Base);
+const builtin = new Map([...base, ...core, 'include', 'eval'].map(name => [name,
+  { name, kind: 'builtin', builtin: core.has(name) ? 'Core' : 'Base', definitions: [], references: [], writes: [] }]));
+const cache = new WeakMap(), owners = new WeakMap();
+export const identifierName = node => node?.kind === 'Identifier' ? node.value
+  : node?.kind === 'var' ? node.children[0]?.value
+  : node?.kind === 'macro_name' ? `@${node.children[0]?.value}` : null;
+export function bindingNames(node) {
+  if (!node) return [];
+  if (identifierName(node) !== null) return [node.kind === 'var' ? node.children[0] : node];
+  if (['tuple', 'parameters', 'parens', 'block'].includes(node.kind)) return node.children.flatMap(bindingNames);
+  if (['=', '...', 'outer', '<:', '>:'].includes(node.kind)) return bindingNames(node.children[0]);
+  if (node.kind === '::' && node.children.length === 2) return bindingNames(node.children[0]);
+  return [];
+}
+export function getScopeManager(sourceCode) {
+  if (!cache.has(sourceCode)) cache.set(sourceCode, analyze(sourceCode));
+  return cache.get(sourceCode);
+}
+export const resolve = node => owners.get(node)?.resolve(node) ?? null;
+export const isReadReference = node => owners.get(node)?.referenceFor(node)?.read === true;
+export const isUnshadowedBuiltin = (node, name) => owners.get(node)?.isUnshadowedBuiltin(node, name) ?? false;
+
+function analyze(source) {
+  const scopes = [], references = [], definitions = [], nodeScopes = new WeakMap(), nodeReferences = new WeakMap();
+  const nodeDefinitions = new WeakMap(), functions = [], exports = [], imports = [];
+  function scope(kind, node, parent, extra = {}) {
+    const s = { kind, node, parent, bindings: new Map(), declarations: new Map(), candidates: [], children: [],
+      bareUsing: [], dynamic: false, ...extra };
+    s.module = kind === 'module' ? s : parent.module;
+    scopes.push(s); parent?.children.push(s); return s;
+  }
+  const root = scope('module', source.ast, null, { bare: false });
+  function mark(node, s) { nodeScopes.set(node, s); owners.set(node, manager); }
+  function ref(node, s, read = true, extra = {}) {
+    if (!node) return;
+    mark(node, s);
+    const r = { node, name: identifierName(node), scope: s, read, write: !read, ...extra, binding: null };
+    references.push(r); nodeReferences.set(node, r); return r;
+  }
+  function define(node, s, kind, extra = {}) {
+    if (!node || /^_+$/u.test(identifierName(node) ?? '')) return;
+    mark(node, s);
+    const d = { node, name: identifierName(node), scope: s, kind, ...extra, binding: null };
+    definitions.push(d); s.candidates.push(d); nodeDefinitions.set(node, d); return d;
+  }
+  function pattern(node, s, kind, extra = {}) {
+    if (!node) return;
+    mark(node, s);
+    const name = identifierName(node);
+    if (name !== null) { define(node.kind === 'var' ? node.children[0] : node, s, kind, extra); return; }
+    if (['tuple', 'parameters', 'parens', 'block'].includes(node.kind)) {
+      for (const c of node.children) pattern(c, s, kind, extra);
+    } else if (['...', 'outer'].includes(node.kind)) {
+      pattern(node.children[0], s, kind, { ...extra, outer: node.kind === 'outer' || extra.outer });
+    } else if (node.kind === '::') {
+      if (node.children.length === 2) pattern(node.children[0], s, kind, { ...extra, typed: true });
+      visit(node.children.at(-1), s);
+    } else if (node.kind === '=') {
+      visit(node.children[1], s); pattern(node.children[0], s, kind, extra);
+    } else visit(node, s); // property/index mutation reads its receiver and indices
+  }
+  function typeParameters(nodes, s) {
+    const params = nodes.flatMap(n => n.kind === 'braces' ? n.children : [n]);
+    for (const p of params) for (const n of bindingNames(p)) define(n, s, 'type-parameter', { parameter: p, force: true });
+    for (const p of params) {
+      mark(p, s);
+      if (['<:', '>:'].includes(p.kind)) p.children.slice(1).forEach(n => visit(n, s));
+      else if (p.kind === 'comparison') { // lower < T <: upper
+        visit(p.children[0], s); visit(p.children.at(-1), s);
+      }
+    }
+    return params;
+  }
+  function signature(sig, s, outer, fn) {
+    mark(sig, s);
+    if (sig.kind === 'where') {
+      fn.typeParameters.push(...typeParameters(sig.children.slice(1), s));
+      return signature(sig.children[0], s, outer, fn);
+    }
+    if (sig.kind === '::' && sig.children.length === 2) {
+      visit(sig.children[1], s); return signature(sig.children[0], s, outer, fn);
+    }
+    if (sig.kind === 'parens' && sig.children.length === 1) return signature(sig.children[0], s, outer, fn);
+    let args;
+    if (sig.kind === 'call') {
+      let head = sig.children[isInfixCall(sig) ? 1 : 0];
+      if (head?.kind === 'curly') { head.children.slice(1).forEach(n => visit(n, s)); head = head.children[0]; }
+      if (identifierName(head) !== null) {
+        const n = head.kind === 'var' ? head.children[0] : head;
+        define(n, outer, fn.node.kind === 'macro' ? 'macro' : 'function', { assignment: fn.node,
+          name: fn.node.kind === 'macro' ? `@${identifierName(n)}` : identifierName(n) });
+      } else if (head?.kind === '.' ) visit(head.children[0], outer);
+      else argument(head, false);
+      args = sig.children.filter(c => c !== sig.children[isInfixCall(sig) ? 1 : 0]);
+      fn.call = sig;
+    } else args = ['tuple', 'parameters'].includes(sig.kind) ? sig.children : [sig];
+    for (const arg of args) {
+      if (arg.kind === 'parameters') for (const a of arg.children) argument(a, true);
+      else argument(arg, false);
+    }
+    function argument(arg, keyword) {
+      if (!arg) return;
+      // Defaults can see earlier arguments and type parameters, never later args/body locals.
+      const prior = new Set(s.candidates.filter(d => ['argument', 'keyword', 'type-parameter'].includes(d.kind)).map(d => d.name));
+      const start = references.length;
+      const names = bindingNames(arg);
+      pattern(arg, s, keyword ? 'keyword' : 'argument', { force: true, parameter: arg, assignment: arg });
+      for (const r of references.slice(start)) r.visibility = { scope: s, names: prior };
+      fn.arguments.push(...names.map(n => nodeDefinitions.get(n)).filter(Boolean));
+    }
+  }
+  function iteration(clause, s) {
+    if (clause.kind === 'filter') {
+      s = iteration(clause.children[0], s);
+      clause.children.slice(1).forEach(n => visit(n, s)); return s;
+    }
+    if (clause.kind !== 'iteration') { visit(clause, s); return s; }
+    for (const pair of clause.children) {
+      visit(pair.children[1], s);
+      s = scope('for', pair, s);
+      pattern(pair.children[0], s, 'iteration', { force: true, assignment: pair });
+    }
+    return s;
+  }
+  function quoted(node, s, depth) {
+    mark(node, s);
+    if (node.kind === '$') {
+      if (depth === 1) node.children.forEach(n => visit(n, s));
+      else node.children.forEach(n => quoted(n, s, depth - 1));
+    } else node.children.forEach(n => quoted(n, s, depth + (n.kind === 'quote' ? 1 : 0)));
+  }
+  function importStatement(node, s) {
+    s = s.module;
+    for (const clause of node.children) {
+      const named = clause.kind === ':', paths = named ? clause.children.slice(1) : [clause];
+      const pathText = p => source.getText(p).replace(/\s/gu, '');
+      const moduleName = named ? pathText(clause.children[0]) : pathText(clause.kind === 'as' ? clause.children[0] : clause);
+      if (node.kind === 'using' && !named) s.bareUsing.push(moduleName);
+      for (const p of paths) {
+        const target = p.kind === 'as' ? p.children[1] : p.children.at(-1);
+        if (!target) continue;
+        const d = define(target, s, 'import', { force: true, moduleName, imported: source.getText(p), assignment: node });
+        if (d) imports.push(d);
+      }
+    }
+  }
+  function visit(node, s, extra = {}) {
+    if (!node) return;
+    mark(node, s);
+    if (identifierName(node) !== null && node.kind !== 'macro_name') {
+      const n = node.kind === 'var' ? node.children[0] : node;
+      ref(n, s, true, extra); return;
+    }
+    if (!node.interior && node.kind !== 'JuliaFile') return;
+    const c = node.children;
+    switch (node.kind) {
+      case 'quote': case 'inert': quoted(node, s, 1); return;
+      case 'macro_name': return;
+      case 'macrocall': {
+        s.dynamic = true;
+        // Written normal declarations still count; naked DSL operands are opaque reads.
+        for (const arg of c.slice(1)) visit(arg, s, { opaque: true });
+        return;
+      }
+      case 'module': {
+        define(c[0], s.module, 'module', { force: true, assignment: node });
+        const inner = scope('module', node, s, { bare: Boolean(node.flags & 256) });
+        define(c[0], inner, 'module-self', { force: true });
+        visit(c[1], inner); return;
+      }
+      case 'function': case 'macro': case '->': case 'do': {
+        const inner = scope('function', node, s);
+        const fn = { node, scope: inner, arguments: [], typeParameters: [], call: null }; functions.push(fn);
+        signature(c[0], inner, s, fn); visit(c[1], inner); return;
+      }
+      case 'struct': case 'abstract': case 'primitive': {
+        const inner = scope('type', node, s);
+        let head = c[0];
+        if (head?.kind === '<:') { visit(head.children[1], inner); head = head.children[0]; }
+        if (head?.kind === 'curly') { typeParameters(head.children.slice(1), inner); head = head.children[0]; }
+        define(head, s, 'type', { assignment: node });
+        if (node.kind === 'struct') {
+          define({ kind: 'Identifier', value: 'new', range: head.range, loc: head.loc }, inner, 'intrinsic', { force: true });
+          const body = c.at(-1); mark(body, inner);
+          for (let field of body.children) {
+            if (field.kind === 'const') field = field.children[0];
+            if (identifierName(field) !== null) continue;
+            if (field.kind === '::') visit(field.children.at(-1), inner);
+            else if (field.kind === '=' && ['Identifier', '::'].includes(field.children[0]?.kind)) {
+              if (field.children[0].kind === '::') visit(field.children[0].children.at(-1), inner);
+              visit(field.children[1], inner);
+            } else visit(field, inner);
+          }
+        } else c.slice(1).forEach(n => visit(n, inner));
+        return;
+      }
+      case 'where': {
+        const inner = scope('where', node, s); typeParameters(c.slice(1), inner); visit(c[0], inner); return;
+      }
+      case 'let': {
+        let inner = scope('let', node, s);
+        for (const item of c[0].children) {
+          if (item.kind === '=') visit(item.children[1], inner);
+          const next = scope('let', item, inner);
+          pattern(item.kind === '=' ? item.children[0] : item, next, 'let', { force: true, assignment: item });
+          inner = next;
+        }
+        visit(c[1], inner); return;
+      }
+      case 'for': { visit(c[1], iteration(c[0], s)); return; }
+      case 'generator': {
+        let inner = scope('comprehension', node, s);
+        for (const clause of c.slice(1)) inner = iteration(clause, inner);
+        visit(c[0], inner); return;
+      }
+      case 'while': { const inner = scope('while', node, s); c.forEach(n => visit(n, inner)); return; }
+      case 'try': {
+        for (const part of c) {
+          const inner = scope('try', part, s);
+          if (part.kind === 'catch') {
+            if (part.children.length > 1) pattern(part.children[0], inner, 'catch', { force: true, assignment: part });
+            visit(part.children.at(-1), inner);
+          } else visit(part, inner);
+        }
+        return;
+      }
+      case 'local': case 'global': case 'const':
+        for (const item of c) declaration(item, s, { ...extra,
+          ...(node.kind === 'const' ? { constant: true } : { declaration: node.kind }), assignment: item });
+        return;
+      case 'import': case 'using': importStatement(node, s); return;
+      case 'export': case 'public':
+        for (const n of c) exports.push({ node: n, name: identifierName(n), scope: s.module }); return;
+      case '=': case 'op=': case '.=':
+        if (node.kind === '.=') { c.forEach(n => visit(n, s, extra)); return; }
+        visit(c.at(-1), s, extra);
+        if (node.kind === 'op=') { visit(c[1], s, extra); for (const n of bindingNames(c[0])) ref(n, s, true, extra); }
+        pattern(c[0], s, 'assignment', { ...extra, assignment: node, initialized: true }); return;
+      case '.': visit(c[0], s, extra); return;
+      case 'call': case 'dotcall':
+        if (identifierName(c[0]) && ['include', 'eval', 'include_string'].includes(identifierName(c[0]))) s.dynamic = true;
+        for (const arg of c) {
+          if (arg.kind === '=' && identifierName(arg.children[0]) !== null) visit(arg.children[1], s, extra);
+          else visit(arg, s, extra);
+        }
+        return;
+      case 'parameters':
+        for (const item of c) {
+          if (item.kind === '=') visit(item.children[1], s, extra); else visit(item, s, extra);
+        }
+        return;
+      case 'tuple':
+        for (const item of c) {
+          if (item.kind === '=') visit(item.children[1], s, extra); else visit(item, s, extra);
+        }
+        return;
+      default: c.forEach(n => visit(n, s, extra));
+    }
+  }
+  function declaration(node, s, extra) {
+    mark(node, s);
+    if (['const', 'global', 'local'].includes(node.kind)) {
+      for (const n of node.children) declaration(n, s, { ...extra,
+        ...(node.kind === 'const' ? { constant: true } : { declaration: node.kind }) });
+    } else if (node.kind === '=') {
+      visit(node.children[1], s); pattern(node.children[0], s, 'assignment', { ...extra, assignment: node, initialized: true });
+    } else pattern(node, s, 'declaration', { ...extra, force: extra.declaration === 'local' });
+  }
+  function lookup(name, s, visibility) {
+    for (let at = s; at; at = at.parent) {
+      const b = at.bindings.get(name);
+      if (b && (!visibility || at !== visibility.scope || visibility.names.has(name))) return b;
+      if (at.kind === 'module') return (!at.bare || core.has(name)) ? builtin.get(name) ?? null : null;
+    }
+    return null;
+  }
+  function localOuter(name, s) {
+    for (let at = s.parent; at && at.kind !== 'module'; at = at.parent) if (at.bindings.has(name)) return at.bindings.get(name);
+    return null;
+  }
+  function makeBinding(d, s) {
+    if (!s.bindings.has(d.name)) s.bindings.set(d.name, { name: d.name, kind: d.kind, scope: s,
+      definitions: [], references: [], writes: [], constant: false });
+    return s.bindings.get(d.name);
+  }
+  const manager = { scopes, references, definitions, functions, exports, imports, globalScope: root,
+    scopeFor: node => nodeScopes.get(node), referenceFor: node => nodeReferences.get(node),
+    definitionFor: node => nodeDefinitions.get(node),
+    resolve(node) { return nodeDefinitions.get(node)?.binding ?? nodeReferences.get(node)?.binding ?? null; },
+    lookup: (name, s = root) => lookup(name, s),
+    isReadReference: node => nodeReferences.get(node)?.read === true,
+    isUnshadowedBuiltin(node, name) {
+      if (identifierName(node) === name) return this.resolve(node)?.kind === 'builtin';
+      if (node?.kind !== '.' || identifierName(node.children[1]) !== name) return false;
+      const receiver = this.resolve(node.children[0]);
+      return receiver?.kind === 'builtin' && ['Base', 'Core'].includes(receiver.name)
+        && (receiver.name === 'Core' ? core : base).has(name);
+    },
+  };
+  visit(source.ast, root);
+  // Declarations are scope-wide, even when written after assignments.
+  for (const d of definitions) if (d.declaration) d.scope.declarations.set(d.name, d.declaration);
+  // Parent scopes are finalized first; a later parent assignment is still captured.
+  for (const s of scopes) {
+    const ordered = [...s.candidates].sort((a, b) => Number(Boolean(b.force)) - Number(Boolean(a.force)));
+    for (const d of ordered) {
+      const declaration = s.declarations.get(d.name);
+      let b;
+      if (declaration === 'global' || d.declaration === 'global') b = makeBinding(d, s.module);
+      else if (s.bindings.has(d.name)) b = s.bindings.get(d.name);
+      else if (d.force && !d.outer || declaration === 'local' || s.kind === 'module') b = makeBinding(d, s);
+      else b = localOuter(d.name, s) ?? makeBinding(d, s);
+      d.binding = b; b.definitions.push(d); b.constant ||= Boolean(d.constant);
+      if (d.initialized) b.writes.push(d);
+    }
+  }
+  for (const r of references) {
+    const declaration = r.scope.declarations.get(r.name);
+    r.binding = lookup(r.name, declaration === 'global' ? r.scope.module : r.scope, r.visibility);
+    if (r.binding && r.binding.kind !== 'builtin') r.binding.references.push(r);
+  }
+  for (const s of scopes) for (const b of s.bindings.values()) {
+    b.definitions.sort((a, b) => a.node.range[0] - b.node.range[0]);
+    b.writes.sort((a, b) => a.node.range[0] - b.node.range[0]);
+  }
+  return manager;
+}
