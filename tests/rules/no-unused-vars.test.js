@@ -23,3 +23,34 @@ tester.run('no-unused-vars',plugin.rules['no-unused-vars'],{
  bad('try work(); catch e; nothing; end',['e']), bad('f()=(x=1; eval(:x))',['x']),
  ]
 });
+
+tester.run('no-unused-vars imports',plugin.rules['no-unused-vars'],{
+ valid:[
+  'using LinearAlgebra: norm; @eval $(Symbol("generated"))()=1',
+  'f()=(@test true atol=1)', 'f()=(@error "message" exception=1)',
+  'import Base: show; show(x::Int)=nothing',
+  'using Test: @test; @test true', 'import Test as T; T.@test true',
+  'using LinearAlgebra; norm([1,2])', 'import LinearAlgebra as LA; LA.norm([1])',
+  'using LinearAlgebra: norm; norm([1])', 'using LinearAlgebra: norm; export norm',
+  'using LinearAlgebra: norm; @show norm', 'using UnknownModule; possibly_exported()',
+  'using LinearAlgebra: norm; include(dynamic_path)',
+  'using LinearAlgebra: norm; eval(:(generated_use=norm))',
+  'import LinearAlgebra: norm as _norm',
+  {code:'using LinearAlgebra: norm',options:[{imports:'none'}]},
+ ],invalid:[
+  {code:'using LinearAlgebra: norm',errors:[{messageId:'unusedImport',data:{name:'norm'}}]},
+  {code:'using LinearAlgebra',errors:[{messageId:'unusedImport',data:{name:'LinearAlgebra'}}]},
+  {code:'import LinearAlgebra: norm as α',errors:[{messageId:'unusedImport',data:{name:'α'}}]},
+  {code:'using LinearAlgebra: norm; f()=(norm=1; norm)',errors:[{messageId:'unusedImport',data:{name:'norm'}}]},
+  {code:'module A; using LinearAlgebra: norm; end; module B; norm=1; end',errors:[{messageId:'unusedImport',data:{name:'norm'}}]},
+ ]
+});
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
+import { engine } from '../helpers.js';
+test('unused imports count sibling reads across a custom include tree', async () => {
+ const entry=fileURLToPath(new URL('../fixtures/packages/custom/entry.jl',import.meta.url));
+ const [r]=await engine({'julia/no-unused-vars':'error'}).lintText('module Custom; using Dates: year, now; include("child.jl"); end',{filePath:entry});
+ assert.deepEqual(r.messages,[]);
+});
