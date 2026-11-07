@@ -1,3 +1,4 @@
+import noCondAssign from './rules/no-cond-assign.js';
 import { language } from './language.js';
 import { manifest } from './parser/wasm-host.js';
 import parseErrors from './rules/parse-errors.js';
@@ -10,7 +11,7 @@ import shadowedLoopVar from './rules/no-shadowed-loop-var.js';
 const plugin = {
   meta: { name: 'eslint-plugin-julia', version: `0.1.0+wasm.${manifest.sha256}` },
   languages: { julia: language },
-  rules: { 'parse-errors': parseErrors, 'prefer-identity-nothing': identity,
+  rules: { 'no-cond-assign': noCondAssign, 'parse-errors': parseErrors, 'prefer-identity-nothing': identity,
     'no-duplicate-struct-fields': structFields, 'no-duplicate-keyword-arguments': keywordArguments,
     'no-empty-catch': emptyCatch, 'no-shadowed-loop-var': shadowedLoopVar },
   configs: {},
