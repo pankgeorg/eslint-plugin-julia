@@ -13,6 +13,7 @@ tester.run('no-unreachable', plugin.rules['no-unreachable'], {
     "function f(); for i in xs; break; end; work(); end"
   ],
   "invalid": [
+    { code: "function f()\n    @assert true\n    return 1\n    x = 2\nend", errors: [{ messageId: "issue", line: 4 }] },
     {
       "code": "function f(); return 1; println(\"dead\"); end",
       "errors": [
@@ -88,9 +89,6 @@ tester.run('no-unreachable', plugin.rules['no-unreachable'], {
     {
       "code": "function f(); begin return; dead(); end; dead2(); end",
       "errors": [
-        {
-          "messageId": "issue"
-        },
         {
           "messageId": "issue"
         }

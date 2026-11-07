@@ -11,11 +11,18 @@ function flatten(node) {
   }
   return result;
 }
+// `@label`/`@goto` can make code after an exit reachable: skip blocks that contain them.
+// Other macros don't (their expansion isn't modelled; the owner's semantics ignore it).
+const jumpMacros = new Set(['label', 'goto']);
+function macroName(n) {
+  const name = n.children[0];
+  return name?.kind === 'macro_name' ? name.children.at(-1)?.value : undefined;
+}
 function hasMacro(node) {
   const stack = [node];
   while (stack.length) {
     const n = stack.pop();
-    if (n.kind === 'macrocall') return true;
+    if (n.kind === 'macrocall' && jumpMacros.has(macroName(n))) return true;
     if (n !== node && (functions.has(n.kind) || ['quote', 'inert'].includes(n.kind))) continue;
     stack.push(...n.children);
   }
@@ -35,9 +42,13 @@ export default defineRule({
     function check(node) {
       if (!node.interior && node.kind !== 'JuliaFile' || isOpaque(node, source)) return;
       if (containers.has(source.getParent(node)?.kind) || hasMacro(node)) return;
-      let terminated = false;
+      // One report per run of dead statements (at its first statement), like ESLint's rule.
+      let terminated = false, reported = false;
       for (const statement of flatten(node)) {
-        if (terminated && !declarations.has(statement.kind)) context.report({ node: statement, messageId: 'issue' });
+        if (terminated && !reported && !declarations.has(statement.kind)) {
+          context.report({ node: statement, messageId: 'issue' });
+          reported = true;
+        }
         if (['return', 'break', 'continue'].includes(statement.kind) && hasTarget(statement, source)) terminated = true;
       }
     }
