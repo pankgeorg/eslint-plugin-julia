@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { isInfixCall } from './parser/flags.js';
 
 const inventory = JSON.parse(readFileSync(new URL('../data/base-core-exports.json', import.meta.url)));
-const core = new Set(inventory.Core), base = new Set(inventory.Base);
+const core = new Set([...inventory.Core, 'ccall']), base = new Set(inventory.Base);
 const builtin = new Map([...base, ...core, 'include', 'eval'].map(name => [name,
   { name, kind: 'builtin', builtin: core.has(name) ? 'Core' : 'Base', definitions: [], references: [], writes: [] }]));
 const cache = new WeakMap(), owners = new WeakMap();
@@ -13,6 +13,8 @@ export function bindingNames(node) {
   if (!node) return [];
   if (identifierName(node) !== null) return [node.kind === 'var' ? node.children[0] : node];
   if (['tuple', 'parameters', 'parens', 'block'].includes(node.kind)) return node.children.flatMap(bindingNames);
+  if (node.kind === 'comparison' && node.children.length === 5) return bindingNames(node.children[2]);
+  if (node.kind === 'macrocall' && ['@nospecialize', '@specialize'].includes(identifierName(node.children[0]))) return node.children.slice(1).flatMap(bindingNames);
   if (['=', '...', 'outer', '<:', '>:'].includes(node.kind)) return bindingNames(node.children[0]);
   if (node.kind === '::' && node.children.length === 2) return bindingNames(node.children[0]);
   return [];
@@ -53,7 +55,9 @@ function analyze(source) {
     mark(node, s);
     const name = identifierName(node);
     if (name !== null) { define(node.kind === 'var' ? node.children[0] : node, s, kind, extra); return; }
-    if (['tuple', 'parameters', 'parens', 'block'].includes(node.kind)) {
+    if (node.kind === 'macrocall' && ['@nospecialize', '@specialize'].includes(identifierName(node.children[0]))) {
+      node.children.slice(1).forEach(n => pattern(n, s, kind, extra));
+    } else if (['tuple', 'parameters', 'parens', 'block'].includes(node.kind)) {
       for (const c of node.children) pattern(c, s, kind, extra);
     } else if (['...', 'outer'].includes(node.kind)) {
       pattern(node.children[0], s, kind, { ...extra, outer: node.kind === 'outer' || extra.outer });
@@ -154,6 +158,7 @@ function analyze(source) {
     mark(node, s);
     if (identifierName(node) !== null && node.kind !== 'macro_name') {
       const n = node.kind === 'var' ? node.children[0] : node;
+      if (['end', 'begin'].includes(n.originalKind)) return;
       ref(n, s, true, extra); return;
     }
     if (!node.interior && node.kind !== 'JuliaFile') return;
@@ -176,7 +181,10 @@ function analyze(source) {
       case 'function': case 'macro': case '->': case 'do': {
         const inner = scope('function', node, s);
         const fn = { node, scope: inner, arguments: [], typeParameters: [], call: null }; functions.push(fn);
-        signature(c[0], inner, s, fn); visit(c[1], inner); return;
+        signature(c[0], inner, s, fn);
+        if (node.kind === 'macro') for (const name of ['__module__', '__source__'])
+          define({ kind: 'Identifier', value: name, range: node.range, loc: node.loc }, inner, 'implicit-argument', { force: true });
+        visit(c[1], inner); return;
       }
       case 'struct': case 'abstract': case 'primitive': {
         const inner = scope('type', node, s);
@@ -238,6 +246,11 @@ function analyze(source) {
         for (const n of c) exports.push({ node: n, name: identifierName(n), scope: s.module }); return;
       case '=': case 'op=': case '.=':
         if (node.kind === '.=') { c.forEach(n => visit(n, s, extra)); return; }
+        if (node.kind === '=' && c[0]?.kind === 'curly') {
+          const inner = scope('where', node, s); typeParameters(c[0].children.slice(1), inner);
+          pattern(c[0].children[0], s, 'assignment', { ...extra, assignment: node, initialized: true });
+          visit(c[1], inner); return;
+        }
         visit(c.at(-1), s, extra);
         if (node.kind === 'op=') { visit(c[1], s, extra); for (const n of bindingNames(c[0])) ref(n, s, true, extra); }
         pattern(c[0], s, 'assignment', { ...extra, assignment: node, initialized: true }); return;
@@ -268,7 +281,10 @@ function analyze(source) {
       for (const n of node.children) declaration(n, s, { ...extra,
         ...(node.kind === 'const' ? { constant: true } : { declaration: node.kind }) });
     } else if (node.kind === '=') {
-      visit(node.children[1], s); pattern(node.children[0], s, 'assignment', { ...extra, assignment: node, initialized: true });
+      if (node.children[0]?.kind === 'curly') {
+        const inner = scope('where', node, s); typeParameters(node.children[0].children.slice(1), inner);
+        visit(node.children[1], inner); pattern(node.children[0].children[0], s, 'assignment', { ...extra, assignment: node, initialized: true });
+      } else { visit(node.children[1], s); pattern(node.children[0], s, 'assignment', { ...extra, assignment: node, initialized: true }); }
     } else pattern(node, s, 'declaration', { ...extra, force: extra.declaration === 'local' });
   }
   function lookup(name, s, visibility) {

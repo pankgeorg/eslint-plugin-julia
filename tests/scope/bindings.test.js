@@ -8,6 +8,11 @@ function analyze(code) {
   const source = new JuliaSourceCode(code, parsed); return [getScopeManager(source), source];
 }
 const cases = [
+  ['alias parameter', 'const A{T}=Vector{T}', 'T', 'type-parameter'],
+  ['double bound parameter', 'f(x::T) where {Int<:T<:Number}=x', 'T', 'type-parameter'],
+  ['macro implicit argument', 'macro m(); __module__; end', '__module__', 'implicit-argument'],
+  ['nospecialize argument', 'f(@nospecialize x)=x', 'x', 'argument'],
+  ['ccall syntax intrinsic', 'ccall(:f,Int,())', 'ccall', 'builtin'],
   ['later local', 'f()=(x; x=1)', 'x', 'assignment'],
   ['argument', 'f(x)=x', 'x', 'argument'],
   ['keyword', 'f(;x=1)=x', 'x', 'keyword'],
@@ -117,4 +122,8 @@ test('scope: macro arguments count written reads, but never synthesized bindings
 test('scope: outer iteration reuses enclosing local', () => {
   const [m]=analyze('f()=(i=0; for outer i in xs; i; end)');
   assert.equal(new Set(m.definitions.filter(d=>d.name==='i').map(d=>d.binding)).size,1);
+});
+
+test('scope: index begin and end are syntax, not names', () => {
+  const [m]=analyze('A[begin:end]'); assert.deepEqual(m.references.map(r=>r.name),['A', ':']);
 });
