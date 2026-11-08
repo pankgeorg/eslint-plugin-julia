@@ -46,7 +46,13 @@ export interface ScopeManager {
   references: Reference[];
   definitions: Definition[];
   globalScope: Scope;
-  functions: { node: JuliaNode; scope: Scope; arguments: Definition[]; typeParameters: JuliaNode[]; call: JuliaNode | null }[];
+  functions: {
+    node: JuliaNode;
+    scope: Scope;
+    arguments: Definition[];
+    typeParameters: JuliaNode[];
+    call: JuliaNode | null;
+  }[];
   imports: Definition[];
   exports: { node: JuliaNode; name: string; scope: Scope }[];
   scopeFor(node: SyntaxElement): Scope | undefined;

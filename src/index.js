@@ -141,7 +141,12 @@ const plugin = {
   },
   configs: {},
 };
-const config = rules => ({ files: ['**/*.jl'], plugins: { julia: plugin }, language: 'julia/julia', rules });
+const config = (rules) => ({
+  files: ['**/*.jl'],
+  plugins: { julia: plugin },
+  language: 'julia/julia',
+  rules,
+});
 const RECOMMENDED = {
   'parse-errors': 'error',
   'no-duplicate-struct-fields': 'error',
@@ -165,13 +170,24 @@ const RECOMMENDED = {
   'no-fill-with-mutable': 'warn',
   'no-discarded-copy-result': 'warn',
   'no-duplicate-dict-keys': 'warn',
-  'no-nothing-return-conversion': 'warn'
+  'no-nothing-return-conversion': 'warn',
 };
-plugin.configs.recommended = config(Object.fromEntries(Object.entries(RECOMMENDED).map(([n, level]) => [`julia/${n}`, level])));
-plugin.configs.style = config({'julia/prefer-identity-nothing': 'warn', 'julia/no-empty-catch': 'warn'});
+plugin.configs.recommended = config(
+  Object.fromEntries(Object.entries(RECOMMENDED).map(([n, level]) => [`julia/${n}`, level])),
+);
+plugin.configs.style = config({
+  'julia/prefer-identity-nothing': 'warn',
+  'julia/no-empty-catch': 'warn',
+});
 // strict: recommended plus every other rule as a warning (style, policy and the scope rules that
 // need a complete environment: no-undef, no-unused-vars, …).
-plugin.configs.strict = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [`julia/${n}`, RECOMMENDED[n] ?? 'warn'])));
-plugin.configs.all = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [`julia/${n}`, 'error'])));
+plugin.configs.strict = config(
+  Object.fromEntries(
+    Object.keys(plugin.rules).map((n) => [`julia/${n}`, RECOMMENDED[n] ?? 'warn']),
+  ),
+);
+plugin.configs.all = config(
+  Object.fromEntries(Object.keys(plugin.rules).map((n) => [`julia/${n}`, 'error'])),
+);
 export default plugin;
 export { JuliaSourceCode } from './source-code.js';

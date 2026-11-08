@@ -1,5 +1,8 @@
 import { tester, plugin } from '../helpers.js';
-const invalid = (code, output) => ({ code, errors: [{ messageId: 'diagnostic', suggestions: [{ messageId: 'replace', output }] }] });
+const invalid = (code, output) => ({
+  code,
+  errors: [{ messageId: 'diagnostic', suggestions: [{ messageId: 'replace', output }] }],
+});
 tester.run('no-collect-before-range-iteration', plugin.rules['no-collect-before-range-iteration'], {
   valid: [
     'for i in 1:100; consume(i); end',
@@ -17,8 +20,14 @@ tester.run('no-collect-before-range-iteration', plugin.rules['no-collect-before-
   invalid: [
     invalid('for i in collect(1:100); consume(i); end', 'for i in 1:100; consume(i); end'),
     invalid('for α = Base.collect(2:2:64); consume(α); end', 'for α = 2:2:64; consume(α); end'),
-    invalid('function f(); for i in collect(20:-1:1); i; end; end', 'function f(); for i in 20:-1:1; i; end; end'),
+    invalid(
+      'function f(); for i in collect(20:-1:1); i; end; end',
+      'function f(); for i in 20:-1:1; i; end; end',
+    ),
     invalid('for i in collect((1:3)); i; end', 'for i in (1:3); i; end'),
-    { code: 'for i in collect(1: # retain\n 3); i; end', errors: [{ messageId: 'diagnostic', suggestions: [] }] },
+    {
+      code: 'for i in collect(1: # retain\n 3); i; end',
+      errors: [{ messageId: 'diagnostic', suggestions: [] }],
+    },
   ],
 });

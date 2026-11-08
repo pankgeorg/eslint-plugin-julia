@@ -1,9 +1,23 @@
 import { defineRule, isOpaque } from './common.js';
 const containers = new Set(['block', 'toplevel', 'JuliaFile']);
 const functions = new Set(['function', 'macro', '->', 'do']);
-const declarations = new Set(['function', 'macro', 'struct', 'module', 'baremodule', 'const', 'global', 'local', 'using', 'import', 'export', 'public']);
+const declarations = new Set([
+  'function',
+  'macro',
+  'struct',
+  'module',
+  'baremodule',
+  'const',
+  'global',
+  'local',
+  'using',
+  'import',
+  'export',
+  'public',
+]);
 function flatten(node) {
-  const result = [], stack = [...node.children].reverse();
+  const result = [],
+    stack = [...node.children].reverse();
   while (stack.length) {
     const n = stack.pop();
     if (n.interior && containers.has(n.kind)) stack.push(...n.children.toReversed());
@@ -31,25 +45,36 @@ function hasMacro(node) {
 function hasTarget(node, source) {
   for (let child = node, p = source.getParent(child); p; child = p, p = source.getParent(p)) {
     if (functions.has(p.kind)) return node.kind === 'return';
-    if (node.kind !== 'return' && ['for', 'while'].includes(p.kind) && p.children.at(-1) === child) return true;
+    if (node.kind !== 'return' && ['for', 'while'].includes(p.kind) && p.children.at(-1) === child)
+      return true;
   }
   return false;
 }
 export default defineRule({
-  meta: { type: 'problem', schema: [], docs: { description: 'Report statements after an unconditional syntax exit.' }, messages: { issue: 'Unreachable statement after an unconditional exit.' } },
+  meta: {
+    type: 'problem',
+    schema: [],
+    docs: { description: 'Report statements after an unconditional syntax exit.' },
+    messages: { issue: 'Unreachable statement after an unconditional exit.' },
+  },
   create(context) {
     const source = context.sourceCode;
     function check(node) {
-      if (!node.interior && node.kind !== 'JuliaFile' || isOpaque(node, source)) return;
+      if ((!node.interior && node.kind !== 'JuliaFile') || isOpaque(node, source)) return;
       if (containers.has(source.getParent(node)?.kind) || hasMacro(node)) return;
       // One report per run of dead statements (at its first statement), like ESLint's rule.
-      let terminated = false, reported = false;
+      let terminated = false,
+        reported = false;
       for (const statement of flatten(node)) {
         if (terminated && !reported && !declarations.has(statement.kind)) {
           context.report({ node: statement, messageId: 'issue' });
           reported = true;
         }
-        if (['return', 'break', 'continue'].includes(statement.kind) && hasTarget(statement, source)) terminated = true;
+        if (
+          ['return', 'break', 'continue'].includes(statement.kind) &&
+          hasTarget(statement, source)
+        )
+          terminated = true;
       }
     }
     return { block: check, toplevel: check, JuliaFile: check };

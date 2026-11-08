@@ -5,21 +5,49 @@ const numbers = new Set(['Integer', 'BinInt', 'OctInt', 'HexInt', 'Float', 'Floa
 // A discarded comparison (`x == 1` as a statement) is almost always a typo for `=`, or a
 // forgotten `@assert`/`&&`. Overloaded comparison operators with side effects are not a
 // pattern worth protecting.
-const comparisonOps = new Set(['==', '!=', '===', '!==', '<', '>', '<=', '>=', '≈', '≉', '≠', '≤', '≥', '∈', '∉', 'in', 'isa']);
+const comparisonOps = new Set([
+  '==',
+  '!=',
+  '===',
+  '!==',
+  '<',
+  '>',
+  '<=',
+  '>=',
+  '≈',
+  '≉',
+  '≠',
+  '≤',
+  '≥',
+  '∈',
+  '∉',
+  'in',
+  'isa',
+]);
 function isComparison(n) {
   while (n.kind === 'parens' && n.children.length === 1) n = n.children[0];
   if (n.kind === 'comparison') return true;
-  return ['call', 'dotcall'].includes(n.kind) && n.interior && n.children.length === 3 && isInfixCall(n)
-    && comparisonOps.has(n.children[1].value);
+  return (
+    ['call', 'dotcall'].includes(n.kind) &&
+    n.interior &&
+    n.children.length === 3 &&
+    isInfixCall(n) &&
+    comparisonOps.has(n.children[1].value)
+  );
 }
 function candidate(n) {
   if (isComparison(n)) return true;
   if (isBareName(n)) return n.value !== 'nothing';
   if (!n.interior && numbers.has(n.kind)) return true;
   if (n.kind === 'parens' && n.children.length === 1) return candidate(n.children[0]);
-  if (n.kind === 'string') return n.children.every(c => !c.interior && c.kind === 'String');
+  if (n.kind === 'string') return n.children.every((c) => !c.interior && c.kind === 'String');
   if (n.kind === 'char') return n.children.length === 1 && n.children[0].kind === 'Char';
-  return n.kind === 'quote' && Boolean(n.flags & 256) && n.children.length === 1 && isBareName(n.children[0]);
+  return (
+    n.kind === 'quote' &&
+    Boolean(n.flags & 256) &&
+    n.children.length === 1 &&
+    isBareName(n.children[0])
+  );
 }
 function discarded(node, source) {
   for (let child = node, p = source.getParent(child); p; child = p, p = source.getParent(p)) {
@@ -36,12 +64,28 @@ function discarded(node, source) {
   return false;
 }
 export default defineRule({
-  meta: { type: 'suggestion', schema: [{ type: 'object', properties: { checkTopLevel: { type: 'boolean' } }, additionalProperties: false }], docs: { description: 'Report simple standalone expressions whose value is definitely discarded.' }, messages: { issue: 'This standalone expression has a discarded value.', comparison: 'This comparison\'s result is discarded (did you mean `=`, or `@assert`?).' } },
+  meta: {
+    type: 'suggestion',
+    schema: [
+      {
+        type: 'object',
+        properties: { checkTopLevel: { type: 'boolean' } },
+        additionalProperties: false,
+      },
+    ],
+    docs: {
+      description: 'Report simple standalone expressions whose value is definitely discarded.',
+    },
+    messages: {
+      issue: 'This standalone expression has a discarded value.',
+      comparison: "This comparison's result is discarded (did you mean `=`, or `@assert`?).",
+    },
+  },
   create(context) {
     const source = context.sourceCode;
     const plutoNotebook = /^### A Pluto\.jl notebook ###(?:\r?\n|$)/u.test(source.text);
     function check(node) {
-      if (node.kind !== 'JuliaFile' && !node.interior || isOpaque(node, source)) return;
+      if ((node.kind !== 'JuliaFile' && !node.interior) || isOpaque(node, source)) return;
       const parent = source.getParent(node);
       let localContext = false;
       for (let p = node; p; p = source.getParent(p)) {
@@ -63,9 +107,29 @@ export default defineRule({
         // cells are display/test scaffolding; comparisons are still reported.
         if (plutoNotebook && !isComparison(value)) continue;
         // Local documentation strings are not always wrapped in a parser doc node.
-        if (value.kind === 'string' && i === 0 && ['function', '->', 'do'].includes(parent?.kind)) continue;
-        if (value.kind === 'string' && ['function', 'macro', 'struct', 'module', 'baremodule', 'const', 'global', 'local', 'macrocall', '='].includes(node.children[i + 1]?.kind)) continue;
-        if (candidate(statement) && discarded(statement, source)) context.report({ node: statement, messageId: isComparison(statement) ? 'comparison' : 'issue' });
+        if (value.kind === 'string' && i === 0 && ['function', '->', 'do'].includes(parent?.kind))
+          continue;
+        if (
+          value.kind === 'string' &&
+          [
+            'function',
+            'macro',
+            'struct',
+            'module',
+            'baremodule',
+            'const',
+            'global',
+            'local',
+            'macrocall',
+            '=',
+          ].includes(node.children[i + 1]?.kind)
+        )
+          continue;
+        if (candidate(statement) && discarded(statement, source))
+          context.report({
+            node: statement,
+            messageId: isComparison(statement) ? 'comparison' : 'issue',
+          });
       }
     }
     return { block: check, toplevel: check, JuliaFile: check };

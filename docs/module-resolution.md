@@ -19,7 +19,11 @@ Additional entry files can be configured (relative paths resolve from the Node
 process's working directory):
 
 ```js
-settings: { julia: { entryFiles: ['/project/scripts/entry.jl'] } }
+settings: {
+  julia: {
+    entryFiles: ['/project/scripts/entry.jl'];
+  }
+}
 ```
 
 Starting at each entry, the resolver follows top-level `include("file.jl")`,

@@ -1,6 +1,12 @@
 /** AST contract v1. All source ranges are half-open UTF-16 unless named byteRange. */
-export interface Position { readonly line: number; readonly column: number }
-export interface Location { readonly start: Position; readonly end: Position }
+export interface Position {
+  readonly line: number;
+  readonly column: number;
+}
+export interface Location {
+  readonly start: Position;
+  readonly end: Position;
+}
 export type Range = readonly [number, number];
 export interface JuliaFile {
   readonly type: 'JuliaFile';
@@ -27,7 +33,9 @@ export interface JuliaNode {
   readonly class: number;
 }
 export type SyntaxElement = JuliaFile | JuliaNode;
-export interface ParentLookup { getParent(node: SyntaxElement): SyntaxElement | undefined }
+export interface ParentLookup {
+  getParent(node: SyntaxElement): SyntaxElement | undefined;
+}
 export function isInfixCall(node: JuliaNode): boolean;
 export function isPrefixCall(node: JuliaNode): boolean;
 export function isPrefixOperatorCall(node: JuliaNode): boolean;

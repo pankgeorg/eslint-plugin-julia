@@ -1,5 +1,5 @@
 import { tester, plugin } from '../helpers.js';
-const invalid = code => ({ code, errors: [{ messageId: 'diagnostic' }] });
+const invalid = (code) => ({ code, errors: [{ messageId: 'diagnostic' }] });
 tester.run('no-concat-growth-in-loop', plugin.rules['no-concat-growth-in-loop'], {
   valid: [
     'function f(a,x); a=vcat(a,x); a; end',
