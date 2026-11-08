@@ -19,6 +19,7 @@ import noIdenticalBranchesRule from './rules/no-identical-branches.js';
 import noImportAssignRule from './rules/no-import-assign.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
 import noShadowedLoopVarRule from './rules/no-shadowed-loop-var.js';
+import noThrowLiteralRule from './rules/no-throw-literal.js';
 import noUnboundTypeParametersRule from './rules/no-unbound-type-parameters.js';
 import noUndefRule from './rules/no-undef.js';
 import noUndefinedExportsRule from './rules/no-undefined-exports.js';
@@ -61,6 +62,7 @@ const plugin = {
     'no-import-assign': noImportAssignRule,
     'no-self-assign': noSelfAssignRule,
     'no-shadowed-loop-var': noShadowedLoopVarRule,
+    'no-throw-literal': noThrowLiteralRule,
     'no-unbound-type-parameters': noUnboundTypeParametersRule,
     'no-undef': noUndefRule,
     'no-undefined-exports': noUndefinedExportsRule,

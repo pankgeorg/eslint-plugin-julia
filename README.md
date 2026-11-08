@@ -80,6 +80,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-import-assign](docs/rules/no-import-assign.md) | Error | None |
 | [no-self-assign](docs/rules/no-self-assign.md) | Warn | None |
 | [no-shadowed-loop-var](docs/rules/no-shadowed-loop-var.md) | Warn | None |
+| [no-throw-literal](docs/rules/no-throw-literal.md) | Off (strict: warn) | Suggestions |
 | [no-unbound-type-parameters](docs/rules/no-unbound-type-parameters.md) | Off (strict: warn) | None |
 | [no-undef](docs/rules/no-undef.md) | Off (strict: warn) | None |
 | [no-undefined-exports](docs/rules/no-undefined-exports.md) | Off (strict: warn) | None |

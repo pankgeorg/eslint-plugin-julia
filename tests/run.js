@@ -15,6 +15,7 @@ import './rules/no-fill-with-mutable.test.js';
 import './rules/no-identical-branches.test.js';
 import './rules/no-import-assign.test.js';
 import './rules/no-self-assign.test.js';
+import './rules/no-throw-literal.test.js';
 import './rules/no-unbound-type-parameters.test.js';
 import './rules/no-undef.test.js';
 import './rules/no-undefined-exports.test.js';
