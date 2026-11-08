@@ -6,6 +6,8 @@ Each measurement enables only the named rule, uses the physical file path, the c
 | --- | --- | --- | --- | --- | --- | --- |
 | no-throw-literal | 2da39f5 | Node 22 + 24: 1065 pass | 30 / 4 / 0 | 14 / 0 / 0 | string suggestion | strict-only: exception hygiene; 10 sampled corpus string throws and all 4 Pluto string throws apply, but arbitrary thrown objects are legal |
 
-| no-single-iteration-loop | this commit | Node 22 + 24: 1075 pass | 2 / 0 / 0 | 0 / 2 / 0 | none | strict-only: both findings are deliberate inference regression fixtures (inference.jl:3768,3775), so no default promotion |
+| no-single-iteration-loop | 0465880 | Node 22 + 24: 1075 pass | 2 / 0 / 0 | 0 / 2 / 0 | none | strict-only: both findings are deliberate inference regression fixtures (inference.jl:3768,3775), so no default promotion |
+
+| no-empty-literal-range | this commit | Node 22 + 24: 1090 pass | 2 / 0 / 0 | 0 / 2 / 0 | none | strict-only: both empty iterators are deliberate compiler regression fixtures (inference.jl:633,2964) |
 
 No changes to the shared scope or module-resolution implementation. `scripts/measure-rule.mjs` applies a normalized ESLint config through Linter so external files are analyzed with real paths instead of silently falling outside ESLint's configuration boundary. Rule helpers resolve module facts lazily after a syntax match; suggestions are suppressed if replacing comments.

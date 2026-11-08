@@ -75,6 +75,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-duplicate-struct-fields](docs/rules/no-duplicate-struct-fields.md) | Error | None |
 | [no-empty-block](docs/rules/no-empty-block.md) | Off (strict: warn) | None |
 | [no-empty-catch](docs/rules/no-empty-catch.md) | Off (strict: warn) | None |
+| [no-empty-literal-range](docs/rules/no-empty-literal-range.md) | Off (strict: warn) | None |
 | [no-fill-with-mutable](docs/rules/no-fill-with-mutable.md) | Warn | None |
 | [no-identical-branches](docs/rules/no-identical-branches.md) | Off (strict: warn) | None |
 | [no-import-assign](docs/rules/no-import-assign.md) | Error | None |
