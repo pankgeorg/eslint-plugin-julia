@@ -4,8 +4,8 @@ A project can ask reviewers to inspect particular APIs without treating every us
 as a Julia bug. `julia/no-restricted-calls`, `julia/no-restricted-macros` and
 `julia/no-restricted-imports` start with empty restriction lists. Enable only the
 entries that express your project's conventions. Structural conventions use ESLint
-core `no-restricted-syntax` on JuliaSyntax nodes; see `docs/restricted-syntax.md`
-for selector details. Import options are documented under `no-restricted-imports`.
+core `no-restricted-syntax` on JuliaSyntax nodes; see [restricted-syntax.md](restricted-syntax.md)
+for selector details. Import options are documented under [no-restricted-imports](rules/no-restricted-imports.md).
 
 The following complete flat config is an illustrative bundle, not a shipped preset.
 Comments name the related ReLint checks so that each policy can be considered on
@@ -146,7 +146,7 @@ const projectCalls = [
 
 These paths are placeholders requiring matching imports or known origins. The
 `RelPath` annotation boundary needs a structural selector as described in
-`docs/restricted-syntax.md`; a call rule covers constructors only. Private logging
+[restricted-syntax.md](restricted-syntax.md); a call rule covers constructors only. Private logging
 redaction and assertion contracts require project rules. Neither a name restriction
 nor a selector proves that data is safe to log. For a general TODO reminder, core
 `no-warning-comments` can express the related `TODO` check; a tracker-specific
@@ -162,5 +162,5 @@ comprehensions are matched without type inference. They express review conventio
 not complete semantic equivalence with another linter.
 
 See [no-restricted-calls](rules/no-restricted-calls.md),
-[no-restricted-macros](rules/no-restricted-macros.md), `no-restricted-imports`, and
-`docs/restricted-syntax.md` for detailed options and limitations.
+[no-restricted-macros](rules/no-restricted-macros.md), [no-restricted-imports](rules/no-restricted-imports.md), and
+[restricted-syntax.md](restricted-syntax.md) for detailed options and limitations.

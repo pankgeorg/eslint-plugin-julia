@@ -58,7 +58,7 @@ npx eslint --stdin --stdin-filename example.jl
 
 The default configuration (`recommended`: likely bugs, near-zero false positives; `strict`: everything else as warnings) and the evidence behind each rule's default: [docs/defaults.md](docs/defaults.md).
 
-Project syntax policies can use [ESLint core selectors over Julia trees](docs/restricted-syntax.md).
+Project policies (banned calls, macros, imports or syntax, in the style of ReLint.jl's checks) use the configurable `no-restricted-calls`, `no-restricted-macros` and `no-restricted-imports` rules, which ship empty, and [ESLint core `no-restricted-syntax` with selectors over Julia trees](docs/restricted-syntax.md); a worked example config is in [docs/policies.md](docs/policies.md).
 
 Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `tests/rules/<name>.test.js`, then run `node scripts/gen-registry.mjs` (it regenerates the registry in `src/index.js`, `tests/run.js` and this table).
 
@@ -71,7 +71,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-cond-assign](docs/rules/no-cond-assign.md) | Off (strict: warn) | Suggestions |
 | [no-const-reassign](docs/rules/no-const-reassign.md) | Warn | None |
 | [no-constant-condition](docs/rules/no-constant-condition.md) | Off (strict: warn) | None |
-| [no-debugger](docs/rules/no-debugger.md) | Off (strict: warn) | Suggestions |
+| [no-debugger](docs/rules/no-debugger.md) | Warn | Suggestions |
 | [no-discarded-copy-result](docs/rules/no-discarded-copy-result.md) | Warn | None |
 | [no-dupe-args](docs/rules/no-dupe-args.md) | Error | None |
 | [no-dupe-elseif](docs/rules/no-dupe-elseif.md) | Warn | None |
@@ -83,6 +83,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-empty-block](docs/rules/no-empty-block.md) | Off (strict: warn) | None |
 | [no-empty-catch](docs/rules/no-empty-catch.md) | Off (strict: warn) | None |
 | [no-empty-literal-range](docs/rules/no-empty-literal-range.md) | Off (strict: warn) | None |
+| [no-env-mutation](docs/rules/no-env-mutation.md) | Off (strict: warn) | None |
 | [no-eval-local-symbol](docs/rules/no-eval-local-symbol.md) | Off (strict: warn) | None |
 | [no-fill-with-mutable](docs/rules/no-fill-with-mutable.md) | Warn | None |
 | [no-full-slice-in-consumer](docs/rules/no-full-slice-in-consumer.md) | Off (strict: warn) | Suggestions |
@@ -99,6 +100,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-redundant-type-assertion](docs/rules/no-redundant-type-assertion.md) | Off (strict: warn) | Fix |
 | [no-redundant-union-members](docs/rules/no-redundant-union-members.md) | Off (strict: warn) | Suggestions |
 | [no-restricted-calls](docs/rules/no-restricted-calls.md) | Off (strict: warn) | None |
+| [no-restricted-imports](docs/rules/no-restricted-imports.md) | Off (strict: warn) | None |
 | [no-restricted-macros](docs/rules/no-restricted-macros.md) | Off (strict: warn) | None |
 | [no-self-assign](docs/rules/no-self-assign.md) | Warn | None |
 | [no-self-identity-comparison](docs/rules/no-self-identity-comparison.md) | Off (strict: warn) | None |
@@ -135,6 +137,8 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [prefer-parenthesized-interpolation](docs/rules/prefer-parenthesized-interpolation.md) | Off (strict: warn) | Fix + suggestions |
 | [prefer-size-dimension](docs/rules/prefer-size-dimension.md) | Off (strict: warn) | Suggestions |
 | [prefer-sized-push-buffer](docs/rules/prefer-sized-push-buffer.md) | Off (strict: warn) | Suggestions |
+| [prefer-typed-empty-array](docs/rules/prefer-typed-empty-array.md) | Off (strict: warn) | None |
+| [require-typed-global](docs/rules/require-typed-global.md) | Off (strict: warn) | None |
 | [use-isnan](docs/rules/use-isnan.md) | Error | Suggestions |
 
 Rules compare exact source spellings; Unicode normalization aliases can be missed.

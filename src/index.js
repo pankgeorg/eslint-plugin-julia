@@ -20,6 +20,7 @@ import noDuplicateStructFieldsRule from './rules/no-duplicate-struct-fields.js';
 import noEmptyBlockRule from './rules/no-empty-block.js';
 import noEmptyCatchRule from './rules/no-empty-catch.js';
 import noEmptyLiteralRangeRule from './rules/no-empty-literal-range.js';
+import noEnvMutationRule from './rules/no-env-mutation.js';
 import noEvalLocalSymbolRule from './rules/no-eval-local-symbol.js';
 import noFillWithMutableRule from './rules/no-fill-with-mutable.js';
 import noFullSliceInConsumerRule from './rules/no-full-slice-in-consumer.js';
@@ -36,6 +37,7 @@ import noReassignedCaptureRule from './rules/no-reassigned-capture.js';
 import noRedundantTypeAssertionRule from './rules/no-redundant-type-assertion.js';
 import noRedundantUnionMembersRule from './rules/no-redundant-union-members.js';
 import noRestrictedCallsRule from './rules/no-restricted-calls.js';
+import noRestrictedImportsRule from './rules/no-restricted-imports.js';
 import noRestrictedMacrosRule from './rules/no-restricted-macros.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
 import noSelfIdentityComparisonRule from './rules/no-self-identity-comparison.js';
@@ -72,6 +74,8 @@ import preferIsmissingRule from './rules/prefer-ismissing.js';
 import preferParenthesizedInterpolationRule from './rules/prefer-parenthesized-interpolation.js';
 import preferSizeDimensionRule from './rules/prefer-size-dimension.js';
 import preferSizedPushBufferRule from './rules/prefer-sized-push-buffer.js';
+import preferTypedEmptyArrayRule from './rules/prefer-typed-empty-array.js';
+import requireTypedGlobalRule from './rules/require-typed-global.js';
 import useIsnanRule from './rules/use-isnan.js';
 
 const plugin = {
@@ -97,6 +101,7 @@ const plugin = {
     'no-empty-block': noEmptyBlockRule,
     'no-empty-catch': noEmptyCatchRule,
     'no-empty-literal-range': noEmptyLiteralRangeRule,
+    'no-env-mutation': noEnvMutationRule,
     'no-eval-local-symbol': noEvalLocalSymbolRule,
     'no-fill-with-mutable': noFillWithMutableRule,
     'no-full-slice-in-consumer': noFullSliceInConsumerRule,
@@ -113,6 +118,7 @@ const plugin = {
     'no-redundant-type-assertion': noRedundantTypeAssertionRule,
     'no-redundant-union-members': noRedundantUnionMembersRule,
     'no-restricted-calls': noRestrictedCallsRule,
+    'no-restricted-imports': noRestrictedImportsRule,
     'no-restricted-macros': noRestrictedMacrosRule,
     'no-self-assign': noSelfAssignRule,
     'no-self-identity-comparison': noSelfIdentityComparisonRule,
@@ -149,6 +155,8 @@ const plugin = {
     'prefer-parenthesized-interpolation': preferParenthesizedInterpolationRule,
     'prefer-size-dimension': preferSizeDimensionRule,
     'prefer-sized-push-buffer': preferSizedPushBufferRule,
+    'prefer-typed-empty-array': preferTypedEmptyArrayRule,
+    'require-typed-global': requireTypedGlobalRule,
     'use-isnan': useIsnanRule,
   },
   configs: {},
@@ -177,10 +185,11 @@ const RECOMMENDED = {
   'no-fill-with-mutable': 'warn',
   'no-discarded-copy-result': 'warn',
   'no-duplicate-dict-keys': 'warn',
-  'no-nothing-return-conversion': 'warn'
+  'no-nothing-return-conversion': 'warn',
+  'no-debugger': 'warn'
 };
 plugin.configs.recommended = config(Object.fromEntries(Object.entries(RECOMMENDED).map(([n, level]) => [`julia/${n}`, level])));
-plugin.configs.style = config({'julia/prefer-identity-nothing': 'warn', 'julia/no-empty-catch': 'warn'});
+plugin.configs.style = config({'julia/prefer-identity-nothing': 'warn', 'julia/no-empty-catch': 'warn', 'julia/prefer-parenthesized-interpolation': 'warn'});
 // strict: recommended plus every other rule as a warning (style, policy and the scope rules that
 // need a complete environment: no-undef, no-unused-vars, …).
 plugin.configs.strict = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [`julia/${n}`, RECOMMENDED[n] ?? 'warn'])));

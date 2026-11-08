@@ -20,8 +20,9 @@ const RECOMMENDED = {
   'no-const-reassign': 'warn', 'no-self-assign': 'warn', 'no-unsafe-negation': 'warn',
   'no-unused-expressions': 'warn', 'no-fill-with-mutable': 'warn', 'no-discarded-copy-result': 'warn',
   'no-duplicate-dict-keys': 'warn', 'no-nothing-return-conversion': 'warn',
+  'no-debugger': 'warn',
 };
-const STYLE = { 'prefer-identity-nothing': 'warn', 'no-empty-catch': 'warn' };
+const STYLE = { 'prefer-identity-nothing': 'warn', 'no-empty-catch': 'warn', 'prefer-parenthesized-interpolation': 'warn' };
 
 const rules = readdirSync(new URL('src/rules/', root)).filter(f => f.endsWith('.js') && !f.endsWith('common.js'))
   .map(f => f.slice(0, -3)).sort();

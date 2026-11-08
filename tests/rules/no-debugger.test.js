@@ -4,7 +4,9 @@ const error = (output, name = 'Infiltrator.@infiltrate') => ({ messageId: 'break
 tester.run('no-debugger', plugin.rules['no-debugger'], {
   valid: [
     'import Debugger; @run task()',
-    '@run task()', '@enter task()', '@bp', '@infiltrate', '@exfiltrate',
+    '@run task()', '@enter task()', '@bp',
+    'macro infiltrate(x); x; end; @infiltrate 1',
+    'Main = Dict(); Main.@infiltrate',
     'using Infiltrator; using Debugger',
     'macro run(x); x; end; @run task()',
     'using Debugger; macro run(x); x; end; @run task()',
@@ -23,6 +25,10 @@ tester.run('no-debugger', plugin.rules['no-debugger'], {
   invalid: [
     { code: 'Infiltrator.@infiltrate\n)', languageOptions: { recover: true }, errors: [error(null)] },
     { code: 'Infiltrator.@infiltrate', errors: [error('')] },
+    { code: '@infiltrate', errors: [error('')] },
+    { code: 'f() = (@exfiltrate; 1)', errors: [error('f() = (; 1)', 'Infiltrator.@exfiltrate')] },
+    { code: 'Main.@infiltrate', errors: [error('')] },
+    { code: 'function f(x)\n    Main.Infiltrator.@infiltrate\n    x\nend', errors: [error('function f(x)\n    \n    x\nend')] },
     { code: 'using Infiltrator\n@infiltrate', errors: [error('using Infiltrator\n')] },
     { code: 'using Infiltrator\n@exfiltrate', errors: [error('using Infiltrator\n', 'Infiltrator.@exfiltrate')] },
     { code: 'using Debugger\n@run f(λ)', errors: [error('using Debugger\n', 'Debugger.@run')] },
