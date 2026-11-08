@@ -5,7 +5,7 @@ tester.run('no-use-before-define',plugin.rules['no-use-before-define'],{
 'f()=(@gensym x y; (x,y))',{"code": "f()=(x;x=1;let;eval(:x);end)", "options": [{"dynamicInitialization": "ignore-containing-scope"}]},"x=0; f()=(global x; g()=(x+=1); g())",{code:'@node f()=(x;x=1)',options:[{dynamicInitialization:'ignore-containing-scope'}]},
  '@testset "updates" begin last_position=0; function update(); position=last_position; last_position=position+1; end; end',
  '@testset for i in 1:2; x=i; f()=(x=x+1); end',
- 'Test.@testset "outer" begin x=1; @testset "inner" begin f()=(x=x+1); end; end', {"code": "f()=(x;x=1;let;eval(:x);end)", "options": [{"dynamicInitialization": "ignore-containing-scope"}]},"x=0; f()=(global x; g()=(x+=1); g())",{code:'@node f()=(x;x=1)',options:[{dynamicInitialization:'ignore-containing-scope'}]},
+ 'Test.@testset "outer" begin x=1; @testset "inner" begin f()=(x=x+1); end; end', 
 '@node function f(x)::(y); y=x; end',
 'f(xs)=[i for i in xs]', 'x=0; f()=(global x+=1)',
  'f()=(local x; @inbounds for i in 1:3; x=i; end; x)',
@@ -18,7 +18,7 @@ tester.run('no-use-before-define',plugin.rules['no-use-before-define'],{
  'quote f()=(x;x=1); end', '@unknown x', 'f()=(x=1; @show x)',
  ],invalid:[
 bad('f()=(x; @gensym x)',['x']),{"code": "function f(x)::T; T=Int; x; end", "errors": [{"messageId": "before", "data": {"name": "T"}}]},bad('function f(); println(x); x=1; end',['x']),
- bad('@testset "test" begin f()=(x; x=1); end', ['x']),{"code": "function f(x)::T; T=Int; x; end", "errors": [{"messageId": "before", "data": {"name": "T"}}]},bad('function f(); println(x); x=1; end',['x']),
+ bad('@testset "test" begin f()=(x; x=1); end', ['x']),
  bad('function f(); local x; x+1; x=2; end',['x']),
  bad('let; println(y); y=3; end',['y']),bad('f()=(x=x; x)',['x']),
  bad('f()=(🐱; 🐱=1)',['🐱']),bad('f()=(var"a b"; var"a b"=1)',['a b']),

@@ -3,8 +3,8 @@ const bad=(code,names,options)=>({code,...(options?{options:[options]}:{}),error
 tester.run('no-unused-vars',plugin.rules['no-unused-vars'],{
  valid:[
 'f()=(@gensym x y; (x,y))','f(x, spare)=x','f(x,_spare)=x','f(x)=(y=x+1; ()->y)',
-'f(widget)=(@bind x widget; x)','f(x, spare)=x','f(x,_spare)=x','f(x)=(y=x+1; ()->y)',
- '@testset "test" begin x=1; f()=(x+=1); end', 'f(x, spare)=x','f(x,_spare)=x','f(x)=(y=x+1; ()->y)',
+'f(widget)=(@bind x widget; x)',
+ '@testset "test" begin x=1; f()=(x+=1); end',
  'function f(x); g()=x; g; end', 'x=1', 'struct X; field::Int; end',
  'f(x) where T=x', 'f(x)=@show x', 'f()=(@enum X a b; a)',
  'f(x)=(y=1; y+=1; y)', 'f(x)=(y=1; @custom y)',
