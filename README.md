@@ -62,6 +62,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 
 | Rule | Recommended | Edits |
 | --- | --- | --- |
+| [no-catch-binding-reassign](docs/rules/no-catch-binding-reassign.md) | Off (strict: warn) | None |
 | [no-collapsible-if](docs/rules/no-collapsible-if.md) | Off (strict: warn) | Suggestions |
 | [no-cond-assign](docs/rules/no-cond-assign.md) | Off (strict: warn) | Suggestions |
 | [no-const-reassign](docs/rules/no-const-reassign.md) | Warn | None |
