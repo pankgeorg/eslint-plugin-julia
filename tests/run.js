@@ -3,6 +3,7 @@
 import './rules/first-rules.test.js';
 import './rules/no-collapsible-if.test.js';
 import './rules/no-collect-before-range-iteration.test.js';
+import './rules/no-concat-growth-in-loop.test.js';
 import './rules/no-cond-assign.test.js';
 import './rules/no-const-reassign.test.js';
 import './rules/no-constant-condition.test.js';

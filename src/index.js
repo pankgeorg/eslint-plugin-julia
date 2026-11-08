@@ -3,6 +3,7 @@ import { language } from './language.js';
 import { manifest } from './parser/wasm-host.js';
 import noCollapsibleIfRule from './rules/no-collapsible-if.js';
 import noCollectBeforeRangeIterationRule from './rules/no-collect-before-range-iteration.js';
+import noConcatGrowthInLoopRule from './rules/no-concat-growth-in-loop.js';
 import noCondAssignRule from './rules/no-cond-assign.js';
 import noConstReassignRule from './rules/no-const-reassign.js';
 import noConstantConditionRule from './rules/no-constant-condition.js';
@@ -49,6 +50,7 @@ const plugin = {
   rules: {
     'no-collapsible-if': noCollapsibleIfRule,
     'no-collect-before-range-iteration': noCollectBeforeRangeIterationRule,
+    'no-concat-growth-in-loop': noConcatGrowthInLoopRule,
     'no-cond-assign': noCondAssignRule,
     'no-const-reassign': noConstReassignRule,
     'no-constant-condition': noConstantConditionRule,

@@ -64,6 +64,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | --- | --- | --- |
 | [no-collapsible-if](docs/rules/no-collapsible-if.md) | Off (strict: warn) | Suggestions |
 | [no-collect-before-range-iteration](docs/rules/no-collect-before-range-iteration.md) | Off (strict: warn) | Suggestions |
+| [no-concat-growth-in-loop](docs/rules/no-concat-growth-in-loop.md) | Off (strict: warn) | None |
 | [no-cond-assign](docs/rules/no-cond-assign.md) | Off (strict: warn) | Suggestions |
 | [no-const-reassign](docs/rules/no-const-reassign.md) | Warn | None |
 | [no-constant-condition](docs/rules/no-constant-condition.md) | Off (strict: warn) | None |
