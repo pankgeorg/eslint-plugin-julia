@@ -16,6 +16,7 @@ import './rules/no-duplicate-logical-operands.test.js';
 import './rules/no-duplicate-method-signatures.test.js';
 import './rules/no-empty-block.test.js';
 import './rules/no-empty-literal-range.test.js';
+import './rules/no-env-mutation.test.js';
 import './rules/no-eval-local-symbol.test.js';
 import './rules/no-fill-with-mutable.test.js';
 import './rules/no-full-slice-in-consumer.test.js';

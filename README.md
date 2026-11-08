@@ -80,6 +80,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-empty-block](docs/rules/no-empty-block.md) | Off (strict: warn) | None |
 | [no-empty-catch](docs/rules/no-empty-catch.md) | Off (strict: warn) | None |
 | [no-empty-literal-range](docs/rules/no-empty-literal-range.md) | Off (strict: warn) | None |
+| [no-env-mutation](docs/rules/no-env-mutation.md) | Off (strict: warn) | None |
 | [no-eval-local-symbol](docs/rules/no-eval-local-symbol.md) | Off (strict: warn) | None |
 | [no-fill-with-mutable](docs/rules/no-fill-with-mutable.md) | Warn | None |
 | [no-full-slice-in-consumer](docs/rules/no-full-slice-in-consumer.md) | Off (strict: warn) | Suggestions |
