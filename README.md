@@ -96,6 +96,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-use-before-define](docs/rules/no-use-before-define.md) | Off (strict: warn) | None |
 | [parse-errors](docs/rules/parse-errors.md) | Error | None |
 | [prefer-const-global](docs/rules/prefer-const-global.md) | Off (strict: warn) | Suggestions |
+| [prefer-count-over-findall-length](docs/rules/prefer-count-over-findall-length.md) | Off (strict: warn) | Suggestions |
 | [prefer-eachindex](docs/rules/prefer-eachindex.md) | Off (strict: warn) | Suggestions |
 | [prefer-identity-nothing](docs/rules/prefer-identity-nothing.md) | Off (strict: warn) | Fix + suggestions |
 | [prefer-in](docs/rules/prefer-in.md) | Off (strict: warn) | Suggestions |
