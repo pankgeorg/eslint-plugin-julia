@@ -3,26 +3,26 @@
   "version": "0.1.0",
   "private": true,
   "description": "ESLint language plugin for Julia, using Julia's own parser (JuliaSyntax) compiled to WebAssembly",
-  "type": "module",
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin",
+    "julia",
+    "juliasyntax",
+    "linter",
+    "webassembly"
+  ],
+  "homepage": "https://github.com/pankgeorg/eslint-plugin-julia#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pankgeorg/eslint-plugin-julia.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pankgeorg/eslint-plugin-julia/issues"
+  },
   "license": "MIT",
   "author": "Panagiotis Georgakopoulos",
-  "engines": {
-    "node": "^22.23.3 || ^24.22.1"
-  },
-  "peerDependencies": {
-    "eslint": "^10.14.0"
-  },
-  "dependencies": {
-    "@eslint/plugin-kit": "^0.7.3"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@microsoft/eslint-formatter-sarif": "3.1.0",
-    "eslint": "^10.14.0",
-    "eslint-plugin-n": "^18.5.0",
-    "globals": "^17.14.0",
-    "prettier": "^3.9.10"
-  },
+  "type": "module",
   "main": "./src/index.js",
   "types": "./types/index.d.ts",
   "exports": {
@@ -44,13 +44,30 @@
     "data/",
     "types/",
     "wasm/",
-    "docs/",
-    "scripts/",
-    "README.md",
-    "LICENSE",
-    "ECOSYSTEM.md"
+    "CHANGELOG.md"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "test": "node scripts/verify-artifact.mjs && node tests/run.js"
+    "test": "node scripts/verify-artifact.mjs && node tests/run.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "smoke:pack": "node scripts/smoke-pack.mjs"
+  },
+  "peerDependencies": {
+    "eslint": "^9.39.0 || ^10.0.0"
+  },
+  "dependencies": {
+    "@eslint/plugin-kit": "^0.7.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@microsoft/eslint-formatter-sarif": "3.1.0",
+    "eslint": "^10.14.0",
+    "eslint-plugin-n": "^18.5.0",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10"
   }
 }
