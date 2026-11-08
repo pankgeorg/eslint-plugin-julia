@@ -39,6 +39,7 @@ export default defineRule({
   meta: { type: 'suggestion', schema: [{ type: 'object', properties: { checkTopLevel: { type: 'boolean' } }, additionalProperties: false }], docs: { description: 'Report simple standalone expressions whose value is definitely discarded.' }, messages: { issue: 'This standalone expression has a discarded value.', comparison: 'This comparison\'s result is discarded (did you mean `=`, or `@assert`?).' } },
   create(context) {
     const source = context.sourceCode;
+    const plutoNotebook = /^### A Pluto\.jl notebook ###(?:\r?\n|$)/u.test(source.text);
     function check(node) {
       if (node.kind !== 'JuliaFile' && !node.interior || isOpaque(node, source)) return;
       const parent = source.getParent(node);
@@ -58,6 +59,8 @@ export default defineRule({
         const statement = node.children[i];
         let value = statement;
         while (value.kind === 'parens' && value.children.length === 1) value = value.children[0];
+        // Bare reads create reactive dependencies in Pluto notebook cells.
+        if (plutoNotebook && isBareName(value)) continue;
         // Local documentation strings are not always wrapped in a parser doc node.
         if (value.kind === 'string' && i === 0 && ['function', '->', 'do'].includes(parent?.kind)) continue;
         if (value.kind === 'string' && ['function', 'macro', 'struct', 'module', 'baremodule', 'const', 'global', 'local', 'macrocall', '='].includes(node.children[i + 1]?.kind)) continue;
