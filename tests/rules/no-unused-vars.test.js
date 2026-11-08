@@ -1,7 +1,8 @@
 import { tester, plugin } from '../helpers.js';
 const bad=(code,names,options)=>({code,...(options?{options:[options]}:{}),errors:names.map(name=>({messageId:'unused',data:{name}}))});
 tester.run('no-unused-vars',plugin.rules['no-unused-vars'],{
- valid:['f(x, spare)=x','f(x,_spare)=x','f(x)=(y=x+1; ()->y)',
+ valid:[
+ '@testset "test" begin x=1; f()=(x+=1); end', 'f(x, spare)=x','f(x,_spare)=x','f(x)=(y=x+1; ()->y)',
  'function f(x); g()=x; g; end', 'x=1', 'struct X; field::Int; end',
  'f(x) where T=x', 'f(x)=@show x', 'f()=(@enum X a b; a)',
  'f(x)=(y=1; y+=1; y)', 'f(x)=(y=1; @custom y)',
@@ -11,6 +12,8 @@ tester.run('no-unused-vars',plugin.rules['no-unused-vars'],{
  {code:'f()=(x=1; eval(:x))',options:[{dynamicReads:'ignore-containing-scope'}]},
  {code:'f()=(intentional=1; nothing)',options:[{ignorePattern:'^intentional$'}]},
  ],invalid:[
+ bad('@testset "test" begin unused=1; end', ['unused']),
+ bad('@testset for i in 1:2; unused=i; end', ['unused']),
  bad('function f(x); temporary=1; x; end',['temporary']),
  bad('function f(x, spare); x; end',['spare'],{args:'all'}),
  bad('let spare=1; println("ok"); end',['spare']),

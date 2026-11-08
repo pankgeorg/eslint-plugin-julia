@@ -20,5 +20,7 @@ This is conservative initialization checking, not a control-flow graph. It skips
 reads in branches/loops/try regions, after control-flow joins or terminators, and
 captures from a different scope, and signature expressions (which have separate
 evaluation rules). Deferred closures and mutually recursive methods
-are accepted. Unresolved names belong to no-undef. Literal quoted code is data;
+are accepted. `@testset` block and loop bodies have local scopes, so a
+closure updating an initialized testset local is treated as a capture rather
+than an uninitialized function local. Unresolved names belong to no-undef. Literal quoted code is data;
 macro expansion never initializes a binding. Exact spellings only.
