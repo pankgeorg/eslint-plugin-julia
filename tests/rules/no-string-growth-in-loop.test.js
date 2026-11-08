@@ -1,5 +1,5 @@
 import { tester, plugin } from '../helpers.js';
-const invalid = code => ({ code, errors: [{ messageId: 'diagnostic' }] });
+const invalid = (code) => ({ code, errors: [{ messageId: 'diagnostic' }] });
 tester.run('no-string-growth-in-loop', plugin.rules['no-string-growth-in-loop'], {
   valid: [
     'function f(xs); p=1; for x in xs; p*=x; end; p; end',

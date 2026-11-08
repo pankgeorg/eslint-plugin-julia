@@ -1,5 +1,8 @@
 import { tester, plugin } from '../helpers.js';
-const invalid = (code, output) => ({ code, errors: [{ messageId: 'diagnostic', suggestions: [{ messageId: 'replace', output }] }] });
+const invalid = (code, output) => ({
+  code,
+  errors: [{ messageId: 'diagnostic', suggestions: [{ messageId: 'replace', output }] }],
+});
 tester.run('prefer-size-dimension', plugin.rules['prefer-size-dimension'], {
   valid: [
     'size(x)[1]=2',

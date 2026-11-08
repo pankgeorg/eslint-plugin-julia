@@ -1,6 +1,6 @@
 import { tester, plugin } from '../helpers.js';
 tester.run('no-empty-block', plugin.rules['no-empty-block'], {
-  "valid": [
+  valid: [
     'function f(); end',
     'function 🐱(α); end',
     'function f(x::T) where T; end',
@@ -10,131 +10,131 @@ tester.run('no-empty-block', plugin.rules['no-empty-block'], {
     'function +(x, y); end',
     'function NoOp(); end',
     { code: 'function f(); end', options: [{ allowComment: false }] },
-    "if ready; nothing; end",
-    "for x in items; # Deliberately exhaust the iterator.\nend",
-    "function f end",
-    "struct S; end",
-    "module M; end",
-    "begin end",
-    "try work(); catch; end",
-    "try work(); finally; end",
-    "@m if ready; end",
-    "quote for x in xs; end end",
-    "let x=1; x; end",
-    "function f(); nothing; end",
+    'if ready; nothing; end',
+    'for x in items; # Deliberately exhaust the iterator.\nend',
+    'function f end',
+    'struct S; end',
+    'module M; end',
+    'begin end',
+    'try work(); catch; end',
+    'try work(); finally; end',
+    '@m if ready; end',
+    'quote for x in xs; end end',
+    'let x=1; x; end',
+    'function f(); nothing; end',
     {
-      "code": "while ready; end",
-      "options": [
+      code: 'while ready; end',
+      options: [
         {
-          "allowEmptyWhile": true
-        }
-      ]
+          allowEmptyWhile: true,
+        },
+      ],
     },
     {
-      "code": "if ready; #= intentional =#\nend",
-      "options": [
+      code: 'if ready; #= intentional =#\nend',
+      options: [
         {
-          "allowComment": true
-        }
-      ]
-    }
+          allowComment: true,
+        },
+      ],
+    },
   ],
-  "invalid": [
+  invalid: [
     { code: 'function f(); if ready; end; end', errors: [{ messageId: 'issue' }] },
     { code: 'function f(); for x in xs; end; end', errors: [{ messageId: 'issue' }] },
     { code: 'function f(); while ready; end; end', errors: [{ messageId: 'issue' }] },
     { code: 'function f(); let; end; end', errors: [{ messageId: 'issue' }] },
     {
-      "code": "if ready; end",
-      "errors": [
+      code: 'if ready; end',
+      errors: [
         {
-          "messageId": "issue"
-        }
+          messageId: 'issue',
+        },
       ],
-      "output": null
+      output: null,
     },
     {
-      "code": "for x in items; end",
-      "errors": [
+      code: 'for x in items; end',
+      errors: [
         {
-          "messageId": "issue"
-        }
+          messageId: 'issue',
+        },
       ],
-      "output": null
+      output: null,
     },
     {
-      "code": "while ready; end",
-      "errors": [
+      code: 'while ready; end',
+      errors: [
         {
-          "messageId": "issue"
-        }
+          messageId: 'issue',
+        },
       ],
-      "output": null
+      output: null,
     },
     {
-      "code": "let; end",
-      "errors": [
+      code: 'let; end',
+      errors: [
         {
-          "messageId": "issue"
-        }
+          messageId: 'issue',
+        },
       ],
-      "output": null
+      output: null,
     },
     {
-      "code": "if ready; begin end; end",
-      "errors": [
+      code: 'if ready; begin end; end',
+      errors: [
         {
-          "messageId": "issue"
-        }
+          messageId: 'issue',
+        },
       ],
-      "output": null
+      output: null,
     },
     {
-      "code": "if ready; work(); elseif waiting; end",
-      "errors": [
+      code: 'if ready; work(); elseif waiting; end',
+      errors: [
         {
-          "messageId": "issue"
-        }
+          messageId: 'issue',
+        },
       ],
-      "output": null
+      output: null,
     },
     {
-      "code": "if ready; work(); else; end",
-      "errors": [
+      code: 'if ready; work(); else; end',
+      errors: [
         {
-          "messageId": "issue"
-        }
+          messageId: 'issue',
+        },
       ],
-      "output": null
+      output: null,
     },
     {
-      "code": "if ready; # deliberate\nend",
-      "options": [
+      code: 'if ready; # deliberate\nend',
+      options: [
         {
-          "allowComment": false
-        }
+          allowComment: false,
+        },
       ],
-      "errors": [
+      errors: [
         {
-          "messageId": "issue"
-        }
+          messageId: 'issue',
+        },
       ],
-      "output": null
+      output: null,
     },
     {
-      "code": "if a; elseif b; else; end",
-      "errors": [
+      code: 'if a; elseif b; else; end',
+      errors: [
         {
-          "messageId": "issue"
+          messageId: 'issue',
         },
         {
-          "messageId": "issue"
+          messageId: 'issue',
         },
         {
-          "messageId": "issue"
-        }
+          messageId: 'issue',
+        },
       ],
-      "output": null
-    }
-  ]
+      output: null,
+    },
+  ],
 });

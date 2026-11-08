@@ -1,16 +1,36 @@
 import { tester, plugin } from '../helpers.js';
-const bad=code=>({code,errors:[{messageId:'self'}]});
-tester.run('no-self-assign',plugin.rules['no-self-assign'],{
- valid:['x=1; let x=x; println(x); end','f(x,y)=(x=y;x)',
- 'function f(x); let x=x; x; end; end','f(x)=(x.field=x.other)',
- 'f(x,y)=((x,y)=(y,x))','f()=(x[1]=x[1])','f(x)=(x.=x)',
- 'f(x)=(x+=x)', 'f(x)=(x::Int=x)', 'f(x)=g(;x=x)',
- 'f(x)=(;x=x)','quote x=x; end','f(x)=(y=1; let y=x; y=y+1; end)',
- 'f()=(make().x=make().x)', '@cuda blocks=blocks f(x)', '@parameters x=x',
- ],invalid:[bad('function f(x); x=x; x; end'),bad('let x=1; x=x; end'),
- bad('function f(); y=2; y=y; y; end'),bad('x=1; x=x'),
- bad('f(a)=(a.b=a.b)'),bad('f(x,y)=((x,y)=(x,y))'),
- bad('f(x,y)=((x,(y,x))=(x,(y,x)))'),bad('f(🐱)=(🐱=🐱)'),
- bad('f(var"a b")=(var"a b"=var"a b")'),bad('@inline f(x)=(x=x)'),
- bad('f(a)=(a.b.c=a.b.c)'),bad('@enum X a; a=a')]
+const bad = (code) => ({ code, errors: [{ messageId: 'self' }] });
+tester.run('no-self-assign', plugin.rules['no-self-assign'], {
+  valid: [
+    'x=1; let x=x; println(x); end',
+    'f(x,y)=(x=y;x)',
+    'function f(x); let x=x; x; end; end',
+    'f(x)=(x.field=x.other)',
+    'f(x,y)=((x,y)=(y,x))',
+    'f()=(x[1]=x[1])',
+    'f(x)=(x.=x)',
+    'f(x)=(x+=x)',
+    'f(x)=(x::Int=x)',
+    'f(x)=g(;x=x)',
+    'f(x)=(;x=x)',
+    'quote x=x; end',
+    'f(x)=(y=1; let y=x; y=y+1; end)',
+    'f()=(make().x=make().x)',
+    '@cuda blocks=blocks f(x)',
+    '@parameters x=x',
+  ],
+  invalid: [
+    bad('function f(x); x=x; x; end'),
+    bad('let x=1; x=x; end'),
+    bad('function f(); y=2; y=y; y; end'),
+    bad('x=1; x=x'),
+    bad('f(a)=(a.b=a.b)'),
+    bad('f(x,y)=((x,y)=(x,y))'),
+    bad('f(x,y)=((x,(y,x))=(x,(y,x)))'),
+    bad('f(🐱)=(🐱=🐱)'),
+    bad('f(var"a b")=(var"a b"=var"a b")'),
+    bad('@inline f(x)=(x=x)'),
+    bad('f(a)=(a.b.c=a.b.c)'),
+    bad('@enum X a; a=a'),
+  ],
 });

@@ -39,8 +39,7 @@ remain zero-width. ESLint strips a leading BOM before calling the language and
 restores it when applying fixes. Direct internal parser calls retain a BOM in
 their coordinates.
 
-For `α = √2; 🐱 == nothing`, `==` has `range: [11, 13]`; ESLint's report column is
-12. The file is longer in UTF-8 bytes than in UTF-16 code units.
+For `α = √2; 🐱 == nothing`, `==` has `range: [11, 13]`; ESLint's report column is 12. The file is longer in UTF-8 bytes than in UTF-16 code units.
 
 SourceCode extends plugin-kit's TextSourceCodeBase, exposing `text`, `lines`,
 `ast`, text/location conversion methods, `getAncestors`, and iterative traversal.

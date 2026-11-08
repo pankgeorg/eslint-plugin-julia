@@ -1,71 +1,71 @@
 import { tester, plugin } from '../helpers.js';
-tester.run("no-throw-literal", plugin.rules["no-throw-literal"], {
-  "valid": [
-    "throw(ArgumentError(\"bad\"))",
-    "f(throw)=throw(42)",
-    "f(nothing)=throw(nothing)",
-    "@m throw(42)",
-    "quote throw(42); end",
-    "throw(\"value: $x\")",
-    "f(x)=throw(x)"
+tester.run('no-throw-literal', plugin.rules['no-throw-literal'], {
+  valid: [
+    'throw(ArgumentError("bad"))',
+    'f(throw)=throw(42)',
+    'f(nothing)=throw(nothing)',
+    '@m throw(42)',
+    'quote throw(42); end',
+    'throw("value: $x")',
+    'f(x)=throw(x)',
   ],
-  "invalid": [
+  invalid: [
     {
-      "code": "throw(\"α\")",
-      "errors": [
+      code: 'throw("α")',
+      errors: [
         {
-          "messageId": "issue",
-          "suggestions": [
+          messageId: 'issue',
+          suggestions: [
             {
-              "messageId": "replace",
-              "data": {
-                "message": "Use Base.error(\"α\")."
+              messageId: 'replace',
+              data: {
+                message: 'Use Base.error("α").',
               },
-              "output": "Base.error(\"α\")"
-            }
-          ]
-        }
-      ]
+              output: 'Base.error("α")',
+            },
+          ],
+        },
+      ],
     },
     {
-      "code": "throw(42)",
-      "errors": [
+      code: 'throw(42)',
+      errors: [
         {
-          "messageId": "issue"
-        }
-      ]
+          messageId: 'issue',
+        },
+      ],
     },
     {
-      "code": "throw(nothing)",
-      "errors": [
+      code: 'throw(nothing)',
+      errors: [
         {
-          "messageId": "issue"
-        }
-      ]
+          messageId: 'issue',
+        },
+      ],
     },
     {
-      "code": "throw(true)",
-      "errors": [
+      code: 'throw(true)',
+      errors: [
         {
-          "messageId": "issue"
-        }
-      ]
+          messageId: 'issue',
+        },
+      ],
     },
     {
-      "code": "throw('α')",
-      "errors": [
+      code: "throw('α')",
+      errors: [
         {
-          "messageId": "issue"
-        }
-      ]
+          messageId: 'issue',
+        },
+      ],
     },
     {
-      "code": "Core.throw(missing)",
-      "errors": [
+      code: 'Core.throw(missing)',
+      errors: [
         {
-          "messageId": "issue"
-        }
-      ]
-    }
-  ]
+          messageId: 'issue',
+        },
+      ],
+    },
+  ],
 });

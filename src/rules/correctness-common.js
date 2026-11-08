@@ -7,25 +7,50 @@ export { strip, nodes, ordinary, text, span, binary, baseAvailable } from './idi
 
 // These checks need the physical file and entry-file settings for module facts.
 export function checkRule(description, create, suggestions = false) {
-  return defineRule({ meta: { type: 'problem', docs: { description }, schema: [],
-    hasSuggestions: suggestions,
-    messages: { issue: '{{message}}', replace: '{{message}}' } },
+  return defineRule({
+    meta: {
+      type: 'problem',
+      docs: { description },
+      schema: [],
+      hasSuggestions: suggestions,
+      messages: { issue: '{{message}}', replace: '{{message}}' },
+    },
     create(context) {
       let manager;
-      const lazy = new Proxy({}, { get(_, key) {
-        manager ??= getScopeManager(context.sourceCode, context);
-        const value = manager[key];
-        return typeof value === 'function' ? value.bind(manager) : value;
-      } });
+      const lazy = new Proxy(
+        {},
+        {
+          get(_, key) {
+            manager ??= getScopeManager(context.sourceCode, context);
+            const value = manager[key];
+            return typeof value === 'function' ? value.bind(manager) : value;
+          },
+        },
+      );
       return create(context, lazy, context.sourceCode);
-    } });
+    },
+  });
 }
 export function report(context, node, message, replacement) {
   const source = context.sourceCode;
-  const comments = source.comments.some(c => c.range[0] >= node.range[0] && c.range[1] <= node.range[1]);
-  context.report({ node, messageId: 'issue', data: { message },
-    ...(replacement && !comments && { suggest: [{ messageId: 'replace', data: { message: `Use ${replacement}.` },
-      fix: fixer => fixer.replaceTextRange(span(source, node), replacement) }] }) });
+  const comments = source.comments.some(
+    (c) => c.range[0] >= node.range[0] && c.range[1] <= node.range[1],
+  );
+  context.report({
+    node,
+    messageId: 'issue',
+    data: { message },
+    ...(replacement &&
+      !comments && {
+        suggest: [
+          {
+            messageId: 'replace',
+            data: { message: `Use ${replacement}.` },
+            fix: (fixer) => fixer.replaceTextRange(span(source, node), replacement),
+          },
+        ],
+      }),
+  });
 }
 export function smallInteger(node) {
   while (node?.kind === 'parens' && node.children.length === 1) node = node.children[0];
@@ -37,10 +62,20 @@ export function statements(node) {
   return ['block', 'toplevel'].includes(node.kind) ? node.children.flatMap(statements) : [node];
 }
 export function localSymbol(node, at, m) {
-  if (node?.kind !== 'quote' || node.children.length !== 1 || node.children[0].kind !== 'Identifier') return null;
-  const name = identifierName(node.children[0]), scope = m.scopeFor(at);
+  if (
+    node?.kind !== 'quote' ||
+    node.children.length !== 1 ||
+    node.children[0].kind !== 'Identifier'
+  )
+    return null;
+  const name = identifierName(node.children[0]),
+    scope = m.scopeFor(at);
   const binding = scope && m.lookup(name, scope);
-  return binding && !['builtin', 'type-parameter'].includes(binding.kind) && binding.scope.kind !== 'module' ? binding : null;
+  return binding &&
+    !['builtin', 'type-parameter'].includes(binding.kind) &&
+    binding.scope.kind !== 'module'
+    ? binding
+    : null;
 }
 
 // Match the spelling before requesting potentially expensive module facts.
