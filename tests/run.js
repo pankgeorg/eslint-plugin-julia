@@ -8,6 +8,7 @@ import './rules/no-constant-condition.test.js';
 import './rules/no-discarded-copy-result.test.js';
 import './rules/no-dupe-args.test.js';
 import './rules/no-dupe-elseif.test.js';
+import './rules/no-duplicate-dict-keys.test.js';
 import './rules/no-duplicate-logical-operands.test.js';
 import './rules/no-duplicate-method-signatures.test.js';
 import './rules/no-empty-block.test.js';

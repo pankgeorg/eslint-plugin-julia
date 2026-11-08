@@ -69,6 +69,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-discarded-copy-result](docs/rules/no-discarded-copy-result.md) | Warn | None |
 | [no-dupe-args](docs/rules/no-dupe-args.md) | Error | None |
 | [no-dupe-elseif](docs/rules/no-dupe-elseif.md) | Warn | None |
+| [no-duplicate-dict-keys](docs/rules/no-duplicate-dict-keys.md) | Off (strict: warn) | None |
 | [no-duplicate-keyword-arguments](docs/rules/no-duplicate-keyword-arguments.md) | Error | None |
 | [no-duplicate-logical-operands](docs/rules/no-duplicate-logical-operands.md) | Warn | Suggestions |
 | [no-duplicate-method-signatures](docs/rules/no-duplicate-method-signatures.md) | Off (strict: warn) | None |

@@ -8,6 +8,7 @@ import noConstantConditionRule from './rules/no-constant-condition.js';
 import noDiscardedCopyResultRule from './rules/no-discarded-copy-result.js';
 import noDupeArgsRule from './rules/no-dupe-args.js';
 import noDupeElseifRule from './rules/no-dupe-elseif.js';
+import noDuplicateDictKeysRule from './rules/no-duplicate-dict-keys.js';
 import noDuplicateKeywordArgumentsRule from './rules/no-duplicate-keyword-arguments.js';
 import noDuplicateLogicalOperandsRule from './rules/no-duplicate-logical-operands.js';
 import noDuplicateMethodSignaturesRule from './rules/no-duplicate-method-signatures.js';
@@ -50,6 +51,7 @@ const plugin = {
     'no-discarded-copy-result': noDiscardedCopyResultRule,
     'no-dupe-args': noDupeArgsRule,
     'no-dupe-elseif': noDupeElseifRule,
+    'no-duplicate-dict-keys': noDuplicateDictKeysRule,
     'no-duplicate-keyword-arguments': noDuplicateKeywordArgumentsRule,
     'no-duplicate-logical-operands': noDuplicateLogicalOperandsRule,
     'no-duplicate-method-signatures': noDuplicateMethodSignaturesRule,
