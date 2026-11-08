@@ -9,7 +9,8 @@ statements may be Literate or notebook outputs. True enables those checks too;
 the final file/module expression is still preserved.
 
 In Pluto notebooks whose first line is exactly `### A Pluto.jl notebook ###`,
-bare identifiers (including parenthesized identifiers) are accepted everywhere,
+bare identifiers (including parenthesized identifiers) and bare literals are accepted
+everywhere (cells use them for reactivity and display scaffolding; comparisons are still reported),
 even with `checkTopLevel: true`. A read such as `let; trigger; html"..." end`
 creates a reactive dependency. LF and CRLF headers are recognized. Discarded
 comparisons and other literal values remain checked; ordinary Julia files keep

@@ -2,26 +2,47 @@
 import { language } from './language.js';
 import { manifest } from './parser/wasm-host.js';
 import noCollapsibleIfRule from './rules/no-collapsible-if.js';
+import noCollectBeforeRangeIterationRule from './rules/no-collect-before-range-iteration.js';
+import noCompareNegativeZeroRule from './rules/no-compare-negative-zero.js';
+import noConcatGrowthInLoopRule from './rules/no-concat-growth-in-loop.js';
 import noCondAssignRule from './rules/no-cond-assign.js';
 import noConstReassignRule from './rules/no-const-reassign.js';
 import noConstantConditionRule from './rules/no-constant-condition.js';
 import noDiscardedCopyResultRule from './rules/no-discarded-copy-result.js';
 import noDupeArgsRule from './rules/no-dupe-args.js';
 import noDupeElseifRule from './rules/no-dupe-elseif.js';
+import noDuplicateDictKeysRule from './rules/no-duplicate-dict-keys.js';
 import noDuplicateKeywordArgumentsRule from './rules/no-duplicate-keyword-arguments.js';
 import noDuplicateLogicalOperandsRule from './rules/no-duplicate-logical-operands.js';
 import noDuplicateMethodSignaturesRule from './rules/no-duplicate-method-signatures.js';
 import noDuplicateStructFieldsRule from './rules/no-duplicate-struct-fields.js';
 import noEmptyBlockRule from './rules/no-empty-block.js';
 import noEmptyCatchRule from './rules/no-empty-catch.js';
+import noEmptyLiteralRangeRule from './rules/no-empty-literal-range.js';
+import noEvalLocalSymbolRule from './rules/no-eval-local-symbol.js';
 import noFillWithMutableRule from './rules/no-fill-with-mutable.js';
+import noFullSliceInConsumerRule from './rules/no-full-slice-in-consumer.js';
 import noIdenticalBranchesRule from './rules/no-identical-branches.js';
 import noImportAssignRule from './rules/no-import-assign.js';
+import noImpossibleLengthComparisonRule from './rules/no-impossible-length-comparison.js';
+import noInvalidForeignCallSignatureRule from './rules/no-invalid-foreign-call-signature.js';
+import noIsdefinedLocalCallRule from './rules/no-isdefined-local-call.js';
+import noLossOfFloatIntegerPrecisionRule from './rules/no-loss-of-float-integer-precision.js';
+import noNothingReturnConversionRule from './rules/no-nothing-return-conversion.js';
+import noObviousTypePiracyRule from './rules/no-obvious-type-piracy.js';
+import noOverwrittenLiteralIndexRule from './rules/no-overwritten-literal-index.js';
+import noRedundantTypeAssertionRule from './rules/no-redundant-type-assertion.js';
+import noRedundantUnionMembersRule from './rules/no-redundant-union-members.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
+import noSelfIdentityComparisonRule from './rules/no-self-identity-comparison.js';
 import noShadowedLoopVarRule from './rules/no-shadowed-loop-var.js';
+import noSingleIterationLoopRule from './rules/no-single-iteration-loop.js';
+import noStringGrowthInLoopRule from './rules/no-string-growth-in-loop.js';
+import noThrowLiteralRule from './rules/no-throw-literal.js';
 import noUnboundTypeParametersRule from './rules/no-unbound-type-parameters.js';
 import noUndefRule from './rules/no-undef.js';
 import noUndefinedExportsRule from './rules/no-undefined-exports.js';
+import noUninitializedRefReadRule from './rules/no-uninitialized-ref-read.js';
 import noUnreachableRule from './rules/no-unreachable.js';
 import noUnsafeFinallyRule from './rules/no-unsafe-finally.js';
 import noUnsafeNegationRule from './rules/no-unsafe-negation.js';
@@ -29,14 +50,22 @@ import noUnusedExpressionsRule from './rules/no-unused-expressions.js';
 import noUnusedTypeParametersRule from './rules/no-unused-type-parameters.js';
 import noUnusedVarsRule from './rules/no-unused-vars.js';
 import noUseBeforeDefineRule from './rules/no-use-before-define.js';
+import noUselessAssignmentRule from './rules/no-useless-assignment.js';
+import noUselessCatchRule from './rules/no-useless-catch.js';
 import parseErrorsRule from './rules/parse-errors.js';
+import preferAnyRule from './rules/prefer-any.js';
 import preferConstGlobalRule from './rules/prefer-const-global.js';
+import preferCountOverFindallLengthRule from './rules/prefer-count-over-findall-length.js';
 import preferEachindexRule from './rules/prefer-eachindex.js';
+import preferExtremeOverSortRule from './rules/prefer-extreme-over-sort.js';
+import preferGeneratorSumRule from './rules/prefer-generator-sum.js';
 import preferIdentityNothingRule from './rules/prefer-identity-nothing.js';
 import preferInRule from './rules/prefer-in.js';
 import preferIsaRule from './rules/prefer-isa.js';
 import preferIsemptyRule from './rules/prefer-isempty.js';
 import preferIsmissingRule from './rules/prefer-ismissing.js';
+import preferSizeDimensionRule from './rules/prefer-size-dimension.js';
+import preferSizedPushBufferRule from './rules/prefer-sized-push-buffer.js';
 import useIsnanRule from './rules/use-isnan.js';
 
 const plugin = {
@@ -44,26 +73,47 @@ const plugin = {
   languages: { julia: language },
   rules: {
     'no-collapsible-if': noCollapsibleIfRule,
+    'no-collect-before-range-iteration': noCollectBeforeRangeIterationRule,
+    'no-compare-negative-zero': noCompareNegativeZeroRule,
+    'no-concat-growth-in-loop': noConcatGrowthInLoopRule,
     'no-cond-assign': noCondAssignRule,
     'no-const-reassign': noConstReassignRule,
     'no-constant-condition': noConstantConditionRule,
     'no-discarded-copy-result': noDiscardedCopyResultRule,
     'no-dupe-args': noDupeArgsRule,
     'no-dupe-elseif': noDupeElseifRule,
+    'no-duplicate-dict-keys': noDuplicateDictKeysRule,
     'no-duplicate-keyword-arguments': noDuplicateKeywordArgumentsRule,
     'no-duplicate-logical-operands': noDuplicateLogicalOperandsRule,
     'no-duplicate-method-signatures': noDuplicateMethodSignaturesRule,
     'no-duplicate-struct-fields': noDuplicateStructFieldsRule,
     'no-empty-block': noEmptyBlockRule,
     'no-empty-catch': noEmptyCatchRule,
+    'no-empty-literal-range': noEmptyLiteralRangeRule,
+    'no-eval-local-symbol': noEvalLocalSymbolRule,
     'no-fill-with-mutable': noFillWithMutableRule,
+    'no-full-slice-in-consumer': noFullSliceInConsumerRule,
     'no-identical-branches': noIdenticalBranchesRule,
     'no-import-assign': noImportAssignRule,
+    'no-impossible-length-comparison': noImpossibleLengthComparisonRule,
+    'no-invalid-foreign-call-signature': noInvalidForeignCallSignatureRule,
+    'no-isdefined-local-call': noIsdefinedLocalCallRule,
+    'no-loss-of-float-integer-precision': noLossOfFloatIntegerPrecisionRule,
+    'no-nothing-return-conversion': noNothingReturnConversionRule,
+    'no-obvious-type-piracy': noObviousTypePiracyRule,
+    'no-overwritten-literal-index': noOverwrittenLiteralIndexRule,
+    'no-redundant-type-assertion': noRedundantTypeAssertionRule,
+    'no-redundant-union-members': noRedundantUnionMembersRule,
     'no-self-assign': noSelfAssignRule,
+    'no-self-identity-comparison': noSelfIdentityComparisonRule,
     'no-shadowed-loop-var': noShadowedLoopVarRule,
+    'no-single-iteration-loop': noSingleIterationLoopRule,
+    'no-string-growth-in-loop': noStringGrowthInLoopRule,
+    'no-throw-literal': noThrowLiteralRule,
     'no-unbound-type-parameters': noUnboundTypeParametersRule,
     'no-undef': noUndefRule,
     'no-undefined-exports': noUndefinedExportsRule,
+    'no-uninitialized-ref-read': noUninitializedRefReadRule,
     'no-unreachable': noUnreachableRule,
     'no-unsafe-finally': noUnsafeFinallyRule,
     'no-unsafe-negation': noUnsafeNegationRule,
@@ -71,22 +121,57 @@ const plugin = {
     'no-unused-type-parameters': noUnusedTypeParametersRule,
     'no-unused-vars': noUnusedVarsRule,
     'no-use-before-define': noUseBeforeDefineRule,
+    'no-useless-assignment': noUselessAssignmentRule,
+    'no-useless-catch': noUselessCatchRule,
     'parse-errors': parseErrorsRule,
+    'prefer-any': preferAnyRule,
     'prefer-const-global': preferConstGlobalRule,
+    'prefer-count-over-findall-length': preferCountOverFindallLengthRule,
     'prefer-eachindex': preferEachindexRule,
+    'prefer-extreme-over-sort': preferExtremeOverSortRule,
+    'prefer-generator-sum': preferGeneratorSumRule,
     'prefer-identity-nothing': preferIdentityNothingRule,
     'prefer-in': preferInRule,
     'prefer-isa': preferIsaRule,
     'prefer-isempty': preferIsemptyRule,
     'prefer-ismissing': preferIsmissingRule,
+    'prefer-size-dimension': preferSizeDimensionRule,
+    'prefer-sized-push-buffer': preferSizedPushBufferRule,
     'use-isnan': useIsnanRule,
   },
   configs: {},
 };
 const config = rules => ({ files: ['**/*.jl'], plugins: { julia: plugin }, language: 'julia/julia', rules });
-const RECOMMENDED = ['parse-errors', 'no-duplicate-struct-fields', 'no-duplicate-keyword-arguments', 'no-shadowed-loop-var', 'no-unreachable', 'no-unsafe-finally', 'no-dupe-args'];
-plugin.configs.recommended = config(Object.fromEntries(RECOMMENDED.map(n => [`julia/${n}`, 'error'])));
+const RECOMMENDED = {
+  'parse-errors': 'error',
+  'no-duplicate-struct-fields': 'error',
+  'no-duplicate-keyword-arguments': 'error',
+  'no-dupe-args': 'error',
+  'no-unreachable': 'error',
+  'no-unsafe-finally': 'error',
+  'no-import-assign': 'error',
+  'use-isnan': 'error',
+  'prefer-ismissing': 'error',
+  'no-isdefined-local-call': 'error',
+  'no-invalid-foreign-call-signature': 'error',
+  'no-uninitialized-ref-read': 'error',
+  'no-shadowed-loop-var': 'warn',
+  'no-dupe-elseif': 'warn',
+  'no-duplicate-logical-operands': 'warn',
+  'no-const-reassign': 'warn',
+  'no-self-assign': 'warn',
+  'no-unsafe-negation': 'warn',
+  'no-unused-expressions': 'warn',
+  'no-fill-with-mutable': 'warn',
+  'no-discarded-copy-result': 'warn',
+  'no-duplicate-dict-keys': 'warn',
+  'no-nothing-return-conversion': 'warn'
+};
+plugin.configs.recommended = config(Object.fromEntries(Object.entries(RECOMMENDED).map(([n, level]) => [`julia/${n}`, level])));
 plugin.configs.style = config({'julia/prefer-identity-nothing': 'warn', 'julia/no-empty-catch': 'warn'});
+// strict: recommended plus every other rule as a warning (style, policy and the scope rules that
+// need a complete environment: no-undef, no-unused-vars, …).
+plugin.configs.strict = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [`julia/${n}`, RECOMMENDED[n] ?? 'warn'])));
 plugin.configs.all = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [`julia/${n}`, 'error'])));
 export default plugin;
 export { JuliaSourceCode } from './source-code.js';

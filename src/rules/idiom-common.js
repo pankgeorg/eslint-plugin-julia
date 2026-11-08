@@ -42,7 +42,7 @@ export function rule(description, properties, create, hasSuggestions = true) {
   return defineRule({ meta: { type: 'suggestion', hasSuggestions, docs: { description },
     schema: [{ type: 'object', properties, additionalProperties: false }],
     messages: { diagnostic: '{{message}}', replace: '{{message}}' } },
-    create(context) { return create(context, getScopeManager(context.sourceCode), context.sourceCode, context.options[0] ?? {}); } });
+    create(context) { return create(context, getScopeManager(context.sourceCode, context), context.sourceCode, context.options[0] ?? {}); } });
 }
 export function integer(node) {
   node = strip(node);
