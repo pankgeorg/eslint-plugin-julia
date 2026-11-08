@@ -79,6 +79,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-fill-with-mutable](docs/rules/no-fill-with-mutable.md) | Warn | None |
 | [no-identical-branches](docs/rules/no-identical-branches.md) | Off (strict: warn) | None |
 | [no-import-assign](docs/rules/no-import-assign.md) | Error | None |
+| [no-invalid-foreign-call-signature](docs/rules/no-invalid-foreign-call-signature.md) | Off (strict: warn) | None |
 | [no-isdefined-local-call](docs/rules/no-isdefined-local-call.md) | Off (strict: warn) | None |
 | [no-nothing-return-conversion](docs/rules/no-nothing-return-conversion.md) | Off (strict: warn) | None |
 | [no-overwritten-literal-index](docs/rules/no-overwritten-literal-index.md) | Off (strict: warn) | None |

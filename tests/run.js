@@ -15,6 +15,7 @@ import './rules/no-empty-literal-range.test.js';
 import './rules/no-fill-with-mutable.test.js';
 import './rules/no-identical-branches.test.js';
 import './rules/no-import-assign.test.js';
+import './rules/no-invalid-foreign-call-signature.test.js';
 import './rules/no-isdefined-local-call.test.js';
 import './rules/no-nothing-return-conversion.test.js';
 import './rules/no-overwritten-literal-index.test.js';
