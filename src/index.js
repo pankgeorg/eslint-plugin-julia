@@ -37,6 +37,7 @@ import parseErrorsRule from './rules/parse-errors.js';
 import preferConstGlobalRule from './rules/prefer-const-global.js';
 import preferCountOverFindallLengthRule from './rules/prefer-count-over-findall-length.js';
 import preferEachindexRule from './rules/prefer-eachindex.js';
+import preferGeneratorSumRule from './rules/prefer-generator-sum.js';
 import preferIdentityNothingRule from './rules/prefer-identity-nothing.js';
 import preferInRule from './rules/prefer-in.js';
 import preferIsaRule from './rules/prefer-isa.js';
@@ -85,6 +86,7 @@ const plugin = {
     'prefer-const-global': preferConstGlobalRule,
     'prefer-count-over-findall-length': preferCountOverFindallLengthRule,
     'prefer-eachindex': preferEachindexRule,
+    'prefer-generator-sum': preferGeneratorSumRule,
     'prefer-identity-nothing': preferIdentityNothingRule,
     'prefer-in': preferInRule,
     'prefer-isa': preferIsaRule,
