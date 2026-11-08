@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
+import { applyModuleResolution } from './module-resolution.js';
 import { isInfixCall } from './parser/flags.js';
 
 const inventory = JSON.parse(readFileSync(new URL('../data/base-core-exports.json', import.meta.url)));
 const core = new Set([...inventory.Core, 'ccall']), base = new Set(inventory.Base);
 const builtin = new Map([...base, ...core, 'include', 'eval'].map(name => [name,
   { name, kind: 'builtin', builtin: core.has(name) ? 'Core' : 'Base', definitions: [], references: [], writes: [] }]));
-const cache = new WeakMap(), owners = new WeakMap();
+const cache = new WeakMap(), localCache = new WeakMap(), owners = new WeakMap();
 export const identifierName = node => node?.kind === 'Identifier' ? node.value
   : node?.kind === 'var' ? node.children[0]?.value
   : node?.kind === 'macro_name' ? `@${node.children[0]?.value}` : null;
@@ -19,15 +20,24 @@ export function bindingNames(node) {
   if (node.kind === '::' && node.children.length === 2) return bindingNames(node.children[0]);
   return [];
 }
-export function getScopeManager(sourceCode) {
-  if (!cache.has(sourceCode)) cache.set(sourceCode, analyze(sourceCode));
-  return cache.get(sourceCode);
+// Resolution context is the ESLint rule context (physicalFilename + settings).
+export function getScopeManager(sourceCode, context = {}) {
+  const key = JSON.stringify([context.physicalFilename, context.settings?.julia?.entryFiles, process.env.JULIA_DEPOT_PATH]);
+  if (!cache.has(sourceCode)) cache.set(sourceCode, new Map());
+  const managers = cache.get(sourceCode);
+  if (!managers.has(key)) managers.set(key, analyze(sourceCode, context));
+  return managers.get(key);
+}
+// Internal, filesystem-free pass used to extract facts from dependency syntax trees.
+export function getLocalScopeManager(sourceCode) {
+  if (!localCache.has(sourceCode)) localCache.set(sourceCode, analyze(sourceCode, null));
+  return localCache.get(sourceCode);
 }
 export const resolve = node => owners.get(node)?.resolve(node) ?? null;
 export const isReadReference = node => owners.get(node)?.referenceFor(node)?.read === true;
 export const isUnshadowedBuiltin = (node, name) => owners.get(node)?.isUnshadowedBuiltin(node, name) ?? false;
 
-function analyze(source) {
+function analyze(source, context) {
   const scopes = [], references = [], definitions = [], nodeScopes = new WeakMap(), nodeReferences = new WeakMap();
   const nodeDefinitions = new WeakMap(), functions = [], exports = [], imports = [];
   function scope(kind, node, parent, extra = {}) {
@@ -100,6 +110,10 @@ function analyze(source) {
     }
     if (sig.kind === 'parens' && sig.children.length === 1) return signature(sig.children[0], s, outer, fn);
     let args;
+    if (fn.node.kind === 'function' && identifierName(sig) !== null) {
+      define(sig.kind === 'var' ? sig.children[0] : sig, outer, 'function', { assignment: fn.node });
+      return;
+    }
     if (sig.kind === 'call') {
       let head = sig.children[isInfixCall(sig) ? 1 : 0];
       if (head?.kind === 'curly') { head.children.slice(1).forEach(n => visit(n, signatureScope(s))); head = head.children[0]; }
@@ -157,7 +171,7 @@ function analyze(source) {
       for (const p of paths) {
         const target = p.kind === 'as' ? p.children[1] : p.children.at(-1);
         if (!target) continue;
-        const d = define(target, s, 'import', { force: true, moduleName, imported: source.getText(p), assignment: node });
+        const d = define(target, s, 'import', { force: true, moduleName, named, importKind: node.kind, imported: source.getText(p), assignment: node });
         if (d) imports.push(d);
       }
     }
@@ -176,6 +190,8 @@ function analyze(source) {
       case 'quote': case 'inert': quoted(node, s, 1); return;
       case 'macro_name': return;
       case 'macrocall': {
+        // The argument asks whether a binding exists; it does not read its value.
+        if (identifierName(c[0]) === '@isdefined') return;
         s.dynamic = true;
         if (c[0]?.kind === '.') visit(c[0].children[0], s.module); // compile-time namespace lookup; never consumes a runtime local
         const macroName = c[0]?.kind === '.' ? identifierName(c[0].children[1]) : identifierName(c[0]);
@@ -394,6 +410,10 @@ function analyze(source) {
       d.binding = b; b.definitions.push(d); b.constant ||= Boolean(d.constant);
       if (d.initialized) b.writes.push(d);
     }
+  }
+  if (context) {
+    applyModuleResolution(manager, source, context);
+    for (const record of [...definitions, ...references]) owners.set(record.node, manager);
   }
   for (const r of references) {
     const declaration = r.scope.declarations.get(r.name);

@@ -3,7 +3,7 @@
 Experimental v0.1 ESLint language plugin for Julia. It runs Julia 1.13.2's
 JuliaSyntax parser as bundled WebAssembly, without a Julia installation. It uses
 ESLint's native language API and Julia node kinds, with six syntax-based rules.
-It includes an optional single-file syntactic scope analyzer; it does not provide
+It includes an optional syntactic scope analyzer with [module resolution](docs/module-resolution.md); it does not provide
 Julia inference or JavaScript core rules.
 
 Requires ESLint 10.14+ within major 10 and Node 22.23.3+ within major 22, or
@@ -67,7 +67,7 @@ npx eslint --stdin --stdin-filename example.jl
 
 Rules compare exact source spellings; Unicode normalization aliases can be missed.
 Macros and quoted code are excluded from the five non-parser rules. Rules cannot
-predict macro expansion, dynamic splats, dispatch, or definitions in other files.
+predict macro expansion, dynamic splats, dispatch, or dynamic definitions. The scope analyzer resolves literal includes and known module exports.
 
 ## Syntax errors and directives
 

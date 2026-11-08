@@ -78,13 +78,13 @@ comments with trailing whitespace trimmed. The identity rewrite intentionally
 changes the operator and is tested for exactly that delta; it is not claimed to
 preserve Julia semantics when equality is overloaded.
 
-The optional `eslint-plugin-julia/scope` entry point exposes `getScopeManager(sourceCode)`
+The optional `eslint-plugin-julia/scope` entry point exposes `getScopeManager(sourceCode, context)`
 (cached by SourceCode identity), `resolve(identifierNode)`, `isReadReference(node)` and
 `isUnshadowedBuiltin(node, name)`. Call `getScopeManager` before standalone helpers.
 Managers expose `scopes`, `definitions`, `references`, `functions`, `imports`, `exports`,
 `scopeFor`, `definitionFor`, `referenceFor`, `lookup`, and the same helpers. Binding
 objects carry declaration, write and resolved-read records. This is a syntactic,
-single-file model, not Julia lowering or inference.
+syntactic model with [module resolution](module-resolution.md), not Julia lowering or inference.
 
 All bindings are collected before resolving reads. Nested local assignments reuse
 an enclosing local; explicit local/argument/let/iteration/catch/type-parameter
@@ -96,8 +96,10 @@ Exact `var"..."` contents are supported without decoding escape sequences or Uni
 normalization. Quotes are data except interpolation at the matching quote depth.
 Macro names are excluded; written arguments can be reads and written ordinary Julia
 constructs can bind names, but expansion never supplies bindings. Opaque macro
-operands are marked for diagnostic rules to suppress. Includes/eval and bare using
-are recorded as dynamic information; they never invent definitions. The Base/Core
+operands are marked for diagnostic rules to suppress. Literal includes and resolvable bare using/import statements add module members.
+Unresolved wildcard modules remain in the owning scope's `bareUsing`; eval and
+nonliteral includes never invent definitions. Pass the ESLint rule context for
+reverse include discovery and settings.julia.entryFiles. The Base/Core
 inventory is pinned to Julia 1.13.2. Rules document their own uncertainty policies.
 
 Direct assignment operands of unknown macros are treated as DSL keyword operands,
