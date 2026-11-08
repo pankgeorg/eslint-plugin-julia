@@ -14,6 +14,8 @@ Each measurement enables only the named rule, uses the physical file path, the c
 
 | no-overwritten-literal-index | a4394df | Node 22 + 24: 1124 pass | 0 / 0 / 0 | 0 / 0 / 0 (no findings) | none | strict-only: narrow fresh-vector correctness pattern passes targeted capture/escape tests, but no observed corpus yield |
 
-| no-isdefined-local-call | this commit | Node 22 + 24: 1139 pass | 0 / 0 / 0 | 0 / 0 / 0 (no findings) | none | error: resolved one-argument Core API calls have invalid arity; tests establish local-symbol and shadowing boundaries, with no corpus counterexamples |
+| no-isdefined-local-call | e0d4b0c | Node 22 + 24: 1139 pass | 0 / 0 / 0 | 0 / 0 / 0 (no findings) | none | error: resolved one-argument Core API calls have invalid arity; tests establish local-symbol and shadowing boundaries, with no corpus counterexamples |
+
+| no-nothing-return-conversion | this commit | Node 22 + 24: 1166 pass | 0 / 0 / 0 | initial 0 / 2 / 0; both excluded | none | warn: stock builtin conversion fails on modeled nothing paths; narrowed after realdomains.jl:24,38 exposed deliberate empty interface methods; caller contracts can still make fallthrough intentional |
 
 No changes to the shared scope or module-resolution implementation. `scripts/measure-rule.mjs` applies a normalized ESLint config through Linter so external files are analyzed with real paths instead of silently falling outside ESLint's configuration boundary. Rule helpers resolve module facts lazily after a syntax match; suggestions are suppressed if replacing comments.

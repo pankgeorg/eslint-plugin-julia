@@ -16,6 +16,7 @@ import './rules/no-fill-with-mutable.test.js';
 import './rules/no-identical-branches.test.js';
 import './rules/no-import-assign.test.js';
 import './rules/no-isdefined-local-call.test.js';
+import './rules/no-nothing-return-conversion.test.js';
 import './rules/no-overwritten-literal-index.test.js';
 import './rules/no-self-assign.test.js';
 import './rules/no-single-iteration-loop.test.js';
