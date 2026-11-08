@@ -26,6 +26,7 @@ import './rules/no-throw-literal.test.js';
 import './rules/no-unbound-type-parameters.test.js';
 import './rules/no-undef.test.js';
 import './rules/no-undefined-exports.test.js';
+import './rules/no-uninitialized-ref-read.test.js';
 import './rules/no-unreachable.test.js';
 import './rules/no-unsafe-finally.test.js';
 import './rules/no-unsafe-negation.test.js';

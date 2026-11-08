@@ -30,6 +30,7 @@ import noThrowLiteralRule from './rules/no-throw-literal.js';
 import noUnboundTypeParametersRule from './rules/no-unbound-type-parameters.js';
 import noUndefRule from './rules/no-undef.js';
 import noUndefinedExportsRule from './rules/no-undefined-exports.js';
+import noUninitializedRefReadRule from './rules/no-uninitialized-ref-read.js';
 import noUnreachableRule from './rules/no-unreachable.js';
 import noUnsafeFinallyRule from './rules/no-unsafe-finally.js';
 import noUnsafeNegationRule from './rules/no-unsafe-negation.js';
@@ -81,6 +82,7 @@ const plugin = {
     'no-unbound-type-parameters': noUnboundTypeParametersRule,
     'no-undef': noUndefRule,
     'no-undefined-exports': noUndefinedExportsRule,
+    'no-uninitialized-ref-read': noUninitializedRefReadRule,
     'no-unreachable': noUnreachableRule,
     'no-unsafe-finally': noUnsafeFinallyRule,
     'no-unsafe-negation': noUnsafeNegationRule,

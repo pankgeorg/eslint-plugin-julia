@@ -91,6 +91,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-unbound-type-parameters](docs/rules/no-unbound-type-parameters.md) | Off (strict: warn) | None |
 | [no-undef](docs/rules/no-undef.md) | Off (strict: warn) | None |
 | [no-undefined-exports](docs/rules/no-undefined-exports.md) | Off (strict: warn) | None |
+| [no-uninitialized-ref-read](docs/rules/no-uninitialized-ref-read.md) | Off (strict: warn) | None |
 | [no-unreachable](docs/rules/no-unreachable.md) | Error | None |
 | [no-unsafe-finally](docs/rules/no-unsafe-finally.md) | Error | None |
 | [no-unsafe-negation](docs/rules/no-unsafe-negation.md) | Warn | Suggestions |
