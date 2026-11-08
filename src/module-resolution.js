@@ -109,7 +109,7 @@ function facts(source, file) {
   const ids = new Map(manager.scopes.filter(s => s.kind === 'module').map(s => [s, s === manager.globalScope ? -1 : s.node.range[0]]));
   for (const s of manager.scopes.filter(s => s.kind === 'module')) {
     modules.push({ id: ids.get(s), parent: ids.get(s.parent?.module), name: s === manager.globalScope ? null : identifierName(s.node.children[0]),
-      bare: s.bare, names: [...s.bindings.values()].map(b => ({ name: b.name, kind: b.kind })), exports: [], imports: [], includes: [], reads: [], unresolvedIncludes: false, dynamicEvaluation: false });
+      bare: s.bare, names: [...s.bindings.values()].map(b => ({ name: b.name, kind: b.kind })), exports: [], imports: [], includes: [], includeMacros: [], macroIncludes: [], reads: [], unresolvedIncludes: false, dynamicEvaluation: false });
   }
   const byId = new Map(modules.map(m => [m.id, m]));
   for (const r of manager.references) if (r.read && (!r.binding || r.binding.scope?.kind === 'module'))
@@ -118,8 +118,29 @@ function facts(source, file) {
     byId.get(ids.get(d.binding.scope))?.reads.push(d.name);
   function walk(node, macros = []) {
     const s = manager.scopeFor(node), m = byId.get(ids.get(s?.module));
+    // A literal call to a source-visible include wrapper can share its context.
+    // Record syntax only; the macro is never expanded or executed.
+    if (m && node.kind === 'macro') {
+      const [signature, body] = node.children;
+      if (signature?.kind === 'call' && signature.children.length === 2) {
+        const parameter = signature.children[1];
+        const name = identifierName(parameter.kind === '::' ? parameter.children[0] : parameter);
+        const forwards = (n, depth = 0) => {
+          if (['inert', 'function', 'macro', '$'].includes(n.kind)) return false;
+          if (n.kind === 'call' && depth === 1 && identifierName(n.children[0]) === 'include'
+            && n.children.length === 2 && n.children[1].kind === '$'
+            && identifierName(n.children[1].children[0]) === name) return true;
+          return n.children.some(child => forwards(child, depth + (n.kind === 'quote' ? 1 : 0)));
+        };
+        const returned = body?.children.at(-1);
+        if (name && returned?.kind === 'quote' && forwards(returned))
+          m.includeMacros.push(`@${identifierName(signature.children[0])}`);
+      }
+    }
     if (m && node.kind === 'macrocall') {
       let head = node.children[0];
+      const path = node.children.length === 2 && s?.kind === 'module' ? literal(node.children[1], file) : null;
+      if (path !== null && !virtual(file)) m.macroIncludes.push({ name: identifierName(head), path: resolve(dirname(file), path) });
       if (identifierName(head) === '@eval' || head?.kind === '.' && identifierName(head.children.at(-1)) === '@eval') m.dynamicEvaluation = true;
       if (identifierName(head)) m.reads.push(identifierName(head));
       else if (head?.kind === '.') {
@@ -170,7 +191,7 @@ function fileFacts(file, graph) {
   factsCache.set(file, { version, facts: result, hash: digest }); return result;
 }
 function moduleModel(name, parent, bare = false) {
-  return { name, parent, bare, names: new Map(), children: new Map(), exports: new Set(), imports: [], unknown: new Set(), unknownExports: false, reads: new Set(), unresolvedIncludes: false, dynamicEvaluation: false };
+  return { name, parent, bare, names: new Map(), children: new Map(), includeMacros: new Set(), exports: new Set(), imports: [], unknown: new Set(), unknownExports: false, reads: new Set(), unresolvedIncludes: false, dynamicEvaluation: false };
 }
 function addFile(graph, file, into, active = new Set()) {
   // Path-based stack also stops cycles that enter a freshly nested module.
@@ -191,6 +212,7 @@ function addFile(graph, file, into, active = new Set()) {
     m.imports.push(...fact.imports.map(imp => ({ ...imp })));
     fact.reads.forEach(name => m.reads.add(name));
     m.unresolvedIncludes ||= fact.unresolvedIncludes; m.dynamicEvaluation ||= fact.dynamicEvaluation;
+    fact.includeMacros.forEach(name => m.includeMacros.add(name));
     for (const include of fact.includes) {
       let included = include.path;
       // Base's bootstrap include is cwd-relative, before it installs Julia's
@@ -200,6 +222,9 @@ function addFile(graph, file, into, active = new Set()) {
         if (!exists(included)) included = resolve(graph.baseDir, include.literal);
       }
       if (!addFile(graph, included, m, next)) m.unresolvedIncludes = true;
+    }
+    for (const include of fact.macroIncludes) if (m.includeMacros.has(include.name)) {
+      if (!addFile(graph, include.path, m, next)) m.unresolvedIncludes = true;
     }
   }
   return true;
@@ -226,7 +251,10 @@ function entryCandidates(file, context, track) {
     for (const entry of configured) if (typeof entry === 'string') candidates.push([resolve(entry)]);
   }
   const project = projectFor(file, track);
-  if (project) candidates.push([join(project.dir, 'src', `${project.name}.jl`)]);
+  if (project) {
+    candidates.push([join(project.dir, 'src', `${project.name}.jl`)]);
+    candidates.push([join(project.dir, 'test', 'runtests.jl')]);
+  }
   for (const dir of upward(file)) {
     if (basename(dir) === 'base' && exists(join(dir, 'Base.jl'))) {
       candidates.push(['Base.jl', 'Base_compiler.jl', 'sysimg.jl', 'compiler/compiler.jl'].map(p => join(dir, p)).filter(exists)); break;

@@ -6,7 +6,14 @@ The filesystem-free extraction pass is internal. No Julia process, package loade
 macro expansion, or ESLint run on dependency files is involved.
 
 The nearest ancestor `Project.toml` with a `name` supplies `src/<name>.jl` as the
-package entry. The resolver also recognizes Julia's `base/Base.jl`,
+package entry. The package's `test/runtests.jl` is a separate entry: recursively
+included tests inherit its imports, aliases, definitions and sibling helpers.
+Source files and tests outside that include tree retain their own context.
+A source-visible, single-parameter macro whose returned quote forwards the
+interpolated parameter directly to `include` is recognized as an include wrapper
+for literal path arguments (for example Pluto's `@timeit_include`). The macro is
+not executed; computed arguments and unrelated macros remain unresolved.
+The resolver also recognizes Julia's `base/Base.jl`,
 `Base_compiler.jl`, `sysimg.jl` and the older `compiler/compiler.jl`, and `stdlib/<name>/src/<name>.jl` layouts.
 Additional entry files can be configured (relative paths resolve from the Node
 process's working directory):

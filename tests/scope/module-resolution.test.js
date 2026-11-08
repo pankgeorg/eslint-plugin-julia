@@ -144,3 +144,19 @@ test('modules: empty generic declarations in an include join the module scope', 
   const m = analyze('custom/entry.jl', 'module Custom; include("child.jl"); declared_generic; end');
   assert.deepEqual(unresolved(m), []);
 });
+
+
+test('modules: package test entry shares recursive includes, imports and helpers', () => {
+  const m = analyze('TestEntry/test/nested/leaf.jl');
+  assert.deepEqual(unresolved(m), []);
+  assert.ok(m.moduleResolution.entries[0].endsWith('/test/runtests.jl'));
+  assert.equal(m.lookup('m').kind, 'import');
+});
+test('modules: package tests do not leak into unreachable tests or source files', () => {
+  assert.deepEqual(unresolved(analyze('TestEntry/test/orphan.jl')), ['m', 'test_helper']);
+  assert.deepEqual(unresolved(analyze('TestEntry/src/orphan.jl')), ['test_helper']);
+  assert.deepEqual(unresolved(analyze('TestEntry/test/unknown.jl')), []);
+});
+test('modules: test entry overlays retain the include context', () => {
+  assert.deepEqual(unresolved(analyze('TestEntry/test/nested/leaf.jl', 'm; test_helper(); absent')), ['absent']);
+});

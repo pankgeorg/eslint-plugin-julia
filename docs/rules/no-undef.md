@@ -29,7 +29,8 @@ These options suppress reports and never invent macro bindings. Includes with
 literal paths contribute ordinary module names, recursively and cycle-safely.
 Computed or missing includes, eval and include_string contribute no new names;
 use `globals` for dynamic APIs. `settings.julia.entryFiles` supplies nonpackage
-entry points. Files outside an entry's include tree retain standalone analysis.
+entry points. Package `test/runtests.jl` is also an entry, so recursively
+included tests share its imports and helpers. Files outside an entry's include tree retain standalone analysis.
 
 Opaque macro operands themselves are skipped; written function bodies and
 assignments still participate. An `@isdefined` argument is not a read. Quote
