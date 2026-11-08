@@ -36,6 +36,7 @@ import noRedundantUnionMembersRule from './rules/no-redundant-union-members.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
 import noSelfIdentityComparisonRule from './rules/no-self-identity-comparison.js';
 import noShadowedLoopVarRule from './rules/no-shadowed-loop-var.js';
+import noShowMacroRule from './rules/no-show-macro.js';
 import noSingleIterationLoopRule from './rules/no-single-iteration-loop.js';
 import noStringGrowthInLoopRule from './rules/no-string-growth-in-loop.js';
 import noThrowLiteralRule from './rules/no-throw-literal.js';
@@ -108,6 +109,7 @@ const plugin = {
     'no-self-assign': noSelfAssignRule,
     'no-self-identity-comparison': noSelfIdentityComparisonRule,
     'no-shadowed-loop-var': noShadowedLoopVarRule,
+    'no-show-macro': noShowMacroRule,
     'no-single-iteration-loop': noSingleIterationLoopRule,
     'no-string-growth-in-loop': noStringGrowthInLoopRule,
     'no-throw-literal': noThrowLiteralRule,

@@ -97,6 +97,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-self-assign](docs/rules/no-self-assign.md) | Warn | None |
 | [no-self-identity-comparison](docs/rules/no-self-identity-comparison.md) | Off (strict: warn) | None |
 | [no-shadowed-loop-var](docs/rules/no-shadowed-loop-var.md) | Warn | None |
+| [no-show-macro](docs/rules/no-show-macro.md) | Off (strict: warn) | Suggestions |
 | [no-single-iteration-loop](docs/rules/no-single-iteration-loop.md) | Off (strict: warn) | None |
 | [no-string-growth-in-loop](docs/rules/no-string-growth-in-loop.md) | Off (strict: warn) | None |
 | [no-throw-literal](docs/rules/no-throw-literal.md) | Off (strict: warn) | Suggestions |

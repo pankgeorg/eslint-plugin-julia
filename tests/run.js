@@ -32,6 +32,7 @@ import './rules/no-redundant-type-assertion.test.js';
 import './rules/no-redundant-union-members.test.js';
 import './rules/no-self-assign.test.js';
 import './rules/no-self-identity-comparison.test.js';
+import './rules/no-show-macro.test.js';
 import './rules/no-single-iteration-loop.test.js';
 import './rules/no-string-growth-in-loop.test.js';
 import './rules/no-throw-literal.test.js';
