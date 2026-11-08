@@ -92,6 +92,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-nothing-return-conversion](docs/rules/no-nothing-return-conversion.md) | Warn | None |
 | [no-obvious-type-piracy](docs/rules/no-obvious-type-piracy.md) | Off (strict: warn) | None |
 | [no-overwritten-literal-index](docs/rules/no-overwritten-literal-index.md) | Off (strict: warn) | None |
+| [no-reassigned-capture](docs/rules/no-reassigned-capture.md) | Off (strict: warn) | None |
 | [no-redundant-type-assertion](docs/rules/no-redundant-type-assertion.md) | Off (strict: warn) | Fix |
 | [no-redundant-union-members](docs/rules/no-redundant-union-members.md) | Off (strict: warn) | Suggestions |
 | [no-self-assign](docs/rules/no-self-assign.md) | Warn | None |

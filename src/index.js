@@ -31,6 +31,7 @@ import noLossOfFloatIntegerPrecisionRule from './rules/no-loss-of-float-integer-
 import noNothingReturnConversionRule from './rules/no-nothing-return-conversion.js';
 import noObviousTypePiracyRule from './rules/no-obvious-type-piracy.js';
 import noOverwrittenLiteralIndexRule from './rules/no-overwritten-literal-index.js';
+import noReassignedCaptureRule from './rules/no-reassigned-capture.js';
 import noRedundantTypeAssertionRule from './rules/no-redundant-type-assertion.js';
 import noRedundantUnionMembersRule from './rules/no-redundant-union-members.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
@@ -104,6 +105,7 @@ const plugin = {
     'no-nothing-return-conversion': noNothingReturnConversionRule,
     'no-obvious-type-piracy': noObviousTypePiracyRule,
     'no-overwritten-literal-index': noOverwrittenLiteralIndexRule,
+    'no-reassigned-capture': noReassignedCaptureRule,
     'no-redundant-type-assertion': noRedundantTypeAssertionRule,
     'no-redundant-union-members': noRedundantUnionMembersRule,
     'no-self-assign': noSelfAssignRule,

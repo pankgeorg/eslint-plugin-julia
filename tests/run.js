@@ -28,6 +28,7 @@ import './rules/no-loss-of-float-integer-precision.test.js';
 import './rules/no-nothing-return-conversion.test.js';
 import './rules/no-obvious-type-piracy.test.js';
 import './rules/no-overwritten-literal-index.test.js';
+import './rules/no-reassigned-capture.test.js';
 import './rules/no-redundant-type-assertion.test.js';
 import './rules/no-redundant-union-members.test.js';
 import './rules/no-self-assign.test.js';
