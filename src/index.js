@@ -23,6 +23,7 @@ import noObviousTypePiracyRule from './rules/no-obvious-type-piracy.js';
 import noRedundantTypeAssertionRule from './rules/no-redundant-type-assertion.js';
 import noRedundantUnionMembersRule from './rules/no-redundant-union-members.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
+import noSelfIdentityComparisonRule from './rules/no-self-identity-comparison.js';
 import noShadowedLoopVarRule from './rules/no-shadowed-loop-var.js';
 import noUnboundTypeParametersRule from './rules/no-unbound-type-parameters.js';
 import noUndefRule from './rules/no-undef.js';
@@ -72,6 +73,7 @@ const plugin = {
     'no-redundant-type-assertion': noRedundantTypeAssertionRule,
     'no-redundant-union-members': noRedundantUnionMembersRule,
     'no-self-assign': noSelfAssignRule,
+    'no-self-identity-comparison': noSelfIdentityComparisonRule,
     'no-shadowed-loop-var': noShadowedLoopVarRule,
     'no-unbound-type-parameters': noUnboundTypeParametersRule,
     'no-undef': noUndefRule,
