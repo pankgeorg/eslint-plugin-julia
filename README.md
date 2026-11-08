@@ -129,6 +129,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [prefer-ismissing](docs/rules/prefer-ismissing.md) | Error | Suggestions |
 | [prefer-size-dimension](docs/rules/prefer-size-dimension.md) | Off (strict: warn) | Suggestions |
 | [prefer-sized-push-buffer](docs/rules/prefer-sized-push-buffer.md) | Off (strict: warn) | Suggestions |
+| [require-typed-global](docs/rules/require-typed-global.md) | Off (strict: warn) | None |
 | [use-isnan](docs/rules/use-isnan.md) | Error | Suggestions |
 
 Rules compare exact source spellings; Unicode normalization aliases can be missed.

@@ -63,6 +63,7 @@ import './rules/prefer-ismissing.test.js';
 import './rules/prefer-size-dimension.test.js';
 import './rules/prefer-sized-push-buffer.test.js';
 import './rules/prototype.test.js';
+import './rules/require-typed-global.test.js';
 import './rules/use-isnan.test.js';
 import './scope/bindings.test.js';
 import './scope/module-resolution.test.js';
