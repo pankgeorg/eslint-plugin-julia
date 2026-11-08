@@ -1,4 +1,3 @@
-# Owner: move this file to .github/workflows/ci.yml when ready to enable it.
 name: Julia ESLint
 on: [push, pull_request]
 permissions:
@@ -22,6 +21,8 @@ jobs:
   sarif:
     # Demonstration, findings are intentional. GitHub upload needs code scanning
     # enabled and suitable repository/token permissions; it is not a test gate.
+    # Pull-request tokens can't upload SARIF in this private repo: run on pushes only.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     continue-on-error: true
     permissions:
