@@ -2,6 +2,9 @@ import { tester, plugin } from '../helpers.js';
 const bad=(code,names,options)=>({code,...(options?{options:[options]}:{}),errors:names.map(name=>({messageId:'undefined',data:{name}}))});
 tester.run('no-undef',plugin.rules['no-undef'],{
  valid:[
+  '@gensym result elapsed_ns; (result, elapsed_ns)',
+  'function f(); Base.@gensym α β; (α, β); end',
+  '@gensym(var"a b", 🐱); (var"a b", 🐱)',
   '@dsl [unknown for i in xs]', '@dsl for i in xs; unknown; end',
   '@isdefined(x)', 'f() = @isdefined(local_name)',
   'using Dates; year(now())', 'import LinearAlgebra; norm([1, 2])',
@@ -19,6 +22,8 @@ tester.run('no-undef',plugin.rules['no-undef'],{
   {code:'f()=project_name',options:[{globals:['project_name']}]},
   {code:'unknown()',options:[{unknownGlobals:'ignore'}]},
  ],invalid:[
+  bad('f()=(@gensym x; x); x', ['x']),
+  bad('@gensym x; y', ['y']),
   bad('function f(x); x+offest; end',['offest']),
   bad('f()=missing_helper(1)',['missing_helper']),
   bad('using LinearAlgebra; @enum Fruit apple pear; apple',['apple']),

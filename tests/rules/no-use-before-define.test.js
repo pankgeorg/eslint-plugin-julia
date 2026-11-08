@@ -1,7 +1,8 @@
 import { tester, plugin } from '../helpers.js';
 const bad=(code,names,options)=>({code,...(options?{options:[options]}:{}),errors:names.map(name=>({messageId:'before',data:{name}}))});
 tester.run('no-use-before-define',plugin.rules['no-use-before-define'],{
- valid:[{"code": "f()=(x;x=1;let;eval(:x);end)", "options": [{"dynamicInitialization": "ignore-containing-scope"}]},"x=0; f()=(global x; g()=(x+=1); g())",{code:'@node f()=(x;x=1)',options:[{dynamicInitialization:'ignore-containing-scope'}]},
+ valid:[
+'f()=(@gensym x y; (x,y))',{"code": "f()=(x;x=1;let;eval(:x);end)", "options": [{"dynamicInitialization": "ignore-containing-scope"}]},"x=0; f()=(global x; g()=(x+=1); g())",{code:'@node f()=(x;x=1)',options:[{dynamicInitialization:'ignore-containing-scope'}]},
 '@node function f(x)::(y); y=x; end',
 'f(xs)=[i for i in xs]', 'x=0; f()=(global x+=1)',
  'f()=(local x; @inbounds for i in 1:3; x=i; end; x)',
@@ -12,7 +13,8 @@ tester.run('no-use-before-define',plugin.rules['no-use-before-define'],{
  'f(x::T) where T=x', 'f()=(local x; nothing)', 'f()=(x; g()=(x=1))',
  {code:'f()=(x; x=1; eval(:x))',options:[{dynamicInitialization:'ignore-containing-scope'}]},
  'quote f()=(x;x=1); end', '@unknown x', 'f()=(x=1; @show x)',
- ],invalid:[{"code": "function f(x)::T; T=Int; x; end", "errors": [{"messageId": "before", "data": {"name": "T"}}]},bad('function f(); println(x); x=1; end',['x']),
+ ],invalid:[
+bad('f()=(x; @gensym x)',['x']),{"code": "function f(x)::T; T=Int; x; end", "errors": [{"messageId": "before", "data": {"name": "T"}}]},bad('function f(); println(x); x=1; end',['x']),
  bad('function f(); local x; x+1; x=2; end',['x']),
  bad('let; println(y); y=3; end',['y']),bad('f()=(x=x; x)',['x']),
  bad('f()=(🐱; 🐱=1)',['🐱']),bad('f()=(var"a b"; var"a b"=1)',['a b']),
