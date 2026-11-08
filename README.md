@@ -58,6 +58,8 @@ npx eslint --stdin --stdin-filename example.jl
 
 The default configuration (`recommended`: likely bugs, near-zero false positives; `strict`: everything else as warnings) and the evidence behind each rule's default: [docs/defaults.md](docs/defaults.md).
 
+Project syntax policies can use [ESLint core selectors over Julia trees](docs/restricted-syntax.md).
+
 Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `tests/rules/<name>.test.js`, then run `node scripts/gen-registry.mjs` (it regenerates the registry in `src/index.js`, `tests/run.js` and this table).
 
 | Rule | Recommended | Edits |
