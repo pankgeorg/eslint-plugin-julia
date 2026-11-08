@@ -34,6 +34,7 @@ import noOverwrittenLiteralIndexRule from './rules/no-overwritten-literal-index.
 import noRedundantTypeAssertionRule from './rules/no-redundant-type-assertion.js';
 import noRedundantUnionMembersRule from './rules/no-redundant-union-members.js';
 import noRestrictedCallsRule from './rules/no-restricted-calls.js';
+import noRestrictedMacrosRule from './rules/no-restricted-macros.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
 import noSelfIdentityComparisonRule from './rules/no-self-identity-comparison.js';
 import noShadowedLoopVarRule from './rules/no-shadowed-loop-var.js';
@@ -106,6 +107,7 @@ const plugin = {
     'no-redundant-type-assertion': noRedundantTypeAssertionRule,
     'no-redundant-union-members': noRedundantUnionMembersRule,
     'no-restricted-calls': noRestrictedCallsRule,
+    'no-restricted-macros': noRestrictedMacrosRule,
     'no-self-assign': noSelfAssignRule,
     'no-self-identity-comparison': noSelfIdentityComparisonRule,
     'no-shadowed-loop-var': noShadowedLoopVarRule,

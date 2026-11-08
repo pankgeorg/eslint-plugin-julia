@@ -31,6 +31,7 @@ import './rules/no-overwritten-literal-index.test.js';
 import './rules/no-redundant-type-assertion.test.js';
 import './rules/no-redundant-union-members.test.js';
 import './rules/no-restricted-calls.test.js';
+import './rules/no-restricted-macros.test.js';
 import './rules/no-self-assign.test.js';
 import './rules/no-self-identity-comparison.test.js';
 import './rules/no-single-iteration-loop.test.js';
