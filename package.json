@@ -31,10 +31,15 @@
     "./ast": {
       "types": "./types/ast.d.ts",
       "import": "./src/parser/flags.js"
+    },
+    "./scope": {
+      "types": "./types/scope.d.ts",
+      "import": "./src/scope.js"
     }
   },
   "files": [
     "src/",
+    "data/",
     "types/",
     "wasm/",
     "docs/",
