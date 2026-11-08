@@ -12,6 +12,7 @@ import './rules/no-duplicate-logical-operands.test.js';
 import './rules/no-duplicate-method-signatures.test.js';
 import './rules/no-empty-block.test.js';
 import './rules/no-fill-with-mutable.test.js';
+import './rules/no-full-slice-in-consumer.test.js';
 import './rules/no-identical-branches.test.js';
 import './rules/no-import-assign.test.js';
 import './rules/no-self-assign.test.js';

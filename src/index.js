@@ -15,6 +15,7 @@ import noDuplicateStructFieldsRule from './rules/no-duplicate-struct-fields.js';
 import noEmptyBlockRule from './rules/no-empty-block.js';
 import noEmptyCatchRule from './rules/no-empty-catch.js';
 import noFillWithMutableRule from './rules/no-fill-with-mutable.js';
+import noFullSliceInConsumerRule from './rules/no-full-slice-in-consumer.js';
 import noIdenticalBranchesRule from './rules/no-identical-branches.js';
 import noImportAssignRule from './rules/no-import-assign.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
@@ -58,6 +59,7 @@ const plugin = {
     'no-empty-block': noEmptyBlockRule,
     'no-empty-catch': noEmptyCatchRule,
     'no-fill-with-mutable': noFillWithMutableRule,
+    'no-full-slice-in-consumer': noFullSliceInConsumerRule,
     'no-identical-branches': noIdenticalBranchesRule,
     'no-import-assign': noImportAssignRule,
     'no-self-assign': noSelfAssignRule,

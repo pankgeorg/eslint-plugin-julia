@@ -7,3 +7,4 @@ Measurement: ESLint Linter with clone cwd, absolute original filenames and a nor
 | Rule | Commit | Tests (Node 22 / 24) | Corpus / Pluto / Malt | TP / FP / debatable | Edit | Recommendation and evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | prefer-sized-push-buffer | `:/Implement prefer-sized-push-buffer` | 17 RuleTester cases; full suite 1069 / 1069 pass | 1 / 0 / 0 | 0 / 1 / 0 | suggestion | strict-only: Julia `test/llvmpasses/pipeline-o0.jl:33` deliberately exercises array allocation and GC roots; changing its workload is unhelpful. Reservation is optional performance policy. |
+| no-full-slice-in-consumer | `:/Implement no-full-slice-in-consumer` | 13 RuleTester cases; full suite 1082 / 1082 pass | 0 / 0 / 0 | 0 / 0 / 0 | length-only suggestion | strict-only: snapshot, flattening and reduction semantics require review; no observed matches establish precision. |
