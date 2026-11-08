@@ -149,7 +149,7 @@ test('modules: empty generic declarations in an include join the module scope', 
 test('modules: package test entry shares recursive includes, imports and helpers', () => {
   const m = analyze('TestEntry/test/nested/leaf.jl');
   assert.deepEqual(unresolved(m), []);
-  assert.ok(m.moduleResolution.entries[0].endsWith('/test/runtests.jl'));
+  assert.ok(m.moduleResolution.entries[0].endsWith(join('test', 'runtests.jl')), m.moduleResolution.entries[0]);
   assert.equal(m.lookup('m').kind, 'import');
 });
 test('modules: package tests do not leak into unreachable tests or source files', () => {
