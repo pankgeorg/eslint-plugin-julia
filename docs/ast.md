@@ -99,6 +99,11 @@ constructs can bind names. The documented `@gensym a b` exception binds and
 initializes each identifier operand as an ordinary assignment, including Unicode
 and `var"..."` names; qualified `Base.@gensym` has the same treatment. It reuses
 enclosing locals just like a written assignment. Other expansion does not supply bindings. Opaque macro
+constructs can bind names. Pluto's `@bind x expr` is a documented syntax
+exception: it reads `expr` in the caller's scope and initializes the named module
+global, including when invoked in a local scope. Qualified invocations have the
+same treatment. This convention is recognized by spelling; an unrelated custom
+macro named `@bind` may have different behavior. Other macro expansion supplies no bindings. Opaque macro
 operands are marked for diagnostic rules to suppress. Literal includes and resolvable bare using/import statements add module members.
 Unresolved wildcard modules remain in the owning scope's `bareUsing`; eval and
 nonliteral includes never invent definitions. Pass the ESLint rule context for

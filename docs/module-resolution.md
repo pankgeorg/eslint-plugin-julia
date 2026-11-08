@@ -68,6 +68,8 @@ consumers retain the unknown-module fallback as well. Relative reexport cycles c
 ordinary Julia definitions inside macros still obey the scope pass's existing
 policy, including the documented `@gensym` binding exception. Other macro
 invocations invent no bindings.
+policy, including the documented Pluto `@bind` global-binding exception.
+Other macro invocations invent no bindings.
 
 File facts, project metadata and module models are cached per process by absolute
 path and modification time (also ctime and size). Models are shared between linted

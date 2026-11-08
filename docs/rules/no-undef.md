@@ -14,6 +14,8 @@ light             # unknown macro-generated bindings do not count
 @gensym a b       # documented exception: binds a and b
 (a, b)
 @isdefined(x)     # tests for a binding; x is not a value read
+@bind x 1        # documented Pluto exception: initializes global x
+x
 ```
 
 Options:
