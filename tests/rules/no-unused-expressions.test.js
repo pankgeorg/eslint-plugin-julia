@@ -1,6 +1,8 @@
 import { tester, plugin } from '../helpers.js';
 tester.run('no-unused-expressions', plugin.rules['no-unused-expressions'], {
   "valid": [
+    { code: "### A Pluto.jl notebook ###\nfunction f(x)\n    123\n    x\nend" },
+    '### A Pluto.jl notebook ###\nfunction f(); 42; :unused; return 1; end',
     '### A Pluto.jl notebook ###\nlet; trigger; html"output"; end',
     '### A Pluto.jl notebook ###\r\nlet; (trigger); html"output"; end',
     '### A Pluto.jl notebook ###\nfunction f(x); x; return 1; end',
@@ -38,7 +40,7 @@ tester.run('no-unused-expressions', plugin.rules['no-unused-expressions'], {
     { code: '### A Pluto.jl notebook ###\nlet; x == y; work(); end', errors: [{ messageId: 'comparison' }] },
     { code: '### A Pluto.jl notebook ###\nfor i in xs; a < b < c; end', errors: [{ messageId: 'comparison' }] },
     { code: '### A Pluto.jl notebook ###\nx == y; work()', options: [{ checkTopLevel: true }], errors: [{ messageId: 'comparison' }] },
-    { code: '### A Pluto.jl notebook ###\nfunction f(); 42; :unused; return 1; end', errors: [{ messageId: 'issue' }, { messageId: 'issue' }] },
+    { code: '### A Pluto.jl notebook ###\nfunction f(x); x == 1; return 1; end', errors: [{ messageId: 'comparison' }] },
     { code: "function f(); x == y; return 1; end", errors: [{ messageId: "comparison" }] },
     { code: "function f(x)\n    x == 1\n    return x\nend", errors: [{ messageId: "comparison", line: 2 }] },
     { code: "for i in 1:3\n    a[i] < 0\nend", errors: [{ messageId: "comparison", line: 2 }] },

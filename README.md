@@ -62,36 +62,48 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 
 | Rule | Recommended | Edits |
 | --- | --- | --- |
-| [no-catch-binding-reassign](docs/rules/no-catch-binding-reassign.md) | Off (strict: warn) | None |
 | [no-collapsible-if](docs/rules/no-collapsible-if.md) | Off (strict: warn) | Suggestions |
+| [no-collect-before-range-iteration](docs/rules/no-collect-before-range-iteration.md) | Off (strict: warn) | Suggestions |
 | [no-compare-negative-zero](docs/rules/no-compare-negative-zero.md) | Off (strict: warn) | Suggestions |
+| [no-concat-growth-in-loop](docs/rules/no-concat-growth-in-loop.md) | Off (strict: warn) | None |
 | [no-cond-assign](docs/rules/no-cond-assign.md) | Off (strict: warn) | Suggestions |
 | [no-const-reassign](docs/rules/no-const-reassign.md) | Warn | None |
 | [no-constant-condition](docs/rules/no-constant-condition.md) | Off (strict: warn) | None |
 | [no-discarded-copy-result](docs/rules/no-discarded-copy-result.md) | Warn | None |
 | [no-dupe-args](docs/rules/no-dupe-args.md) | Error | None |
 | [no-dupe-elseif](docs/rules/no-dupe-elseif.md) | Warn | None |
-| [no-duplicate-dict-keys](docs/rules/no-duplicate-dict-keys.md) | Off (strict: warn) | None |
+| [no-duplicate-dict-keys](docs/rules/no-duplicate-dict-keys.md) | Warn | None |
 | [no-duplicate-keyword-arguments](docs/rules/no-duplicate-keyword-arguments.md) | Error | None |
 | [no-duplicate-logical-operands](docs/rules/no-duplicate-logical-operands.md) | Warn | Suggestions |
 | [no-duplicate-method-signatures](docs/rules/no-duplicate-method-signatures.md) | Off (strict: warn) | None |
 | [no-duplicate-struct-fields](docs/rules/no-duplicate-struct-fields.md) | Error | None |
 | [no-empty-block](docs/rules/no-empty-block.md) | Off (strict: warn) | None |
 | [no-empty-catch](docs/rules/no-empty-catch.md) | Off (strict: warn) | None |
+| [no-empty-literal-range](docs/rules/no-empty-literal-range.md) | Off (strict: warn) | None |
+| [no-eval-local-symbol](docs/rules/no-eval-local-symbol.md) | Off (strict: warn) | None |
 | [no-fill-with-mutable](docs/rules/no-fill-with-mutable.md) | Warn | None |
+| [no-full-slice-in-consumer](docs/rules/no-full-slice-in-consumer.md) | Off (strict: warn) | Suggestions |
 | [no-identical-branches](docs/rules/no-identical-branches.md) | Off (strict: warn) | None |
 | [no-import-assign](docs/rules/no-import-assign.md) | Error | None |
 | [no-impossible-length-comparison](docs/rules/no-impossible-length-comparison.md) | Off (strict: warn) | None |
+| [no-invalid-foreign-call-signature](docs/rules/no-invalid-foreign-call-signature.md) | Error | None |
+| [no-isdefined-local-call](docs/rules/no-isdefined-local-call.md) | Error | None |
 | [no-loss-of-float-integer-precision](docs/rules/no-loss-of-float-integer-precision.md) | Off (strict: warn) | None |
+| [no-nothing-return-conversion](docs/rules/no-nothing-return-conversion.md) | Warn | None |
 | [no-obvious-type-piracy](docs/rules/no-obvious-type-piracy.md) | Off (strict: warn) | None |
+| [no-overwritten-literal-index](docs/rules/no-overwritten-literal-index.md) | Off (strict: warn) | None |
 | [no-redundant-type-assertion](docs/rules/no-redundant-type-assertion.md) | Off (strict: warn) | Fix |
 | [no-redundant-union-members](docs/rules/no-redundant-union-members.md) | Off (strict: warn) | Suggestions |
 | [no-self-assign](docs/rules/no-self-assign.md) | Warn | None |
 | [no-self-identity-comparison](docs/rules/no-self-identity-comparison.md) | Off (strict: warn) | None |
 | [no-shadowed-loop-var](docs/rules/no-shadowed-loop-var.md) | Warn | None |
+| [no-single-iteration-loop](docs/rules/no-single-iteration-loop.md) | Off (strict: warn) | None |
+| [no-string-growth-in-loop](docs/rules/no-string-growth-in-loop.md) | Off (strict: warn) | None |
+| [no-throw-literal](docs/rules/no-throw-literal.md) | Off (strict: warn) | Suggestions |
 | [no-unbound-type-parameters](docs/rules/no-unbound-type-parameters.md) | Off (strict: warn) | None |
 | [no-undef](docs/rules/no-undef.md) | Off (strict: warn) | None |
 | [no-undefined-exports](docs/rules/no-undefined-exports.md) | Off (strict: warn) | None |
+| [no-uninitialized-ref-read](docs/rules/no-uninitialized-ref-read.md) | Error | None |
 | [no-unreachable](docs/rules/no-unreachable.md) | Error | None |
 | [no-unsafe-finally](docs/rules/no-unsafe-finally.md) | Error | None |
 | [no-unsafe-negation](docs/rules/no-unsafe-negation.md) | Warn | Suggestions |
@@ -102,13 +114,19 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-useless-assignment](docs/rules/no-useless-assignment.md) | Off (strict: warn) | Suggestions |
 | [no-useless-catch](docs/rules/no-useless-catch.md) | Off (strict: warn) | None |
 | [parse-errors](docs/rules/parse-errors.md) | Error | None |
+| [prefer-any](docs/rules/prefer-any.md) | Off (strict: warn) | Suggestions |
 | [prefer-const-global](docs/rules/prefer-const-global.md) | Off (strict: warn) | Suggestions |
+| [prefer-count-over-findall-length](docs/rules/prefer-count-over-findall-length.md) | Off (strict: warn) | Suggestions |
 | [prefer-eachindex](docs/rules/prefer-eachindex.md) | Off (strict: warn) | Suggestions |
+| [prefer-extreme-over-sort](docs/rules/prefer-extreme-over-sort.md) | Off (strict: warn) | Suggestions |
+| [prefer-generator-sum](docs/rules/prefer-generator-sum.md) | Off (strict: warn) | Suggestions |
 | [prefer-identity-nothing](docs/rules/prefer-identity-nothing.md) | Off (strict: warn) | Fix + suggestions |
 | [prefer-in](docs/rules/prefer-in.md) | Off (strict: warn) | Suggestions |
 | [prefer-isa](docs/rules/prefer-isa.md) | Off (strict: warn) | Suggestions |
 | [prefer-isempty](docs/rules/prefer-isempty.md) | Off (strict: warn) | Suggestions |
 | [prefer-ismissing](docs/rules/prefer-ismissing.md) | Error | Suggestions |
+| [prefer-size-dimension](docs/rules/prefer-size-dimension.md) | Off (strict: warn) | Suggestions |
+| [prefer-sized-push-buffer](docs/rules/prefer-sized-push-buffer.md) | Off (strict: warn) | Suggestions |
 | [use-isnan](docs/rules/use-isnan.md) | Error | Suggestions |
 
 Rules compare exact source spellings; Unicode normalization aliases can be missed.

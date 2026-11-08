@@ -15,9 +15,11 @@ const RECOMMENDED = {
   'parse-errors': 'error', 'no-duplicate-struct-fields': 'error', 'no-duplicate-keyword-arguments': 'error',
   'no-dupe-args': 'error', 'no-unreachable': 'error', 'no-unsafe-finally': 'error', 'no-import-assign': 'error',
   'use-isnan': 'error', 'prefer-ismissing': 'error',
+  'no-isdefined-local-call': 'error', 'no-invalid-foreign-call-signature': 'error', 'no-uninitialized-ref-read': 'error',
   'no-shadowed-loop-var': 'warn', 'no-dupe-elseif': 'warn', 'no-duplicate-logical-operands': 'warn',
   'no-const-reassign': 'warn', 'no-self-assign': 'warn', 'no-unsafe-negation': 'warn',
   'no-unused-expressions': 'warn', 'no-fill-with-mutable': 'warn', 'no-discarded-copy-result': 'warn',
+  'no-duplicate-dict-keys': 'warn', 'no-nothing-return-conversion': 'warn',
 };
 const STYLE = { 'prefer-identity-nothing': 'warn', 'no-empty-catch': 'warn' };
 

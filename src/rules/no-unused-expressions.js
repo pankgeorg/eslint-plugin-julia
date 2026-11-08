@@ -59,8 +59,9 @@ export default defineRule({
         const statement = node.children[i];
         let value = statement;
         while (value.kind === 'parens' && value.children.length === 1) value = value.children[0];
-        // Bare reads create reactive dependencies in Pluto notebook cells.
-        if (plutoNotebook && isBareName(value)) continue;
+        // Bare reads create reactive dependencies in Pluto notebook cells, and bare literals in
+        // cells are display/test scaffolding; comparisons are still reported.
+        if (plutoNotebook && !isComparison(value)) continue;
         // Local documentation strings are not always wrapped in a parser doc node.
         if (value.kind === 'string' && i === 0 && ['function', '->', 'do'].includes(parent?.kind)) continue;
         if (value.kind === 'string' && ['function', 'macro', 'struct', 'module', 'baremodule', 'const', 'global', 'local', 'macrocall', '='].includes(node.children[i + 1]?.kind)) continue;
