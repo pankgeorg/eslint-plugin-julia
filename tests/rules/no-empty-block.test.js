@@ -1,6 +1,15 @@
 import { tester, plugin } from '../helpers.js';
 tester.run('no-empty-block', plugin.rules['no-empty-block'], {
   "valid": [
+    'function f(); end',
+    'function 🐱(α); end',
+    'function f(x::T) where T; end',
+    'function f(x)::Nothing; end',
+    'function Base.show(io::IO, x::Int); end',
+    'function (f::F)(x) where F; end',
+    'function +(x, y); end',
+    'function NoOp(); end',
+    { code: 'function f(); end', options: [{ allowComment: false }] },
     "if ready; nothing; end",
     "for x in items; # Deliberately exhaust the iterator.\nend",
     "function f end",
@@ -31,6 +40,10 @@ tester.run('no-empty-block', plugin.rules['no-empty-block'], {
     }
   ],
   "invalid": [
+    { code: 'function f(); if ready; end; end', errors: [{ messageId: 'issue' }] },
+    { code: 'function f(); for x in xs; end; end', errors: [{ messageId: 'issue' }] },
+    { code: 'function f(); while ready; end; end', errors: [{ messageId: 'issue' }] },
+    { code: 'function f(); let; end; end', errors: [{ messageId: 'issue' }] },
     {
       "code": "if ready; end",
       "errors": [
@@ -51,15 +64,6 @@ tester.run('no-empty-block', plugin.rules['no-empty-block'], {
     },
     {
       "code": "while ready; end",
-      "errors": [
-        {
-          "messageId": "issue"
-        }
-      ],
-      "output": null
-    },
-    {
-      "code": "function f(); end",
       "errors": [
         {
           "messageId": "issue"
@@ -96,15 +100,6 @@ tester.run('no-empty-block', plugin.rules['no-empty-block'], {
     },
     {
       "code": "if ready; work(); else; end",
-      "errors": [
-        {
-          "messageId": "issue"
-        }
-      ],
-      "output": null
-    },
-    {
-      "code": "function 🐱(α); end",
       "errors": [
         {
           "messageId": "issue"
