@@ -1,5 +1,6 @@
+import { fileURLToPath } from 'node:url';
 import { tester, plugin } from '../helpers.js';
-const filename = new URL('../fixtures/packages/PathDep/src/PathDep.jl', import.meta.url).pathname;
+const filename = fileURLToPath(new URL('../fixtures/packages/PathDep/src/PathDep.jl', import.meta.url));
 const bad = code => ({ code, filename, errors: [{ messageId: 'diagnostic' }] });
 tester.run('no-obvious-type-piracy', plugin.rules['no-obvious-type-piracy'], {
   valid: [
