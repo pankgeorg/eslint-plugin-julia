@@ -68,6 +68,7 @@ import preferIsemptyRule from './rules/prefer-isempty.js';
 import preferIsmissingRule from './rules/prefer-ismissing.js';
 import preferSizeDimensionRule from './rules/prefer-size-dimension.js';
 import preferSizedPushBufferRule from './rules/prefer-sized-push-buffer.js';
+import preferTypedEmptyArrayRule from './rules/prefer-typed-empty-array.js';
 import requireTypedGlobalRule from './rules/require-typed-global.js';
 import useIsnanRule from './rules/use-isnan.js';
 
@@ -142,6 +143,7 @@ const plugin = {
     'prefer-ismissing': preferIsmissingRule,
     'prefer-size-dimension': preferSizeDimensionRule,
     'prefer-sized-push-buffer': preferSizedPushBufferRule,
+    'prefer-typed-empty-array': preferTypedEmptyArrayRule,
     'require-typed-global': requireTypedGlobalRule,
     'use-isnan': useIsnanRule,
   },

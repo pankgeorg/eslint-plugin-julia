@@ -129,6 +129,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [prefer-ismissing](docs/rules/prefer-ismissing.md) | Error | Suggestions |
 | [prefer-size-dimension](docs/rules/prefer-size-dimension.md) | Off (strict: warn) | Suggestions |
 | [prefer-sized-push-buffer](docs/rules/prefer-sized-push-buffer.md) | Off (strict: warn) | Suggestions |
+| [prefer-typed-empty-array](docs/rules/prefer-typed-empty-array.md) | Off (strict: warn) | None |
 | [require-typed-global](docs/rules/require-typed-global.md) | Off (strict: warn) | None |
 | [use-isnan](docs/rules/use-isnan.md) | Error | Suggestions |
 
