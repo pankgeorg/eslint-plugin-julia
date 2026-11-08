@@ -9,7 +9,7 @@ function empty(body) {
   return true;
 }
 export default defineRule({
-  meta: { type: 'suggestion', schema: [{ type: 'object', properties: { allowComment: { type: 'boolean' }, allowEmptyWhile: { type: 'boolean' } }, additionalProperties: false }], docs: { description: 'Report empty executable control-flow, function, and let bodies.' }, messages: { issue: 'Empty {{kind}} body.' } },
+  meta: { type: 'suggestion', schema: [{ type: 'object', properties: { allowComment: { type: 'boolean' }, allowEmptyWhile: { type: 'boolean' } }, additionalProperties: false }], docs: { description: 'Report empty executable control-flow and let bodies.' }, messages: { issue: 'Empty {{kind}} body.' } },
   create(context) {
     const source = context.sourceCode, options = context.options[0] ?? {};
     function check(node) {
@@ -21,6 +21,6 @@ export default defineRule({
         context.report({ node: body, messageId: 'issue', data: { kind: node.kind } });
       }
     }
-    return { if: check, elseif: check, for: check, while: check, function: check, let: check };
+    return { if: check, elseif: check, for: check, while: check, let: check };
   },
 });
