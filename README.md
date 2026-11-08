@@ -170,10 +170,37 @@ The Julia language server provides editor language features and Julia-specific
 analysis. ESLint supplies configuration, suppressions, CLI reports, suggestions,
 and optional integrations; editor activation still needs testing.
 
-The CI template is staged in `RELAY/.github/workflows/ci.yml` for the owner to
-move into `.github/workflows/`. It tests Node 22/24 on Linux/macOS/Windows. Its
-optional SARIF demonstration intentionally reports findings in the fixtures and
-requires GitHub code scanning permissions. No CI upload has been performed here.
+CI (`.github/workflows/ci.yml`) tests Node 22/24 on Linux, macOS and Windows. Its
+SARIF job deliberately reports findings in the fixtures, to demonstrate GitHub code
+scanning.
+
+## Influences
+
+Rule ideas, names and behaviour come from these projects. No code, tests or docs were
+copied; snippets and docs here are original.
+
+- [ESLint](https://eslint.org/docs/latest/rules/) core rules: most `no-*` correctness rules,
+  the `recommended`/`strict` split, and the configurable `no-restricted-*` shape.
+- [typescript-eslint](https://typescript-eslint.io/rules/): `no-redundant-union-members`,
+  `no-redundant-type-assertion`, `no-unused-type-parameters`, and `no-throw-literal`
+  (with ESLint's own).
+- [eslint-plugin-unicorn](https://github.com/sindresorhus/eslint-plugin-unicorn): `prefer-isempty`,
+  `prefer-in`, `prefer-any`, `no-fill-with-mutable`, `no-discarded-copy-result`,
+  `no-duplicate-logical-operands`, `no-impossible-length-comparison`.
+- [SonarJS](https://github.com/SonarSource/SonarJS): `no-identical-branches`,
+  `no-collapsible-if`, `no-overwritten-literal-index`, `no-useless-catch`.
+- [ReLint.jl](https://github.com/RelationalAI-oss/ReLint.jl) (RelationalAI): rule ideas for
+  ENV mutation, typed globals, untyped empty arrays, interpolation, captured variables and
+  debug macros, and the shape of project policies (banned calls, macros and imports), which
+  here are the configurable `no-restricted-calls`, `no-restricted-macros` and
+  `no-restricted-imports` rules. Each related rule's doc names the ReLint check.
+- [Aqua.jl](https://github.com/JuliaTesting/Aqua.jl): `no-unbound-type-parameters`,
+  `no-obvious-type-piracy`, `no-undefined-exports`.
+- [JET.jl](https://github.com/aviatesk/JET.jl) and
+  [StaticLint.jl](https://github.com/julia-vscode/StaticLint.jl): categories of errors worth
+  catching statically (undefined names, guaranteed errors); this plugin does no type inference.
+- The Julia manual's [performance tips](https://docs.julialang.org/en/v1/manual/performance-tips/):
+  the performance rules (globals, captured variables, abstract containers, growth in loops).
 
 MIT © Panagiotis Georgakopoulos. Bundled parser/compiler notices are in
 `wasm/LICENSES/`; the Wasm compiler's exact revision is recorded in the manifest.

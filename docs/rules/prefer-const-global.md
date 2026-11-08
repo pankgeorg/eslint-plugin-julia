@@ -23,3 +23,5 @@ writes; macro expansion never supplies bindings. Written macro assignments are
 excluded. Single-file evidence cannot prove session-wide const safety. A type
 annotation may be preferable for intentionally mutable globals. Exact spellings
 only; no automatic fix or inference of Julia types.
+
+Related: [ReLint.jl](https://github.com/RelationalAI-oss/ReLint.jl) check "non-const untyped global"; for globals that are deliberately reassigned, see `require-typed-global`.

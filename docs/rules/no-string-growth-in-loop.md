@@ -14,3 +14,5 @@ Ordinary String concatenation copies the accumulated byte prefix on each iterati
 There are no options or edits. Consider `IOBuffer` with `print`/`write`, or `join` when appropriate. Review custom `*` dispatch, output formatting, encoding, exceptions and lifetime: printing a value need not equal concatenating it. Retain the recurrence or disable this opt-in rule for short/cold loops or intentional behavior.
 
 Only adjacent same-block initialization and straight-line `for`/`while` bodies are supported. Resets, conditional writes, intermediate prefix observations, aliases through explicit reads, nested loops, closures, macros, quoted code, global accumulators and shadowed multiplication are excluded. Numeric products and unknown incoming accumulators are not diagnosed. Calls can still have effects invisible to lexical analysis.
+
+Related: [ReLint.jl](https://github.com/RelationalAI-oss/ReLint.jl) check "string concatenation" (a formatting policy); this rule reports only quadratic growth in loops.

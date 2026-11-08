@@ -24,3 +24,5 @@ ccall(:abs, Cint, (Cint,), x)  # Valid: x needs no inline annotation.
 Base.@ccall abs(x)::Cint      # Reported: x needs ::Cint.
 Base.@ccall abs(x::Cint)::Cint # Valid.
 ```
+
+Related: [ReLint.jl](https://github.com/RelationalAI-oss/ReLint.jl) check "ccall" (review every foreign call); this rule reports only malformed calls. To review every call, use `no-restricted-calls`.
