@@ -15,17 +15,22 @@ suffixes and `.identifier`, including chained accesses and Unicode names.
 
 ```js
 import julia from 'eslint-plugin-julia';
-export default [{
-  files: ['**/*.jl'],
-  plugins: { julia },
-  language: 'julia/julia',
-  rules: {
-    'julia/prefer-parenthesized-interpolation': ['warn', {
-      mode: 'ambiguous', // default; alternatively 'always'
-      commands: true,   // default
-    }],
+export default [
+  {
+    files: ['**/*.jl'],
+    plugins: { julia },
+    language: 'julia/julia',
+    rules: {
+      'julia/prefer-parenthesized-interpolation': [
+        'warn',
+        {
+          mode: 'ambiguous', // default; alternatively 'always'
+          commands: true, // default
+        },
+      ],
+    },
   },
-}];
+];
 ```
 
 In `ambiguous` mode there is no autofix. Two suggestions let you preserve the

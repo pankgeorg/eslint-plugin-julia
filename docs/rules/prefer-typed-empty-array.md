@@ -16,12 +16,14 @@ end
 ```js
 import julia from 'eslint-plugin-julia';
 
-export default [{
-  files: ['**/*.jl'],
-  plugins: { julia },
-  language: 'julia/julia',
-  rules: { 'julia/prefer-typed-empty-array': 'warn' },
-}];
+export default [
+  {
+    files: ['**/*.jl'],
+    plugins: { julia },
+    language: 'julia/julia',
+    rules: { 'julia/prefer-typed-empty-array': 'warn' },
+  },
+];
 ```
 
 There are no options. The rule reports only a simple assignment `x = []` (parentheses allowed) with one definition and one write, followed in a containing block by `push!`, `append!`, `pushfirst!`, or `prepend!` on that same binding. Both local and module bindings qualify. Base qualification and explicit Base import aliases work; local shadows do not. The initialization and fill must be in the same function or module, so deferred closure effects do not count. Conditional fills and fills in loops over unknown iterables can qualify; execution is not proven.

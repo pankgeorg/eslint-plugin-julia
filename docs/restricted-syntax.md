@@ -7,17 +7,20 @@ objects:
 
 ```js
 import julia from 'eslint-plugin-julia';
-export default [{
-  files: ['src/**/*.jl'],
-  plugins: { julia },
-  language: 'julia/julia',
-  rules: {
-    'no-restricted-syntax': ['warn',
-      { selector: 'vect[children.length=0]', message: 'Choose an explicit element type.' },
-      { selector: 'macrocall', message: 'Review macro use in this directory.' },
-    ],
+export default [
+  {
+    files: ['src/**/*.jl'],
+    plugins: { julia },
+    language: 'julia/julia',
+    rules: {
+      'no-restricted-syntax': [
+        'warn',
+        { selector: 'vect[children.length=0]', message: 'Choose an explicit element type.' },
+        { selector: 'macrocall', message: 'Review macro use in this directory.' },
+      ],
+    },
   },
-}];
+];
 ```
 
 These are project policies, not necessarily bugs. Scope them with `files` and

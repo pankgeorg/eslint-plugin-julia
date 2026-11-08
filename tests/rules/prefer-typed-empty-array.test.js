@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { tester, plugin, engine } from '../helpers.js';
-const invalid = (code, name) => ({ code, errors: [{ messageId: 'typed', data: { name }, suggestions: [] }] });
+const invalid = (code, name) => ({
+  code,
+  errors: [{ messageId: 'typed', data: { name }, suggestions: [] }],
+});
 tester.run('prefer-typed-empty-array', plugin.rules['prefer-typed-empty-array'], {
   valid: [
     '[]; isempty([]); f()==[]; @test f()==[]',
@@ -34,8 +37,14 @@ tester.run('prefer-typed-empty-array', plugin.rules['prefer-typed-empty-array'],
   ],
 });
 for (const minimumIterations of [1, 16]) {
-  const [result] = await engine({ 'julia/prefer-typed-empty-array': 'warn',
-    'julia/prefer-sized-push-buffer': ['warn', { minimumIterations }] }).lintText(
-    'function f(); x=[]; for i in 1:100; push!(x,i); end; x; end', { filePath: 'buffers.jl' });
-  assert.deepEqual(result.messages.map(m => m.ruleId), ['julia/prefer-sized-push-buffer']);
+  const [result] = await engine({
+    'julia/prefer-typed-empty-array': 'warn',
+    'julia/prefer-sized-push-buffer': ['warn', { minimumIterations }],
+  }).lintText('function f(); x=[]; for i in 1:100; push!(x,i); end; x; end', {
+    filePath: 'buffers.jl',
+  });
+  assert.deepEqual(
+    result.messages.map((m) => m.ruleId),
+    ['julia/prefer-sized-push-buffer'],
+  );
 }

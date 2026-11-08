@@ -6,25 +6,40 @@ There are no fixes or suggestions because replacing a call can change its behavi
 
 ```js
 import julia from 'eslint-plugin-julia';
-export default [{
-  files: ['**/*.jl'],
-  plugins: { julia },
-  language: 'julia/julia',
-  rules: {
-    'julia/no-restricted-calls': ['warn', {
-      entries: [
-        { name: 'Base.sleep', minArgs: 1, maxArgs: 1,
-          message: 'Use the project delay wrapper.' },
-        { name: 'Threads.nthreads', context: 'const-initializer',
-          message: 'Read the thread count during runtime work.' },
-        { pattern: 'unsafe_*', binding: 'spelling',
-          exceptWithinFunctions: ['unsafe_*', '_unsafe_*'],
-          message: 'Keep this operation inside an approved low-level function.' },
+export default [
+  {
+    files: ['**/*.jl'],
+    plugins: { julia },
+    language: 'julia/julia',
+    rules: {
+      'julia/no-restricted-calls': [
+        'warn',
+        {
+          entries: [
+            {
+              name: 'Base.sleep',
+              minArgs: 1,
+              maxArgs: 1,
+              message: 'Use the project delay wrapper.',
+            },
+            {
+              name: 'Threads.nthreads',
+              context: 'const-initializer',
+              message: 'Read the thread count during runtime work.',
+            },
+            {
+              pattern: 'unsafe_*',
+              binding: 'spelling',
+              exceptWithinFunctions: ['unsafe_*', '_unsafe_*'],
+              message: 'Keep this operation inside an approved low-level function.',
+            },
+          ],
+          includeMacroPayloads: false,
+        },
       ],
-      includeMacroPayloads: false,
-    }],
+    },
   },
-}];
+];
 ```
 
 Each entry requires exactly one of `name` (exact) and `pattern` (glob). `*` matches

@@ -14,12 +14,14 @@ end
 ```js
 import julia from 'eslint-plugin-julia';
 
-export default [{
-  files: ['**/*.jl'],
-  plugins: { julia },
-  language: 'julia/julia',
-  rules: { 'julia/require-typed-global': ['warn', { allow: ['interactive_state'] }] },
-}];
+export default [
+  {
+    files: ['**/*.jl'],
+    plugins: { julia },
+    language: 'julia/julia',
+    rules: { 'julia/require-typed-global': ['warn', { allow: ['interactive_state'] }] },
+  },
+];
 ```
 
 `allow` defaults to `[]` and contains exact binding names, including Unicode or quoted identifier contents.

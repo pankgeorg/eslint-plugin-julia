@@ -7,7 +7,11 @@ const sleep = opts({ name: 'sleep' });
 const unsafe = opts({ pattern: 'unsafe_*' });
 const arity = opts({ name: 'sleep', minArgs: 1, maxArgs: 1 });
 const threads = opts({ name: 'Threads.nthreads', context: 'const-initializer', maxArgs: 0 });
-const invalid = (code, options = sleep, count = 1) => ({ code, options, errors: Array.from({ length: count }, () => ({ messageId: 'restricted' })) });
+const invalid = (code, options = sleep, count = 1) => ({
+  code,
+  options,
+  errors: Array.from({ length: count }, () => ({ messageId: 'restricted' })),
+});
 tester.run('no-restricted-calls', plugin.rules['no-restricted-calls'], {
   valid: [
     'sleep(1)',
@@ -32,20 +36,37 @@ tester.run('no-restricted-calls', plugin.rules['no-restricted-calls'], {
     { code: 'f(x)=x; f(1)', options: opts({ name: 'Other.f' }) },
     { code: 'using Other; sleep(1)', options: sleep },
     { code: 'import Other: Base; Base.sleep(1)', options: sleep },
-    { code: 'function unsafe_入口(p); unsafe_load(p); end', options: opts({ pattern: 'unsafe_*', exceptWithinFunctions: ['unsafe_*'] }) },
+    {
+      code: 'function unsafe_入口(p); unsafe_load(p); end',
+      options: opts({ pattern: 'unsafe_*', exceptWithinFunctions: ['unsafe_*'] }),
+    },
   ],
   invalid: [
     invalid('f(x=sleep(1))=x'),
-    { ...invalid('sleep(1)\nfetch_raw(pointer_value)', opts({ name: 'Base.sleep' }, { name: 'Base.unsafe_load' })),
+    {
+      ...invalid(
+        'sleep(1)\nfetch_raw(pointer_value)',
+        opts({ name: 'Base.sleep' }, { name: 'Base.unsafe_load' }),
+      ),
       filename: fileURLToPath(new URL('../fixtures/restricted/consumer.jl', import.meta.url)),
-      settings: { julia: { entryFiles: [fileURLToPath(new URL('../fixtures/restricted/entry.jl', import.meta.url))] } } },
-    invalid('sleep(1)'), invalid('Base.sleep(1)'),
+      settings: {
+        julia: {
+          entryFiles: [fileURLToPath(new URL('../fixtures/restricted/entry.jl', import.meta.url))],
+        },
+      },
+    },
+    invalid('sleep(1)'),
+    invalid('Base.sleep(1)'),
     invalid('using Base: sleep as nap; nap(1)'),
     invalid('import Base as B; B.sleep(1)'),
     invalid('using Base: sleep; sleep(1)'),
-    invalid('sleep.(xs)'), invalid('Base.sleep.(xs)'),
+    invalid('sleep.(xs)'),
+    invalid('Base.sleep.(xs)'),
     invalid('sleep(1; timer=2); sleep(1, timer=2)', arity, 2),
-    invalid('finalizer(obj) do item; close(item); end', opts({ name: 'finalizer', minArgs: 2, maxArgs: 2 })),
+    invalid(
+      'finalizer(obj) do item; close(item); end',
+      opts({ name: 'finalizer', minArgs: 2, maxArgs: 2 }),
+    ),
     invalid('x ∈ xs; x .∈ xs; ∈(x,xs)', opts({ name: '∈', minArgs: 2, maxArgs: 2 }), 3),
     invalid('Base.:+(x,y)', opts({ name: '+' })),
     invalid('Task{T}(f); Base.Task(f)', opts({ name: 'Core.Task' }), 2),
@@ -54,10 +75,16 @@ tester.run('no-restricted-calls', plugin.rules['no-restricted-calls'], {
     invalid('using Base.Threads: nthreads as nt; const n = nt()', threads),
     invalid('Base.unsafe_load(p); unsafe_load(p)', unsafe, 2),
     invalid('Base.uv_unref(handle)', opts({ pattern: 'Base.uv_*' })),
-    invalid('f(sleep)=sleep(1)', opts({ name: 'sleep', binding: 'spelling', message: 'Use the delay wrapper.' })),
+    invalid(
+      'f(sleep)=sleep(1)',
+      opts({ name: 'sleep', binding: 'spelling', message: 'Use the delay wrapper.' }),
+    ),
     invalid('unsafe_読み(p)', opts({ pattern: 'unsafe_??', binding: 'spelling' })),
     invalid('Other.unsafe_read(p)', opts({ pattern: 'unsafe_*', binding: 'spelling' })),
-    invalid('function wrap(p); unsafe_load(p); end', opts({ pattern: 'unsafe_*', exceptWithinFunctions: ['unsafe_*'] })),
+    invalid(
+      'function wrap(p); unsafe_load(p); end',
+      opts({ pattern: 'unsafe_*', exceptWithinFunctions: ['unsafe_*'] }),
+    ),
     invalid('@time sleep(1)', [{ entries: [{ name: 'Base.sleep' }], includeMacroPayloads: true }]),
     invalid('sleep(xs...)', sleep),
     invalid('using Other: pause as nap; nap(1)', opts({ name: 'Other.pause' })),
@@ -74,5 +101,10 @@ test('restriction schemas reject ambiguous entries and unknown options', async (
     { entries: [{ name: 'sleep', typo: true }] },
     { includeMacroPayloads: 'yes' },
     { typo: true },
-  ]) await assert.rejects(engine({ 'julia/no-restricted-calls': ['warn', options] }).lintText('sleep(1)', { filePath: 'x.jl' }));
+  ])
+    await assert.rejects(
+      engine({ 'julia/no-restricted-calls': ['warn', options] }).lintText('sleep(1)', {
+        filePath: 'x.jl',
+      }),
+    );
 });

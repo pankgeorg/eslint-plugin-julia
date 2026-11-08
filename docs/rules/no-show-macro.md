@@ -7,12 +7,14 @@ scripts often use these macros deliberately. Restrict it to library sources:
 
 ```js
 import julia from 'eslint-plugin-julia';
-export default [{
-  files: ['src/**'],
-  plugins: { julia },
-  language: 'julia/julia',
-  rules: { 'julia/no-show-macro': ['warn', { allow: [] }] },
-}];
+export default [
+  {
+    files: ['src/**'],
+    plugins: { julia },
+    language: 'julia/julia',
+    rules: { 'julia/no-show-macro': ['warn', { allow: [] }] },
+  },
+];
 ```
 
 `allow` defaults to `[]`. Entries name the canonical macros, with or without

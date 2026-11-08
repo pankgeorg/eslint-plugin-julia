@@ -6,22 +6,29 @@ diagnostic conventions; it does not prove that the matched macro is unsafe.
 
 ```js
 import julia from 'eslint-plugin-julia';
-export default [{
-  files: ['**/*.jl'],
-  plugins: { julia },
-  language: 'julia/julia',
-  rules: {
-    'julia/no-restricted-macros': ['warn', {
-      entries: [
-        { name: 'Base.@async', message: 'Use the project task launcher.' },
-        { name: 'Threads.@threads',
-          when: { argumentIndex: 0, argumentText: ':static' },
-          message: 'Use the project loop scheduling convention.' },
+export default [
+  {
+    files: ['**/*.jl'],
+    plugins: { julia },
+    language: 'julia/julia',
+    rules: {
+      'julia/no-restricted-macros': [
+        'warn',
+        {
+          entries: [
+            { name: 'Base.@async', message: 'Use the project task launcher.' },
+            {
+              name: 'Threads.@threads',
+              when: { argumentIndex: 0, argumentText: ':static' },
+              message: 'Use the project loop scheduling convention.',
+            },
+          ],
+          includeMacroPayloads: false,
+        },
       ],
-      includeMacroPayloads: false,
-    }],
+    },
   },
-}];
+];
 ```
 
 Each entry requires exactly one of `name` and `pattern`. Include the `@` in macro

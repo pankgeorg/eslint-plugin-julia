@@ -5,20 +5,32 @@ Enforce a project's written module boundaries and import style. This syntax poli
 ```js
 import julia from 'eslint-plugin-julia';
 
-export default [{
-  files: ['**/*.jl'],
-  plugins: { julia },
-  language: 'julia/julia',
-  rules: {
-    'julia/no-restricted-imports': ['warn', {
-      entries: [{ module: 'LegacyAPI', names: ['launch'], kind: 'both', message: 'Use the supported launcher.' }],
-      banImport: false,
-      requireExplicitNames: true,
-      allowBareUsing: ['Test'],
-      includeMacroPayloads: false,
-    }],
+export default [
+  {
+    files: ['**/*.jl'],
+    plugins: { julia },
+    language: 'julia/julia',
+    rules: {
+      'julia/no-restricted-imports': [
+        'warn',
+        {
+          entries: [
+            {
+              module: 'LegacyAPI',
+              names: ['launch'],
+              kind: 'both',
+              message: 'Use the supported launcher.',
+            },
+          ],
+          banImport: false,
+          requireExplicitNames: true,
+          allowBareUsing: ['Test'],
+          includeMacroPayloads: false,
+        },
+      ],
+    },
   },
-}];
+];
 ```
 
 `entries` defaults to `[]`; each entry requires exactly one of `module` or `modulePattern`, and a nonempty `message`. `kind` defaults to `both`. Omit `names` to restrict every clause for that module; otherwise provide a nonempty list of original names, before `as`. Thus a restriction on `launch` matches `using LegacyAPI: launch as start`, but not `using LegacyAPI: safe as launch`. Macro names include `@`; quoted identifiers use their identifier contents. Bare `using LegacyAPI` does not enumerate exports and cannot match a name-only restriction. The `names` filter applies to colon lists; a dotted bare import such as `import LegacyAPI.launch` is treated as a whole path because syntax alone cannot distinguish a submodule from a value. Restrict that complete path separately if needed.

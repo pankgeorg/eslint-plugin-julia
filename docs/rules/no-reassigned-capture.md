@@ -15,12 +15,14 @@ end
 
 ```js
 import julia from 'eslint-plugin-julia';
-export default [{
-  files: ['src/**'],
-  plugins: { julia },
-  language: 'julia/julia',
-  rules: { 'julia/no-reassigned-capture': 'warn' },
-}];
+export default [
+  {
+    files: ['src/**'],
+    plugins: { julia },
+    language: 'julia/julia',
+    rules: { 'julia/no-reassigned-capture': 'warn' },
+  },
+];
 ```
 
 There are no options and no fixes or suggestions. Adding `let` automatically

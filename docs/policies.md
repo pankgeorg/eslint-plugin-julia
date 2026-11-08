@@ -19,24 +19,30 @@ import julia from 'eslint-plugin-julia';
 const calls = [
   { name: 'Core.ccall', message: 'Review the foreign interface contract.' }, // ccall
   { name: 'Base.finalizer', message: 'Review cleanup ownership.' }, // finalizer
-  { name: 'Base.unlock', minArgs: 1, maxArgs: 1,
-    message: 'Review this manual lock release.' }, // unlock
-  { name: 'Base.yield', minArgs: 0, maxArgs: 0,
-    message: 'Review this scheduler handoff.' }, // yield
-  { name: 'Base.sleep', minArgs: 1, maxArgs: 1,
-    message: 'Use the application delay abstraction.' }, // sleep
-  { name: 'Core.Task', minArgs: 1, maxArgs: 1,
-    message: 'Use the application task launcher.' }, // Task
+  { name: 'Base.unlock', minArgs: 1, maxArgs: 1, message: 'Review this manual lock release.' }, // unlock
+  { name: 'Base.yield', minArgs: 0, maxArgs: 0, message: 'Review this scheduler handoff.' }, // yield
+  { name: 'Base.sleep', minArgs: 1, maxArgs: 1, message: 'Use the application delay abstraction.' }, // sleep
+  { name: 'Core.Task', minArgs: 1, maxArgs: 1, message: 'Use the application task launcher.' }, // Task
   { name: 'Core.ErrorException', message: 'Choose a domain exception.' }, // ErrorException
   { name: 'Base.error', message: 'Choose a domain exception.' }, // error
-  { name: 'Threads.nthreads', context: 'const-initializer', maxArgs: 0,
-    message: 'Query thread counts during runtime work.' }, // initializing with `nthreads`
-  { pattern: 'unsafe_*', binding: 'spelling',
+  {
+    name: 'Threads.nthreads',
+    context: 'const-initializer',
+    maxArgs: 0,
+    message: 'Query thread counts during runtime work.',
+  }, // initializing with `nthreads`
+  {
+    pattern: 'unsafe_*',
+    binding: 'spelling',
     exceptWithinFunctions: ['unsafe_*', '_unsafe_*'],
-    message: 'Keep this call within the low-level API boundary.' }, // unsafe_ function
-  { pattern: '_unsafe_*', binding: 'spelling',
+    message: 'Keep this call within the low-level API boundary.',
+  }, // unsafe_ function
+  {
+    pattern: '_unsafe_*',
+    binding: 'spelling',
     exceptWithinFunctions: ['unsafe_*', '_unsafe_*'],
-    message: 'Keep this call within the low-level API boundary.' }, // unsafe_ function
+    message: 'Keep this call within the low-level API boundary.',
+  }, // unsafe_ function
   { pattern: 'Base.uv_*', message: 'Review the runtime interface.' }, // uv
 ];
 
@@ -57,63 +63,91 @@ const macros = [
 // opaque macro payloads; they do not expand macros or infer runtime types.
 const ordinary = ':not(quote *):not(inert *):not(macrocall *)';
 const syntax = [
-  { selector: `:matches(call, dotcall) > [kind='...']${ordinary}`
-      + ":not(function > call > [kind='...'])"
-      + ":not(function > [kind='where'] > call > [kind='...'])"
-      + ":not(function > [kind='::'] > call > [kind='...'])"
-      + ':not(macro *)',
-    message: 'Review argument expansion.' }, // splatting
-  { selector: `function > [kind='::']${ordinary}, function > [kind='where'] > [kind='::']${ordinary}`,
-    message: 'Review the method result conversion.' }, // return type annotation
-  { selector: `call:has(> Identifier[value='*']):has(> string)${ordinary}`,
-    message: 'Use the application string formatting convention.' }, // string concatenation
-  { selector: `:matches([kind='->'], [kind='do']) > block > return:last-child${ordinary}`,
-    message: 'Follow the closure return convention.' }, // return in anonymous function
+  {
+    selector:
+      `:matches(call, dotcall) > [kind='...']${ordinary}` +
+      ":not(function > call > [kind='...'])" +
+      ":not(function > [kind='where'] > call > [kind='...'])" +
+      ":not(function > [kind='::'] > call > [kind='...'])" +
+      ':not(macro *)',
+    message: 'Review argument expansion.',
+  }, // splatting
+  {
+    selector: `function > [kind='::']${ordinary}, function > [kind='where'] > [kind='::']${ordinary}`,
+    message: 'Review the method result conversion.',
+  }, // return type annotation
+  {
+    selector: `call:has(> Identifier[value='*']):has(> string)${ordinary}`,
+    message: 'Use the application string formatting convention.',
+  }, // string concatenation
+  {
+    selector: `:matches([kind='->'], [kind='do']) > block > return:last-child${ordinary}`,
+    message: 'Follow the closure return convention.',
+  }, // return in anonymous function
 ];
 
-export default [{
-  files: ['**/*.jl'],
-  plugins: { julia },
-  language: 'julia/julia',
-  rules: {
-    'julia/no-restricted-calls': ['warn', { entries: calls }],
-    'julia/no-restricted-macros': ['warn', { entries: macros }],
-    'julia/no-restricted-imports': ['warn', {
-      banImport: true, // no import
-      requireExplicitNames: true, // bare using
-      entries: [{ module: 'RAICode', kind: 'using',
-        message: 'Respect the package boundary.' }], // no import RAICode
-    }],
-    'no-restricted-syntax': ['warn', ...syntax],
+export default [
+  {
+    files: ['**/*.jl'],
+    plugins: { julia },
+    language: 'julia/julia',
+    rules: {
+      'julia/no-restricted-calls': ['warn', { entries: calls }],
+      'julia/no-restricted-macros': ['warn', { entries: macros }],
+      'julia/no-restricted-imports': [
+        'warn',
+        {
+          banImport: true, // no import
+          requireExplicitNames: true, // bare using
+          entries: [{ module: 'RAICode', kind: 'using', message: 'Respect the package boundary.' }], // no import RAICode
+        },
+      ],
+      'no-restricted-syntax': ['warn', ...syntax],
+    },
   },
-}, {
-  files: ['src/Compiler/**/*.jl'],
-  rules: {
-    'no-restricted-syntax': ['warn', ...syntax,
-      { selector: `vect[children.length=0]${ordinary}`,
-        message: 'Specify the container element type.' }, // array with no specific type
-      { selector: `comprehension${ordinary}`,
-        message: 'Specify the comprehension element type.' }, // untyped array comprehension
-    ],
+  {
+    files: ['src/Compiler/**/*.jl'],
+    rules: {
+      'no-restricted-syntax': [
+        'warn',
+        ...syntax,
+        {
+          selector: `vect[children.length=0]${ordinary}`,
+          message: 'Specify the container element type.',
+        }, // array with no specific type
+        {
+          selector: `comprehension${ordinary}`,
+          message: 'Specify the comprehension element type.',
+        }, // untyped array comprehension
+      ],
+    },
   },
-}, {
-  files: ['test/**/*.jl', 'test.jl', 'tests.jl'],
-  rules: {
-    // Explicit policy replacement: tests may use delays and generic exceptions.
-    'julia/no-restricted-calls': ['warn', {
-      entries: calls.filter(entry => !['Base.sleep', 'Base.error', 'Core.ErrorException'].includes(entry.name)),
-    }],
-    'julia/no-restricted-imports': ['warn', {
-      banImport: true, // no import: retained in tests
-      entries: [{ module: 'RAICode', kind: 'using',
-        message: 'Respect the package boundary.' }], // no import RAICode: retained
-      // bare using: allowed in tests by omitting requireExplicitNames
-    }],
-    // splatting, string concatenation, return type annotation, and
-    // return in anonymous function: allowed in tests.
-    'no-restricted-syntax': 'off',
+  {
+    files: ['test/**/*.jl', 'test.jl', 'tests.jl'],
+    rules: {
+      // Explicit policy replacement: tests may use delays and generic exceptions.
+      'julia/no-restricted-calls': [
+        'warn',
+        {
+          entries: calls.filter(
+            (entry) => !['Base.sleep', 'Base.error', 'Core.ErrorException'].includes(entry.name),
+          ),
+        },
+      ],
+      'julia/no-restricted-imports': [
+        'warn',
+        {
+          banImport: true, // no import: retained in tests
+          entries: [{ module: 'RAICode', kind: 'using', message: 'Respect the package boundary.' }], // no import RAICode: retained
+          // bare using: allowed in tests by omitting requireExplicitNames
+        },
+      ],
+      // splatting, string concatenation, return type annotation, and
+      // return in anonymous function: allowed in tests.
+      'no-restricted-syntax': 'off',
+    },
   },
-}];
+];
 ```
 
 Names such as `Core.ccall` are canonical policy identities; they are not instructions

@@ -1,12 +1,17 @@
 import { tester, plugin } from '../helpers.js';
-const bad = (code, ...names) => ({ code, errors: names.map(name => ({ messageId: 'boxed', data: { name } })) });
+const bad = (code, ...names) => ({
+  code,
+  errors: names.map((name) => ({ messageId: 'boxed', data: { name } })),
+});
 tester.run('no-reassigned-capture', plugin.rules['no-reassigned-capture'], {
   valid: [
-    'f()=(x=1; ()->x)', 'f(x)=()->x',
+    'f()=(x=1; ()->x)',
+    'f(x)=()->x',
     'f(x,b)=(if b; x=1; ()->x; end)',
     'f(x,b)=(if b; return 1; else; x=1; ()->x; end)',
     'f(x)=(for i=1:3; x=i; consume(()->x); end)',
-    'f(x)=(x=abs(x); ()->x)', 'f(;x=1)=(x=abs(x); ()->x)',
+    'f(x)=(x=abs(x); ()->x)',
+    'f(;x=1)=(x=abs(x); ()->x)',
     'f()=(x=1; x=2; x)',
     'f()=(x=1; g=let x=x; ()->x; end; x=2; g)',
     'f()=(x=1; g=(x -> x+1); x=2; g)',

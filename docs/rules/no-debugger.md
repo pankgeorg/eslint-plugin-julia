@@ -7,20 +7,26 @@ Report interactive breakpoint macros left in checked-in source:
 
 ```js
 import julia from 'eslint-plugin-julia';
-export default [{
-  files: ['**/*.jl'],
-  plugins: { julia },
-  language: 'julia/julia',
-  rules: {
-    'julia/no-debugger': ['warn', {
-      checkImports: false,
-      includeMacroPayloads: false,
-    }],
+export default [
+  {
+    files: ['**/*.jl'],
+    plugins: { julia },
+    language: 'julia/julia',
+    rules: {
+      'julia/no-debugger': [
+        'warn',
+        {
+          checkImports: false,
+          includeMacroPayloads: false,
+        },
+      ],
+    },
   },
-}, {
-  files: ['src/**/*.jl'],
-  rules: { 'julia/no-debugger': ['warn', { checkImports: true }] },
-}];
+  {
+    files: ['src/**/*.jl'],
+    rules: { 'julia/no-debugger': ['warn', { checkImports: true }] },
+  },
+];
 ```
 
 Qualified invocations such as `Infiltrator.@infiltrate` match even without a written

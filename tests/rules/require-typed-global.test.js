@@ -37,8 +37,14 @@ tester.run('require-typed-global', plugin.rules['require-typed-global'], {
 });
 // The two rules must partition bindings even with the broader const settings.
 for (const code of ['x=0; x=1; f()=x', 'f()=(global x=1; x)', 'x=1; f()=x']) {
-  const [result] = await engine({ 'julia/prefer-const-global': ['warn', { dynamicScopes: 'strict-file' }],
-    'julia/require-typed-global': 'warn' }).lintText(code, { filePath: 'globals.jl' });
+  const [result] = await engine({
+    'julia/prefer-const-global': ['warn', { dynamicScopes: 'strict-file' }],
+    'julia/require-typed-global': 'warn',
+  }).lintText(code, { filePath: 'globals.jl' });
   assert.equal(result.messages.length, 1);
 }
-await assert.rejects(engine({ 'julia/require-typed-global': ['warn', { allow: [''] }] }).lintText('x=0', { filePath: 'schema.jl' }));
+await assert.rejects(
+  engine({ 'julia/require-typed-global': ['warn', { allow: [''] }] }).lintText('x=0', {
+    filePath: 'schema.jl',
+  }),
+);

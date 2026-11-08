@@ -1,10 +1,15 @@
 import { tester, plugin } from '../helpers.js';
-const error = (output, name = 'Infiltrator.@infiltrate') => ({ messageId: 'breakpoint', data: { name },
-  suggestions: output === null ? [] : [{ messageId: 'remove', output }] });
+const error = (output, name = 'Infiltrator.@infiltrate') => ({
+  messageId: 'breakpoint',
+  data: { name },
+  suggestions: output === null ? [] : [{ messageId: 'remove', output }],
+});
 tester.run('no-debugger', plugin.rules['no-debugger'], {
   valid: [
     'import Debugger; @run task()',
-    '@run task()', '@enter task()', '@bp',
+    '@run task()',
+    '@enter task()',
+    '@bp',
     'macro infiltrate(x); x; end; @infiltrate 1',
     'Main = Dict(); Main.@infiltrate',
     'using Infiltrator; using Debugger',
@@ -23,28 +28,66 @@ tester.run('no-debugger', plugin.rules['no-debugger'], {
     { code: '@wrapper using Debugger', options: [{ checkImports: true }] },
   ],
   invalid: [
-    { code: 'Infiltrator.@infiltrate\n)', languageOptions: { recover: true }, errors: [error(null)] },
+    {
+      code: 'Infiltrator.@infiltrate\n)',
+      languageOptions: { recover: true },
+      errors: [error(null)],
+    },
     { code: 'Infiltrator.@infiltrate', errors: [error('')] },
     { code: '@infiltrate', errors: [error('')] },
     { code: 'f() = (@exfiltrate; 1)', errors: [error('f() = (; 1)', 'Infiltrator.@exfiltrate')] },
     { code: 'Main.@infiltrate', errors: [error('')] },
-    { code: 'function f(x)\n    Main.Infiltrator.@infiltrate\n    x\nend', errors: [error('function f(x)\n    \n    x\nend')] },
+    {
+      code: 'function f(x)\n    Main.Infiltrator.@infiltrate\n    x\nend',
+      errors: [error('function f(x)\n    \n    x\nend')],
+    },
     { code: 'using Infiltrator\n@infiltrate', errors: [error('using Infiltrator\n')] },
-    { code: 'using Infiltrator\n@exfiltrate', errors: [error('using Infiltrator\n', 'Infiltrator.@exfiltrate')] },
+    {
+      code: 'using Infiltrator\n@exfiltrate',
+      errors: [error('using Infiltrator\n', 'Infiltrator.@exfiltrate')],
+    },
     { code: 'using Debugger\n@run f(λ)', errors: [error('using Debugger\n', 'Debugger.@run')] },
     { code: 'using Debugger\n@enter f()', errors: [error('using Debugger\n', 'Debugger.@enter')] },
     { code: 'using Debugger\n@bp', errors: [error('using Debugger\n', 'Debugger.@bp')] },
     { code: 'Debugger.@enter f()', errors: [error('', 'Debugger.@enter')] },
-    { code: 'using Debugger: @run as @launch\n@launch f()', errors: [error('using Debugger: @run as @launch\n', 'Debugger.@run')] },
-    { code: 'import Infiltrator as I\nI.@infiltrate', errors: [error('import Infiltrator as I\n')] },
+    {
+      code: 'using Debugger: @run as @launch\n@launch f()',
+      errors: [error('using Debugger: @run as @launch\n', 'Debugger.@run')],
+    },
+    {
+      code: 'import Infiltrator as I\nI.@infiltrate',
+      errors: [error('import Infiltrator as I\n')],
+    },
     { code: 'x = Infiltrator.@infiltrate', errors: [error(null)] },
     { code: 'f(Infiltrator.@infiltrate)', errors: [error(null)] },
-    { code: 'function f()\n    Infiltrator.@infiltrate\n    result\nend', errors: [error('function f()\n    \n    result\nend')] },
-    { code: 'Infiltrator.@infiltrate # inspect this state', errors: [error(' # inspect this state')] },
+    {
+      code: 'function f()\n    Infiltrator.@infiltrate\n    result\nend',
+      errors: [error('function f()\n    \n    result\nend')],
+    },
+    {
+      code: 'Infiltrator.@infiltrate # inspect this state',
+      errors: [error(' # inspect this state')],
+    },
     { code: 'Infiltrator.@infiltrate( # condition\n true)', errors: [error(null)] },
-    { code: '@wrapper Infiltrator.@infiltrate', options: [{ includeMacroPayloads: true }], errors: [error(null)] },
-    { code: 'using Debugger: @run', options: [{ checkImports: true }], errors: [{ messageId: 'debuggerImport', data: { name: 'Debugger' } }] },
-    { code: 'import Infiltrator as I', options: [{ checkImports: true }], errors: [{ messageId: 'debuggerImport', data: { name: 'Infiltrator' } }] },
-    { code: 'using Debugger, Infiltrator', options: [{ checkImports: true }], errors: [{ messageId: 'debuggerImport' }, { messageId: 'debuggerImport' }] },
+    {
+      code: '@wrapper Infiltrator.@infiltrate',
+      options: [{ includeMacroPayloads: true }],
+      errors: [error(null)],
+    },
+    {
+      code: 'using Debugger: @run',
+      options: [{ checkImports: true }],
+      errors: [{ messageId: 'debuggerImport', data: { name: 'Debugger' } }],
+    },
+    {
+      code: 'import Infiltrator as I',
+      options: [{ checkImports: true }],
+      errors: [{ messageId: 'debuggerImport', data: { name: 'Infiltrator' } }],
+    },
+    {
+      code: 'using Debugger, Infiltrator',
+      options: [{ checkImports: true }],
+      errors: [{ messageId: 'debuggerImport' }, { messageId: 'debuggerImport' }],
+    },
   ],
 });
