@@ -1,64 +1,71 @@
 # eslint-plugin-julia
 
-Experimental v0.1 ESLint language plugin for Julia. It runs Julia 1.13.2's
-JuliaSyntax parser as bundled WebAssembly, without a Julia installation. It uses
-ESLint's native language API and Julia node kinds, with syntax and scope rules.
-It includes an optional syntactic scope analyzer with [module resolution](docs/module-resolution.md); it does not provide
-Julia inference or JavaScript core rules.
+[![CI](https://github.com/pankgeorg/eslint-plugin-julia/actions/workflows/ci.yml/badge.svg)](https://github.com/pankgeorg/eslint-plugin-julia/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/pankgeorg/eslint-plugin-julia)](https://github.com/pankgeorg/eslint-plugin-julia/releases)
+[![License: MIT](https://img.shields.io/github/license/pankgeorg/eslint-plugin-julia)](LICENSE)
 
-Requires ESLint 10.14+ within major 10 and Node 22.23.3+ within major 22, or
-24.22.1+ within major 24, with Wasm GC and exception handling enabled. Those two
-baseline versions were tested on Linux arm64; other platforms await CI.
+Lint Julia code with [ESLint](https://eslint.org).
 
-## Install from git
+- **Julia's own parser.** JuliaSyntax from Julia 1.13.2, compiled to WebAssembly and
+  bundled. It parses exactly what Julia parses, and needs no Julia installation, only
+  Node.js.
+- **66 rules** for likely bugs (`x == NaN`, a `return` inside `finally`, duplicate
+  keyword arguments, unreachable code, …), scope problems (undefined and unused names,
+  with `include` and `using` resolved through your Manifest) and performance pitfalls.
+  A conservative `recommended` preset, and `strict` for everything.
+- **Everything ESLint has:** `--fix` and editor suggestions, `eslint-disable` comments in
+  Julia, flat config, SARIF for GitHub code scanning, caching, and pre-commit hooks.
 
-There is no npm release yet. Install from git and pin a reviewed commit:
+```console
+$ npx eslint '**/*.jl'
+
+src/stats.jl
+  12:8  error  Use isnan to test for NaN; equality and identity have different NaN semantics  julia/use-isnan
+```
+
+## Quick start
 
 ```sh
-npm install --save-dev eslint@^10.14.0 'git+https://github.com/pankgeorg/eslint-plugin-julia.git#COMMIT'
+npm install --save-dev eslint \
+  https://github.com/pankgeorg/eslint-plugin-julia/releases/download/v0.1.0/eslint-plugin-julia-0.1.0.tgz
 ```
-
-For a local checkout, use
-`npm install --save-dev /path/to/eslint-plugin-julia`. No build or download runs
-during installation. The package includes the Wasm binary and verifies its hash
-at import. Run `npm test` in a checkout to verify the ABI and test suite.
-
-## Flat config
 
 ```js
-// eslint.config.js (ESM)
+// eslint.config.js
 import julia from 'eslint-plugin-julia';
 
-export default [
-  julia.configs.recommended,
-  {
-    files: ['**/*.jl'],
-    // Optional: lint recovered syntax during editing.
-    languageOptions: { recover: true },
-    rules: {
-      'julia/prefer-identity-nothing': 'warn',
-      'julia/no-empty-catch': ['warn', { allowComment: true }],
-    },
-  },
-];
+export default [julia.configs.recommended];
 ```
-
-`recommended` selects `**/*.jl`, registers `julia`, and sets
-`language: 'julia/julia'`. `style` selects the same files and enables the two
-opt-in rules as warnings. `all` enables all registered rules as errors, retaining the
-default suggestion-only identity behavior. These are single flat config objects.
-For explicit registration, use `plugins: { julia }` and
-`language: 'julia/julia'` in a matching files entry. Keep JavaScript rules in
-separate entries that select JavaScript files.
 
 ```sh
 npx eslint '**/*.jl'
-npx eslint --stdin --stdin-filename example.jl
 ```
 
-The default configuration (`recommended`: likely bugs, near-zero false positives; `strict`: everything else as warnings) and the evidence behind each rule's default: [docs/defaults.md](docs/defaults.md).
+Requires Node.js 22 or 24 and ESLint 10 (or 9.39+). **[docs/usage.md](docs/usage.md)**
+covers the rest:
 
-Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `tests/rules/<name>.test.js`, then run `node scripts/gen-registry.mjs` (it regenerates the registry in `src/index.js`, `tests/run.js` and this table).
+- setting this up in a Julia project that has no `package.json` yet;
+- configuration, `--fix` and SARIF;
+- a copy-paste **GitHub Actions** workflow (annotations and code scanning);
+- pre-commit hooks;
+- VS Code.
+
+## Presets
+
+| preset                      | what it turns on                                                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `julia.configs.recommended` | Likely bugs with near-zero false positives: errors when Julia rejects the code or the check can never be right, else warnings. |
+| `julia.configs.strict`      | `recommended` plus every other rule as a warning (style, performance, scope rules such as `no-undef`).                         |
+| `julia.configs.style`       | The opt-in style rules only, as warnings; combine with `recommended`.                                                          |
+| `julia.configs.all`         | Every rule as an error.                                                                                                        |
+
+Why each rule has its default, with false-positive counts on 2,518 real Julia files,
+Pluto.jl and Malt.jl: [docs/defaults.md](docs/defaults.md).
+
+## Rules
+
+"Recommended" is the rule's level in `recommended`. "Edits": _Fix_ means `--fix` applies it,
+and _Suggestions_ are quick fixes offered in editors.
 
 | Rule                                                                                   | Recommended        | Edits             |
 | -------------------------------------------------------------------------------------- | ------------------ | ----------------- |
@@ -129,51 +136,32 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [prefer-sized-push-buffer](docs/rules/prefer-sized-push-buffer.md)                     | Off (strict: warn) | Suggestions       |
 | [use-isnan](docs/rules/use-isnan.md)                                                   | Error              | Suggestions       |
 
-Rules compare exact source spellings; Unicode normalization aliases can be missed.
-Macros and quoted code are excluded from the five non-parser rules. Rules cannot
-predict macro expansion, dynamic splats, dispatch, or dynamic definitions. The scope analyzer resolves literal includes and known module exports.
+Rules work on syntax and scope. They don't expand macros or infer types, so they skip
+code inside macros they don't know and never guess at dispatch. Each rule's page lists
+its limits.
 
-## Syntax errors and directives
+## How it fits with other Julia tools
 
-`languageOptions.recover` defaults to `false`: all JuliaSyntax errors become fatal
-per-file parsing problems and ESLint skips rules on that file. They cannot be
-suppressed with inline directives. With `recover: true`, ESLint visits the
-recovered tree and `julia/parse-errors` reports the errors as suppressible rule
-messages. Disabling that rule hides those messages, but retains diagnostics on
-SourceCode. A shared guard removes fixes and suggestions from every plugin rule
-on files with syntax errors, even when parse-errors is disabled. Third-party
-rules must implement the same policy for their own edits.
+- **Formatting:** use Runic.jl, JuliaFormatter.jl or topiary-julia. This plugin has no
+  whitespace rules.
+- **JET.jl** finds errors through type inference, by loading your code in Julia. This
+  plugin needs no Julia process: it checks syntax and scope, a different class of mistakes,
+  and the two complement each other.
+- **The Julia language server** (VS Code) provides editor intelligence and its own lint.
+  This plugin brings ESLint's ecosystem to Julia: configuration, CI reports, SARIF and
+  pre-commit.
 
-A Wasm runtime trap produces a fatal per-file problem even in recovery mode; the
-next parse gets a fresh instance. Adapter invariant violations throw as plugin
-bugs. A hash mismatch or unsupported Wasm runtime fails plugin initialization.
+## More
 
-Julia comments support `eslint-disable`, `eslint-enable`, `eslint-disable-line`,
-`eslint-disable-next-line`, and inline `eslint` rule configuration, including
-block comments and `-- justification` text:
+- [docs/usage.md](docs/usage.md): install, configure, CLI, GitHub Actions, hooks, editors.
+- [docs/defaults.md](docs/defaults.md): presets and the evidence behind them.
+- [docs/module-resolution.md](docs/module-resolution.md): how `include`/`using` are resolved.
+- [docs/ast.md](docs/ast.md): the Julia AST for writing your own rules or selectors.
+- [CONTRIBUTING.md](CONTRIBUTING.md): development, tests, adding a rule, rebuilding the parser.
+- [CHANGELOG.md](CHANGELOG.md).
 
-```julia
-# eslint-disable-next-line julia/no-empty-catch -- deliberately ignored
-try f(); catch; end
-```
+## License
 
-AST locations and fixes use UTF-16; ESLint renders columns starting at 1. See the
-[AST contract v1](docs/ast.md), [build provenance](scripts/build-parser.md), and
-[ecosystem validation](ECOSYSTEM.md).
-
-## Relation to other Julia tools
-
-Formatting remains with topiary-julia, Runic, or JuliaFormatter. This plugin
-checks narrow syntax patterns and offers no whitespace rules. JET.jl performs
-Julia program analysis using inference; this plugin does not replace that work.
-The Julia language server provides editor language features and Julia-specific
-analysis. ESLint supplies configuration, suppressions, CLI reports, suggestions,
-and optional integrations; editor activation still needs testing.
-
-The CI template is staged in `RELAY/.github/workflows/ci.yml` for the owner to
-move into `.github/workflows/`. It tests Node 22/24 on Linux/macOS/Windows. Its
-optional SARIF demonstration intentionally reports findings in the fixtures and
-requires GitHub code scanning permissions. No CI upload has been performed here.
-
-MIT © Panagiotis Georgakopoulos. Bundled parser/compiler notices are in
-`wasm/LICENSES/`; the Wasm compiler's exact revision is recorded in the manifest.
+MIT © Panagiotis Georgakopoulos. The bundled parser includes code from Julia and
+JuliaSyntax (MIT) and was compiled with WasmCodegen.jl (MIT); their notices are in
+[wasm/LICENSES/](wasm/LICENSES/).
