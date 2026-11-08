@@ -95,7 +95,10 @@ Properties, keyword labels, named-tuple keys and struct fields are not reads.
 Exact `var"..."` contents are supported without decoding escape sequences or Unicode
 normalization. Quotes are data except interpolation at the matching quote depth.
 Macro names are excluded; written arguments can be reads and written ordinary Julia
-constructs can bind names, but expansion never supplies bindings. Opaque macro
+constructs can bind names. The documented `@gensym a b` exception binds and
+initializes each identifier operand as an ordinary assignment, including Unicode
+and `var"..."` names; qualified `Base.@gensym` has the same treatment. It reuses
+enclosing locals just like a written assignment. Other expansion does not supply bindings. Opaque macro
 operands are marked for diagnostic rules to suppress. Literal includes and resolvable bare using/import statements add module members.
 Unresolved wildcard modules remain in the owning scope's `bareUsing`; eval and
 nonliteral includes never invent definitions. Pass the ESLint rule context for

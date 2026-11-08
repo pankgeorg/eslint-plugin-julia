@@ -21,4 +21,5 @@ reads in branches/loops/try regions, after control-flow joins or terminators, an
 captures from a different scope, and signature expressions (which have separate
 evaluation rules). Deferred closures and mutually recursive methods
 are accepted. Unresolved names belong to no-undef. Literal quoted code is data;
+the documented `@gensym` exception initializes its written names; other
 macro expansion never initializes a binding. Exact spellings only.

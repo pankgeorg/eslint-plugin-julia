@@ -8,6 +8,9 @@ function analyze(code) {
   const source = new JuliaSourceCode(code, parsed); return [getScopeManager(source), source];
 }
 const cases = [
+  ['gensym binding', '@gensym a b; a; b', 'a', 'assignment'],
+  ['qualified gensym binding', 'Base.@gensym α; α', 'α', 'assignment'],
+  ['gensym local', 'f()=(@gensym x; x)', 'x', 'assignment'],
   ['empty generic declaration', 'function f end; f', 'f', 'function'],
   ['Unicode empty generic declaration', 'function α end; α', 'α', 'function'],
   ['alias parameter', 'const A{T}=Vector{T}', 'T', 'type-parameter'],
@@ -286,4 +289,21 @@ test('scope: macro defaults can read language-supplied arguments', () => {
 test('scope: isdefined macro probes are not value reads', () => {
   const [m] = analyze('@isdefined(x); f() = @isdefined(y)');
   assert.ok(!m.references.some(r => ['x', 'y'].includes(r.name)));
+});
+
+
+test('gensym assigns all operands without reading them and captures outer locals', () => {
+  const [m] = analyze('f()=(x=1; g()=(@gensym x y; (x,y)); g())');
+  const x = m.functions[0].scope.bindings.get('x');
+  const y = m.functions[1].scope.bindings.get('y');
+  assert.equal(x.definitions.length, 2);
+  assert.equal(y.definitions.length, 1);
+  assert.equal(y.definitions[0].initialized, true);
+  assert.equal(y.definitions[0].assignment.kind, 'macrocall');
+  assert.equal(x.references.length, 1);
+  assert.equal(y.references.length, 1);
+});
+test('gensym bindings stay within modules, functions and quote interpolation depth', () => {
+  const [m] = analyze('module A; @gensym x; end; x; f()=(@gensym y; y); y; :(@gensym z); z');
+  assert.deepEqual(m.references.filter(r => !r.binding && !r.opaque).map(r => r.name), ['x', 'y', 'z']);
 });

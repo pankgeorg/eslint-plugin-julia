@@ -195,6 +195,14 @@ function analyze(source, context) {
         s.dynamic = true;
         if (c[0]?.kind === '.') visit(c[0].children[0], s.module); // compile-time namespace lookup; never consumes a runtime local
         const macroName = c[0]?.kind === '.' ? identifierName(c[0].children[1]) : identifierName(c[0]);
+        // Documented syntax exception: Base.@gensym assigns each written name.
+        if (macroName === '@gensym') {
+          for (const arg of c.slice(1)) {
+            if (identifierName(arg) !== null) pattern(arg, s, 'assignment', { assignment: node, initialized: true });
+            else visit(arg, s, { opaque: true });
+          }
+          return;
+        }
         // Written normal declarations still count; naked DSL operands are opaque reads.
         const assignmentMacro = ['@views', '@view', '@inbounds', '@inline', '@noinline', '@time', '@elapsed',
           '@allocated', '@allocations', '@show', '@showtime', '@assert', '@boundscheck', '@timed', '@sync', '@async', '@spawn', '@simd', '@fastmath', '@__dot__', '@eval'].includes(macroName);
