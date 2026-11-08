@@ -3,6 +3,7 @@ import { language } from './language.js';
 import { manifest } from './parser/wasm-host.js';
 import noCatchBindingReassignRule from './rules/no-catch-binding-reassign.js';
 import noCollapsibleIfRule from './rules/no-collapsible-if.js';
+import noCompareNegativeZeroRule from './rules/no-compare-negative-zero.js';
 import noCondAssignRule from './rules/no-cond-assign.js';
 import noConstReassignRule from './rules/no-const-reassign.js';
 import noConstantConditionRule from './rules/no-constant-condition.js';
@@ -54,6 +55,7 @@ const plugin = {
   rules: {
     'no-catch-binding-reassign': noCatchBindingReassignRule,
     'no-collapsible-if': noCollapsibleIfRule,
+    'no-compare-negative-zero': noCompareNegativeZeroRule,
     'no-cond-assign': noCondAssignRule,
     'no-const-reassign': noConstReassignRule,
     'no-constant-condition': noConstantConditionRule,
