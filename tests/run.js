@@ -16,6 +16,7 @@ import './rules/no-fill-with-mutable.test.js';
 import './rules/no-identical-branches.test.js';
 import './rules/no-import-assign.test.js';
 import './rules/no-impossible-length-comparison.test.js';
+import './rules/no-redundant-type-assertion.test.js';
 import './rules/no-redundant-union-members.test.js';
 import './rules/no-self-assign.test.js';
 import './rules/no-unbound-type-parameters.test.js';
