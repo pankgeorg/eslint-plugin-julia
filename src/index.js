@@ -84,9 +84,31 @@ const plugin = {
   configs: {},
 };
 const config = rules => ({ files: ['**/*.jl'], plugins: { julia: plugin }, language: 'julia/julia', rules });
-const RECOMMENDED = ['parse-errors', 'no-duplicate-struct-fields', 'no-duplicate-keyword-arguments', 'no-shadowed-loop-var', 'no-unreachable', 'no-unsafe-finally', 'no-dupe-args'];
-plugin.configs.recommended = config(Object.fromEntries(RECOMMENDED.map(n => [`julia/${n}`, 'error'])));
+const RECOMMENDED = {
+  'parse-errors': 'error',
+  'no-duplicate-struct-fields': 'error',
+  'no-duplicate-keyword-arguments': 'error',
+  'no-dupe-args': 'error',
+  'no-unreachable': 'error',
+  'no-unsafe-finally': 'error',
+  'no-import-assign': 'error',
+  'use-isnan': 'error',
+  'prefer-ismissing': 'error',
+  'no-shadowed-loop-var': 'warn',
+  'no-dupe-elseif': 'warn',
+  'no-duplicate-logical-operands': 'warn',
+  'no-const-reassign': 'warn',
+  'no-self-assign': 'warn',
+  'no-unsafe-negation': 'warn',
+  'no-unused-expressions': 'warn',
+  'no-fill-with-mutable': 'warn',
+  'no-discarded-copy-result': 'warn'
+};
+plugin.configs.recommended = config(Object.fromEntries(Object.entries(RECOMMENDED).map(([n, level]) => [`julia/${n}`, level])));
 plugin.configs.style = config({'julia/prefer-identity-nothing': 'warn', 'julia/no-empty-catch': 'warn'});
+// strict: recommended plus every other rule as a warning (style, policy and the scope rules that
+// need a complete environment: no-undef, no-unused-vars, …).
+plugin.configs.strict = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [`julia/${n}`, RECOMMENDED[n] ?? 'warn'])));
 plugin.configs.all = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [`julia/${n}`, 'error'])));
 export default plugin;
 export { JuliaSourceCode } from './source-code.js';

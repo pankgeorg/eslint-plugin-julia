@@ -8,8 +8,17 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const root = new URL('../', import.meta.url);
-const RECOMMENDED = ['parse-errors', 'no-duplicate-struct-fields', 'no-duplicate-keyword-arguments',
-  'no-shadowed-loop-var', 'no-unreachable', 'no-unsafe-finally', 'no-dupe-args'];
+// recommended: likely bugs with near-zero false positives (ESLint's bar). 'error' = almost always
+// a bug; 'warn' = a probable bug with occasional deliberate uses. Everything else is opt-in and on
+// (as a warning) in `strict`. Evidence per rule: docs/defaults.md.
+const RECOMMENDED = {
+  'parse-errors': 'error', 'no-duplicate-struct-fields': 'error', 'no-duplicate-keyword-arguments': 'error',
+  'no-dupe-args': 'error', 'no-unreachable': 'error', 'no-unsafe-finally': 'error', 'no-import-assign': 'error',
+  'use-isnan': 'error', 'prefer-ismissing': 'error',
+  'no-shadowed-loop-var': 'warn', 'no-dupe-elseif': 'warn', 'no-duplicate-logical-operands': 'warn',
+  'no-const-reassign': 'warn', 'no-self-assign': 'warn', 'no-unsafe-negation': 'warn',
+  'no-unused-expressions': 'warn', 'no-fill-with-mutable': 'warn', 'no-discarded-copy-result': 'warn',
+};
 const STYLE = { 'prefer-identity-nothing': 'warn', 'no-empty-catch': 'warn' };
 
 const rules = readdirSync(new URL('src/rules/', root)).filter(f => f.endsWith('.js') && !f.endsWith('common.js'))
@@ -30,9 +39,12 @@ ${rules.map(n => `    '${n}': ${ident(n)},`).join('\n')}
   configs: {},
 };
 const config = rules => ({ files: ['**/*.jl'], plugins: { julia: plugin }, language: 'julia/julia', rules });
-const RECOMMENDED = ${JSON.stringify(RECOMMENDED).replaceAll('"', "'").replaceAll(',', ', ')};
-plugin.configs.recommended = config(Object.fromEntries(RECOMMENDED.map(n => [\`julia/\${n}\`, 'error'])));
+const RECOMMENDED = ${JSON.stringify(RECOMMENDED, null, 2).replaceAll('"', "'")};
+plugin.configs.recommended = config(Object.fromEntries(Object.entries(RECOMMENDED).map(([n, level]) => [\`julia/\${n}\`, level])));
 plugin.configs.style = config(${JSON.stringify(Object.fromEntries(Object.entries(STYLE).map(([k, v]) => [`julia/${k}`, v]))).replaceAll('"', "'").replaceAll(',', ', ').replaceAll(':', ': ')});
+// strict: recommended plus every other rule as a warning (style, policy and the scope rules that
+// need a complete environment: no-undef, no-unused-vars, …).
+plugin.configs.strict = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [\`julia/\${n}\`, RECOMMENDED[n] ?? 'warn'])));
 plugin.configs.all = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [\`julia/\${n}\`, 'error'])));
 export default plugin;
 export { JuliaSourceCode } from './source-code.js';
@@ -51,7 +63,8 @@ const plugin = (await import(pathToFileURL(new URL('src/index.js', root).pathnam
 const rows = rules.map(n => {
   const m = plugin.rules[n].meta ?? {};
   const edits = m.fixable && m.hasSuggestions ? 'Fix + suggestions' : m.fixable ? 'Fix' : m.hasSuggestions ? 'Suggestions' : 'None';
-  return `| [${n}](docs/rules/${n}.md) | ${RECOMMENDED.includes(n) ? 'Error' : 'Off'} | ${edits} |`;
+  const level = RECOMMENDED[n] === 'error' ? 'Error' : RECOMMENDED[n] === 'warn' ? 'Warn' : 'Off (strict: warn)';
+  return `| [${n}](docs/rules/${n}.md) | ${level} | ${edits} |`;
 });
 const readme = readFileSync(new URL('README.md', root), 'utf8');
 const lines = readme.split('\n');
@@ -59,4 +72,4 @@ const start = lines.findIndex(l => l.startsWith('| Rule |'));
 let end = start + 2; while (end < lines.length && lines[end].startsWith('| [')) end++;
 lines.splice(start, end - start, '| Rule | Recommended | Edits |', '| --- | --- | --- |', ...rows);
 writeFileSync(new URL('README.md', root), lines.join('\n'));
-console.log(`${rules.length} rules (${RECOMMENDED.length} recommended), ${tests.length} test files`);
+console.log(`${rules.length} rules (${Object.keys(RECOMMENDED).length} recommended), ${tests.length} test files`);

@@ -56,47 +56,49 @@ npx eslint '**/*.jl'
 npx eslint --stdin --stdin-filename example.jl
 ```
 
+The default configuration (`recommended`: likely bugs, near-zero false positives; `strict`: everything else as warnings) and the evidence behind each rule's default: [docs/defaults.md](docs/defaults.md).
+
 Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `tests/rules/<name>.test.js`, then run `node scripts/gen-registry.mjs` (it regenerates the registry in `src/index.js`, `tests/run.js` and this table).
 
 | Rule | Recommended | Edits |
 | --- | --- | --- |
-| [no-collapsible-if](docs/rules/no-collapsible-if.md) | Off | Suggestions |
-| [no-cond-assign](docs/rules/no-cond-assign.md) | Off | Suggestions |
-| [no-const-reassign](docs/rules/no-const-reassign.md) | Off | None |
-| [no-constant-condition](docs/rules/no-constant-condition.md) | Off | None |
-| [no-discarded-copy-result](docs/rules/no-discarded-copy-result.md) | Off | None |
+| [no-collapsible-if](docs/rules/no-collapsible-if.md) | Off (strict: warn) | Suggestions |
+| [no-cond-assign](docs/rules/no-cond-assign.md) | Off (strict: warn) | Suggestions |
+| [no-const-reassign](docs/rules/no-const-reassign.md) | Warn | None |
+| [no-constant-condition](docs/rules/no-constant-condition.md) | Off (strict: warn) | None |
+| [no-discarded-copy-result](docs/rules/no-discarded-copy-result.md) | Warn | None |
 | [no-dupe-args](docs/rules/no-dupe-args.md) | Error | None |
-| [no-dupe-elseif](docs/rules/no-dupe-elseif.md) | Off | None |
+| [no-dupe-elseif](docs/rules/no-dupe-elseif.md) | Warn | None |
 | [no-duplicate-keyword-arguments](docs/rules/no-duplicate-keyword-arguments.md) | Error | None |
-| [no-duplicate-logical-operands](docs/rules/no-duplicate-logical-operands.md) | Off | Suggestions |
-| [no-duplicate-method-signatures](docs/rules/no-duplicate-method-signatures.md) | Off | None |
+| [no-duplicate-logical-operands](docs/rules/no-duplicate-logical-operands.md) | Warn | Suggestions |
+| [no-duplicate-method-signatures](docs/rules/no-duplicate-method-signatures.md) | Off (strict: warn) | None |
 | [no-duplicate-struct-fields](docs/rules/no-duplicate-struct-fields.md) | Error | None |
-| [no-empty-block](docs/rules/no-empty-block.md) | Off | None |
-| [no-empty-catch](docs/rules/no-empty-catch.md) | Off | None |
-| [no-fill-with-mutable](docs/rules/no-fill-with-mutable.md) | Off | None |
-| [no-identical-branches](docs/rules/no-identical-branches.md) | Off | None |
-| [no-import-assign](docs/rules/no-import-assign.md) | Off | None |
-| [no-self-assign](docs/rules/no-self-assign.md) | Off | None |
-| [no-shadowed-loop-var](docs/rules/no-shadowed-loop-var.md) | Error | None |
-| [no-unbound-type-parameters](docs/rules/no-unbound-type-parameters.md) | Off | None |
-| [no-undef](docs/rules/no-undef.md) | Off | None |
-| [no-undefined-exports](docs/rules/no-undefined-exports.md) | Off | None |
+| [no-empty-block](docs/rules/no-empty-block.md) | Off (strict: warn) | None |
+| [no-empty-catch](docs/rules/no-empty-catch.md) | Off (strict: warn) | None |
+| [no-fill-with-mutable](docs/rules/no-fill-with-mutable.md) | Warn | None |
+| [no-identical-branches](docs/rules/no-identical-branches.md) | Off (strict: warn) | None |
+| [no-import-assign](docs/rules/no-import-assign.md) | Error | None |
+| [no-self-assign](docs/rules/no-self-assign.md) | Warn | None |
+| [no-shadowed-loop-var](docs/rules/no-shadowed-loop-var.md) | Warn | None |
+| [no-unbound-type-parameters](docs/rules/no-unbound-type-parameters.md) | Off (strict: warn) | None |
+| [no-undef](docs/rules/no-undef.md) | Off (strict: warn) | None |
+| [no-undefined-exports](docs/rules/no-undefined-exports.md) | Off (strict: warn) | None |
 | [no-unreachable](docs/rules/no-unreachable.md) | Error | None |
 | [no-unsafe-finally](docs/rules/no-unsafe-finally.md) | Error | None |
-| [no-unsafe-negation](docs/rules/no-unsafe-negation.md) | Off | Suggestions |
-| [no-unused-expressions](docs/rules/no-unused-expressions.md) | Off | None |
-| [no-unused-type-parameters](docs/rules/no-unused-type-parameters.md) | Off | None |
-| [no-unused-vars](docs/rules/no-unused-vars.md) | Off | None |
-| [no-use-before-define](docs/rules/no-use-before-define.md) | Off | None |
+| [no-unsafe-negation](docs/rules/no-unsafe-negation.md) | Warn | Suggestions |
+| [no-unused-expressions](docs/rules/no-unused-expressions.md) | Warn | None |
+| [no-unused-type-parameters](docs/rules/no-unused-type-parameters.md) | Off (strict: warn) | None |
+| [no-unused-vars](docs/rules/no-unused-vars.md) | Off (strict: warn) | None |
+| [no-use-before-define](docs/rules/no-use-before-define.md) | Off (strict: warn) | None |
 | [parse-errors](docs/rules/parse-errors.md) | Error | None |
-| [prefer-const-global](docs/rules/prefer-const-global.md) | Off | Suggestions |
-| [prefer-eachindex](docs/rules/prefer-eachindex.md) | Off | Suggestions |
-| [prefer-identity-nothing](docs/rules/prefer-identity-nothing.md) | Off | Fix + suggestions |
-| [prefer-in](docs/rules/prefer-in.md) | Off | Suggestions |
-| [prefer-isa](docs/rules/prefer-isa.md) | Off | Suggestions |
-| [prefer-isempty](docs/rules/prefer-isempty.md) | Off | Suggestions |
-| [prefer-ismissing](docs/rules/prefer-ismissing.md) | Off | Suggestions |
-| [use-isnan](docs/rules/use-isnan.md) | Off | Suggestions |
+| [prefer-const-global](docs/rules/prefer-const-global.md) | Off (strict: warn) | Suggestions |
+| [prefer-eachindex](docs/rules/prefer-eachindex.md) | Off (strict: warn) | Suggestions |
+| [prefer-identity-nothing](docs/rules/prefer-identity-nothing.md) | Off (strict: warn) | Fix + suggestions |
+| [prefer-in](docs/rules/prefer-in.md) | Off (strict: warn) | Suggestions |
+| [prefer-isa](docs/rules/prefer-isa.md) | Off (strict: warn) | Suggestions |
+| [prefer-isempty](docs/rules/prefer-isempty.md) | Off (strict: warn) | Suggestions |
+| [prefer-ismissing](docs/rules/prefer-ismissing.md) | Error | Suggestions |
+| [use-isnan](docs/rules/use-isnan.md) | Error | Suggestions |
 
 Rules compare exact source spellings; Unicode normalization aliases can be missed.
 Macros and quoted code are excluded from the five non-parser rules. Rules cannot
