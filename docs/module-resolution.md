@@ -61,6 +61,10 @@ consumers retain the unknown-module fallback as well. Relative reexport cycles c
 ordinary Julia definitions inside macros still obey the scope pass's existing
 policy; a macro invocation itself invents no binding.
 
+Module-wide import use tracking also recognizes string macros: `md"text"`
+reads `@md_str`, and `r"pattern"` reads `@r_str`. A qualified string macro reads
+its module receiver instead. Literal quoted calls contribute no reads.
+
 File facts, project metadata and module models are cached per process by absolute
 path and modification time (also ctime and size). Models are shared between linted
 files; cached models retain compact facts, not dependency syntax trees. Editing,

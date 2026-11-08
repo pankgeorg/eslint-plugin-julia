@@ -121,7 +121,8 @@ function facts(source, file) {
     if (m && node.kind === 'macrocall') {
       let head = node.children[0];
       if (identifierName(head) === '@eval' || head?.kind === '.' && identifierName(head.children.at(-1)) === '@eval') m.dynamicEvaluation = true;
-      if (identifierName(head)) m.reads.push(identifierName(head));
+      if (head?.kind === 'StrMacroName') m.reads.push(`@${head.value}_str`);
+      else if (identifierName(head)) m.reads.push(identifierName(head));
       else if (head?.kind === '.') {
         while (head?.kind === '.') head = head.children[0];
         if (identifierName(head)) m.reads.push(identifierName(head));

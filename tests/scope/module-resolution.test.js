@@ -144,3 +144,13 @@ test('modules: empty generic declarations in an include join the module scope', 
   const m = analyze('custom/entry.jl', 'module Custom; include("child.jl"); declared_generic; end');
   assert.deepEqual(unresolved(m), []);
 });
+
+
+test('modules: string macros read their imported macro name, qualified calls read the module', () => {
+  const m = analyze('Tree/src/unreachable.jl', 'using Markdown: @md_str; import Base: @r_str; md"hello"; r"pattern"; :(raw"quoted"); Markdown.html"text"');
+  const [model] = m.moduleResolution.scopes.get(m.globalScope);
+  assert.ok(model.reads.has('@md_str')); assert.ok(model.reads.has('@r_str'));
+  assert.ok(model.reads.has('Markdown'));
+  assert.equal(model.reads.has('@html_str'), false);
+  assert.equal(model.reads.has('@raw_str'), false);
+});
