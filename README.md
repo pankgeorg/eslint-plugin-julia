@@ -82,6 +82,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-identical-branches](docs/rules/no-identical-branches.md) | Off (strict: warn) | None |
 | [no-import-assign](docs/rules/no-import-assign.md) | Error | None |
 | [no-impossible-length-comparison](docs/rules/no-impossible-length-comparison.md) | Off (strict: warn) | None |
+| [no-loss-of-float-integer-precision](docs/rules/no-loss-of-float-integer-precision.md) | Off (strict: warn) | None |
 | [no-obvious-type-piracy](docs/rules/no-obvious-type-piracy.md) | Off (strict: warn) | None |
 | [no-redundant-type-assertion](docs/rules/no-redundant-type-assertion.md) | Off (strict: warn) | Fix |
 | [no-redundant-union-members](docs/rules/no-redundant-union-members.md) | Off (strict: warn) | Suggestions |

@@ -18,6 +18,7 @@ import './rules/no-fill-with-mutable.test.js';
 import './rules/no-identical-branches.test.js';
 import './rules/no-import-assign.test.js';
 import './rules/no-impossible-length-comparison.test.js';
+import './rules/no-loss-of-float-integer-precision.test.js';
 import './rules/no-obvious-type-piracy.test.js';
 import './rules/no-redundant-type-assertion.test.js';
 import './rules/no-redundant-union-members.test.js';

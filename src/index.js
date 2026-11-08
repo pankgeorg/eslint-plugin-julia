@@ -21,6 +21,7 @@ import noFillWithMutableRule from './rules/no-fill-with-mutable.js';
 import noIdenticalBranchesRule from './rules/no-identical-branches.js';
 import noImportAssignRule from './rules/no-import-assign.js';
 import noImpossibleLengthComparisonRule from './rules/no-impossible-length-comparison.js';
+import noLossOfFloatIntegerPrecisionRule from './rules/no-loss-of-float-integer-precision.js';
 import noObviousTypePiracyRule from './rules/no-obvious-type-piracy.js';
 import noRedundantTypeAssertionRule from './rules/no-redundant-type-assertion.js';
 import noRedundantUnionMembersRule from './rules/no-redundant-union-members.js';
@@ -73,6 +74,7 @@ const plugin = {
     'no-identical-branches': noIdenticalBranchesRule,
     'no-import-assign': noImportAssignRule,
     'no-impossible-length-comparison': noImpossibleLengthComparisonRule,
+    'no-loss-of-float-integer-precision': noLossOfFloatIntegerPrecisionRule,
     'no-obvious-type-piracy': noObviousTypePiracyRule,
     'no-redundant-type-assertion': noRedundantTypeAssertionRule,
     'no-redundant-union-members': noRedundantUnionMembersRule,
