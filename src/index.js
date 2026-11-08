@@ -18,6 +18,7 @@ import noEmptyLiteralRangeRule from './rules/no-empty-literal-range.js';
 import noFillWithMutableRule from './rules/no-fill-with-mutable.js';
 import noIdenticalBranchesRule from './rules/no-identical-branches.js';
 import noImportAssignRule from './rules/no-import-assign.js';
+import noOverwrittenLiteralIndexRule from './rules/no-overwritten-literal-index.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
 import noShadowedLoopVarRule from './rules/no-shadowed-loop-var.js';
 import noSingleIterationLoopRule from './rules/no-single-iteration-loop.js';
@@ -64,6 +65,7 @@ const plugin = {
     'no-fill-with-mutable': noFillWithMutableRule,
     'no-identical-branches': noIdenticalBranchesRule,
     'no-import-assign': noImportAssignRule,
+    'no-overwritten-literal-index': noOverwrittenLiteralIndexRule,
     'no-self-assign': noSelfAssignRule,
     'no-shadowed-loop-var': noShadowedLoopVarRule,
     'no-single-iteration-loop': noSingleIterationLoopRule,
