@@ -58,6 +58,8 @@ npx eslint --stdin --stdin-filename example.jl
 
 The default configuration (`recommended`: likely bugs, near-zero false positives; `strict`: everything else as warnings) and the evidence behind each rule's default: [docs/defaults.md](docs/defaults.md).
 
+Project syntax policies can use [ESLint core selectors over Julia trees](docs/restricted-syntax.md).
+
 Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `tests/rules/<name>.test.js`, then run `node scripts/gen-registry.mjs` (it regenerates the registry in `src/index.js`, `tests/run.js` and this table).
 
 | Rule | Recommended | Edits |
@@ -93,6 +95,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-nothing-return-conversion](docs/rules/no-nothing-return-conversion.md) | Warn | None |
 | [no-obvious-type-piracy](docs/rules/no-obvious-type-piracy.md) | Off (strict: warn) | None |
 | [no-overwritten-literal-index](docs/rules/no-overwritten-literal-index.md) | Off (strict: warn) | None |
+| [no-reassigned-capture](docs/rules/no-reassigned-capture.md) | Off (strict: warn) | None |
 | [no-redundant-type-assertion](docs/rules/no-redundant-type-assertion.md) | Off (strict: warn) | Fix |
 | [no-redundant-union-members](docs/rules/no-redundant-union-members.md) | Off (strict: warn) | Suggestions |
 | [no-restricted-calls](docs/rules/no-restricted-calls.md) | Off (strict: warn) | None |
@@ -100,6 +103,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-self-assign](docs/rules/no-self-assign.md) | Warn | None |
 | [no-self-identity-comparison](docs/rules/no-self-identity-comparison.md) | Off (strict: warn) | None |
 | [no-shadowed-loop-var](docs/rules/no-shadowed-loop-var.md) | Warn | None |
+| [no-show-macro](docs/rules/no-show-macro.md) | Off (strict: warn) | Suggestions |
 | [no-single-iteration-loop](docs/rules/no-single-iteration-loop.md) | Off (strict: warn) | None |
 | [no-string-growth-in-loop](docs/rules/no-string-growth-in-loop.md) | Off (strict: warn) | None |
 | [no-throw-literal](docs/rules/no-throw-literal.md) | Off (strict: warn) | Suggestions |
@@ -128,6 +132,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [prefer-isa](docs/rules/prefer-isa.md) | Off (strict: warn) | Suggestions |
 | [prefer-isempty](docs/rules/prefer-isempty.md) | Off (strict: warn) | Suggestions |
 | [prefer-ismissing](docs/rules/prefer-ismissing.md) | Error | Suggestions |
+| [prefer-parenthesized-interpolation](docs/rules/prefer-parenthesized-interpolation.md) | Off (strict: warn) | Fix + suggestions |
 | [prefer-size-dimension](docs/rules/prefer-size-dimension.md) | Off (strict: warn) | Suggestions |
 | [prefer-sized-push-buffer](docs/rules/prefer-sized-push-buffer.md) | Off (strict: warn) | Suggestions |
 | [use-isnan](docs/rules/use-isnan.md) | Error | Suggestions |

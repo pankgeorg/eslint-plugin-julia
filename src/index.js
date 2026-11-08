@@ -32,6 +32,7 @@ import noLossOfFloatIntegerPrecisionRule from './rules/no-loss-of-float-integer-
 import noNothingReturnConversionRule from './rules/no-nothing-return-conversion.js';
 import noObviousTypePiracyRule from './rules/no-obvious-type-piracy.js';
 import noOverwrittenLiteralIndexRule from './rules/no-overwritten-literal-index.js';
+import noReassignedCaptureRule from './rules/no-reassigned-capture.js';
 import noRedundantTypeAssertionRule from './rules/no-redundant-type-assertion.js';
 import noRedundantUnionMembersRule from './rules/no-redundant-union-members.js';
 import noRestrictedCallsRule from './rules/no-restricted-calls.js';
@@ -39,6 +40,7 @@ import noRestrictedMacrosRule from './rules/no-restricted-macros.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
 import noSelfIdentityComparisonRule from './rules/no-self-identity-comparison.js';
 import noShadowedLoopVarRule from './rules/no-shadowed-loop-var.js';
+import noShowMacroRule from './rules/no-show-macro.js';
 import noSingleIterationLoopRule from './rules/no-single-iteration-loop.js';
 import noStringGrowthInLoopRule from './rules/no-string-growth-in-loop.js';
 import noThrowLiteralRule from './rules/no-throw-literal.js';
@@ -67,6 +69,7 @@ import preferInRule from './rules/prefer-in.js';
 import preferIsaRule from './rules/prefer-isa.js';
 import preferIsemptyRule from './rules/prefer-isempty.js';
 import preferIsmissingRule from './rules/prefer-ismissing.js';
+import preferParenthesizedInterpolationRule from './rules/prefer-parenthesized-interpolation.js';
 import preferSizeDimensionRule from './rules/prefer-size-dimension.js';
 import preferSizedPushBufferRule from './rules/prefer-sized-push-buffer.js';
 import useIsnanRule from './rules/use-isnan.js';
@@ -106,6 +109,7 @@ const plugin = {
     'no-nothing-return-conversion': noNothingReturnConversionRule,
     'no-obvious-type-piracy': noObviousTypePiracyRule,
     'no-overwritten-literal-index': noOverwrittenLiteralIndexRule,
+    'no-reassigned-capture': noReassignedCaptureRule,
     'no-redundant-type-assertion': noRedundantTypeAssertionRule,
     'no-redundant-union-members': noRedundantUnionMembersRule,
     'no-restricted-calls': noRestrictedCallsRule,
@@ -113,6 +117,7 @@ const plugin = {
     'no-self-assign': noSelfAssignRule,
     'no-self-identity-comparison': noSelfIdentityComparisonRule,
     'no-shadowed-loop-var': noShadowedLoopVarRule,
+    'no-show-macro': noShowMacroRule,
     'no-single-iteration-loop': noSingleIterationLoopRule,
     'no-string-growth-in-loop': noStringGrowthInLoopRule,
     'no-throw-literal': noThrowLiteralRule,
@@ -141,6 +146,7 @@ const plugin = {
     'prefer-isa': preferIsaRule,
     'prefer-isempty': preferIsemptyRule,
     'prefer-ismissing': preferIsmissingRule,
+    'prefer-parenthesized-interpolation': preferParenthesizedInterpolationRule,
     'prefer-size-dimension': preferSizeDimensionRule,
     'prefer-sized-push-buffer': preferSizedPushBufferRule,
     'use-isnan': useIsnanRule,
