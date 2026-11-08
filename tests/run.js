@@ -8,6 +8,7 @@ import './rules/no-concat-growth-in-loop.test.js';
 import './rules/no-cond-assign.test.js';
 import './rules/no-const-reassign.test.js';
 import './rules/no-constant-condition.test.js';
+import './rules/no-debugger.test.js';
 import './rules/no-discarded-copy-result.test.js';
 import './rules/no-dupe-args.test.js';
 import './rules/no-dupe-elseif.test.js';

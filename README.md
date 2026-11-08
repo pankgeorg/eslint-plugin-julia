@@ -69,6 +69,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-cond-assign](docs/rules/no-cond-assign.md) | Off (strict: warn) | Suggestions |
 | [no-const-reassign](docs/rules/no-const-reassign.md) | Warn | None |
 | [no-constant-condition](docs/rules/no-constant-condition.md) | Off (strict: warn) | None |
+| [no-debugger](docs/rules/no-debugger.md) | Off (strict: warn) | Suggestions |
 | [no-discarded-copy-result](docs/rules/no-discarded-copy-result.md) | Warn | None |
 | [no-dupe-args](docs/rules/no-dupe-args.md) | Error | None |
 | [no-dupe-elseif](docs/rules/no-dupe-elseif.md) | Warn | None |

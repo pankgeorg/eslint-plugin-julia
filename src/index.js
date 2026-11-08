@@ -8,6 +8,7 @@ import noConcatGrowthInLoopRule from './rules/no-concat-growth-in-loop.js';
 import noCondAssignRule from './rules/no-cond-assign.js';
 import noConstReassignRule from './rules/no-const-reassign.js';
 import noConstantConditionRule from './rules/no-constant-condition.js';
+import noDebuggerRule from './rules/no-debugger.js';
 import noDiscardedCopyResultRule from './rules/no-discarded-copy-result.js';
 import noDupeArgsRule from './rules/no-dupe-args.js';
 import noDupeElseifRule from './rules/no-dupe-elseif.js';
@@ -81,6 +82,7 @@ const plugin = {
     'no-cond-assign': noCondAssignRule,
     'no-const-reassign': noConstReassignRule,
     'no-constant-condition': noConstantConditionRule,
+    'no-debugger': noDebuggerRule,
     'no-discarded-copy-result': noDiscardedCopyResultRule,
     'no-dupe-args': noDupeArgsRule,
     'no-dupe-elseif': noDupeElseifRule,
