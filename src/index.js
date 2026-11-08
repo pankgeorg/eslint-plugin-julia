@@ -141,6 +141,12 @@ const plugin = {
   },
   configs: {},
 };
+// Each rule links to its documentation at the matching release tag.
+for (const [name, rule] of Object.entries(plugin.rules))
+  rule.meta.docs = {
+    ...rule.meta.docs,
+    url: `https://github.com/pankgeorg/eslint-plugin-julia/blob/v0.1.0/docs/rules/${name}.md`,
+  };
 const config = (rules) => ({
   files: ['**/*.jl'],
   plugins: { julia: plugin },

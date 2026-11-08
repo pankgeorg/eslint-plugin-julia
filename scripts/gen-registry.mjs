@@ -15,6 +15,7 @@ async function writeFileSync(url, text) {
 }
 
 const root = new URL('../', import.meta.url);
+const { version } = JSON.parse(readFileSync(new URL('package.json', root), 'utf8'));
 // recommended: likely bugs with near-zero false positives (ESLint's bar). 'error' = almost always
 // a bug; 'warn' = a probable bug with occasional deliberate uses. Everything else is opt-in and on
 // (as a warning) in `strict`. Evidence per rule: docs/defaults.md.
@@ -57,13 +58,16 @@ import { manifest } from './parser/wasm-host.js';
 ${rules.map((n) => `import ${ident(n)} from './rules/${n}.js';`).join('\n')}
 
 const plugin = {
-  meta: { name: 'eslint-plugin-julia', version: \`0.1.0+wasm.\${manifest.sha256}\` },
+  meta: { name: 'eslint-plugin-julia', version: \`${version}+wasm.\${manifest.sha256}\` },
   languages: { julia: language },
   rules: {
 ${rules.map((n) => `    '${n}': ${ident(n)},`).join('\n')}
   },
   configs: {},
 };
+// Each rule links to its documentation at the matching release tag.
+for (const [name, rule] of Object.entries(plugin.rules))
+  rule.meta.docs = { ...rule.meta.docs, url: \`https://github.com/pankgeorg/eslint-plugin-julia/blob/v${version}/docs/rules/\${name}.md\` };
 const config = rules => ({ files: ['**/*.jl'], plugins: { julia: plugin }, language: 'julia/julia', rules });
 const RECOMMENDED = ${JSON.stringify(RECOMMENDED, null, 2).replaceAll('"', "'")};
 plugin.configs.recommended = config(Object.fromEntries(Object.entries(RECOMMENDED).map(([n, level]) => [\`julia/\${n}\`, level])));
