@@ -62,13 +62,16 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 
 | Rule | Recommended | Edits |
 | --- | --- | --- |
+| [no-catch-binding-reassign](docs/rules/no-catch-binding-reassign.md) | Off (strict: warn) | None |
 | [no-collapsible-if](docs/rules/no-collapsible-if.md) | Off (strict: warn) | Suggestions |
+| [no-compare-negative-zero](docs/rules/no-compare-negative-zero.md) | Off (strict: warn) | Suggestions |
 | [no-cond-assign](docs/rules/no-cond-assign.md) | Off (strict: warn) | Suggestions |
 | [no-const-reassign](docs/rules/no-const-reassign.md) | Warn | None |
 | [no-constant-condition](docs/rules/no-constant-condition.md) | Off (strict: warn) | None |
 | [no-discarded-copy-result](docs/rules/no-discarded-copy-result.md) | Warn | None |
 | [no-dupe-args](docs/rules/no-dupe-args.md) | Error | None |
 | [no-dupe-elseif](docs/rules/no-dupe-elseif.md) | Warn | None |
+| [no-duplicate-dict-keys](docs/rules/no-duplicate-dict-keys.md) | Off (strict: warn) | None |
 | [no-duplicate-keyword-arguments](docs/rules/no-duplicate-keyword-arguments.md) | Error | None |
 | [no-duplicate-logical-operands](docs/rules/no-duplicate-logical-operands.md) | Warn | Suggestions |
 | [no-duplicate-method-signatures](docs/rules/no-duplicate-method-signatures.md) | Off (strict: warn) | None |
@@ -78,7 +81,13 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-fill-with-mutable](docs/rules/no-fill-with-mutable.md) | Warn | None |
 | [no-identical-branches](docs/rules/no-identical-branches.md) | Off (strict: warn) | None |
 | [no-import-assign](docs/rules/no-import-assign.md) | Error | None |
+| [no-impossible-length-comparison](docs/rules/no-impossible-length-comparison.md) | Off (strict: warn) | None |
+| [no-loss-of-float-integer-precision](docs/rules/no-loss-of-float-integer-precision.md) | Off (strict: warn) | None |
+| [no-obvious-type-piracy](docs/rules/no-obvious-type-piracy.md) | Off (strict: warn) | None |
+| [no-redundant-type-assertion](docs/rules/no-redundant-type-assertion.md) | Off (strict: warn) | Fix |
+| [no-redundant-union-members](docs/rules/no-redundant-union-members.md) | Off (strict: warn) | Suggestions |
 | [no-self-assign](docs/rules/no-self-assign.md) | Warn | None |
+| [no-self-identity-comparison](docs/rules/no-self-identity-comparison.md) | Off (strict: warn) | None |
 | [no-shadowed-loop-var](docs/rules/no-shadowed-loop-var.md) | Warn | None |
 | [no-unbound-type-parameters](docs/rules/no-unbound-type-parameters.md) | Off (strict: warn) | None |
 | [no-undef](docs/rules/no-undef.md) | Off (strict: warn) | None |
@@ -90,6 +99,8 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-unused-type-parameters](docs/rules/no-unused-type-parameters.md) | Off (strict: warn) | None |
 | [no-unused-vars](docs/rules/no-unused-vars.md) | Off (strict: warn) | None |
 | [no-use-before-define](docs/rules/no-use-before-define.md) | Off (strict: warn) | None |
+| [no-useless-assignment](docs/rules/no-useless-assignment.md) | Off (strict: warn) | Suggestions |
+| [no-useless-catch](docs/rules/no-useless-catch.md) | Off (strict: warn) | None |
 | [parse-errors](docs/rules/parse-errors.md) | Error | None |
 | [prefer-const-global](docs/rules/prefer-const-global.md) | Off (strict: warn) | Suggestions |
 | [prefer-eachindex](docs/rules/prefer-eachindex.md) | Off (strict: warn) | Suggestions |
