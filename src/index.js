@@ -7,10 +7,12 @@ import keywordArguments from './rules/no-duplicate-keyword-arguments.js';
 import emptyCatch from './rules/no-empty-catch.js';
 import shadowedLoopVar from './rules/no-shadowed-loop-var.js';
 
+import preferIn from './rules/prefer-in.js';
+
 const plugin = {
   meta: { name: 'eslint-plugin-julia', version: `0.1.0+wasm.${manifest.sha256}` },
   languages: { julia: language },
-  rules: { 'parse-errors': parseErrors, 'prefer-identity-nothing': identity,
+  rules: { 'prefer-in': preferIn, 'parse-errors': parseErrors, 'prefer-identity-nothing': identity,
     'no-duplicate-struct-fields': structFields, 'no-duplicate-keyword-arguments': keywordArguments,
     'no-empty-catch': emptyCatch, 'no-shadowed-loop-var': shadowedLoopVar },
   configs: {},
