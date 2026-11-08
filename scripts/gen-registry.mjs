@@ -77,7 +77,9 @@ const rows = rules.map(n => {
 });
 const readme = readFileSync(new URL('README.md', root), 'utf8');
 const lines = readme.split('\n');
-const start = lines.findIndex(l => l.startsWith('| Rule |'));
+// Prettier pads the table, so match the header loosely, and never append a second table.
+const start = lines.findIndex((l) => /^\|\s*Rule\s*\|/u.test(l));
+if (start < 0) throw new Error('README.md: the rules table header was not found');
 let end = start + 2; while (end < lines.length && lines[end].startsWith('| [')) end++;
 lines.splice(start, end - start, '| Rule | Recommended | Edits |', '| --- | --- | --- |', ...rows);
 await writeFileSync(new URL('README.md', root), lines.join('\n'));
