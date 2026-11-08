@@ -50,6 +50,15 @@ function analyze(source) {
     const d = { node, name: identifierName(node), scope: s, kind, ...extra, binding: null };
     definitions.push(d); s.candidates.push(d); nodeDefinitions.set(node, d); return d;
   }
+  function signatureScope(s) {
+    return s.signatureScope ??= scope('signature', s.node, s.parent,
+      { aliasesFrom: s, transparent: s.kind === 'function' });
+  }
+  function defaulted(node) {
+    if (node.kind === '=') return true;
+    if (node.kind === '::') return node.children.length === 2 && defaulted(node.children[0]);
+    return ['tuple', 'parens', '...', 'macrocall'].includes(node.kind) && node.children.some(defaulted);
+  }
   function pattern(node, s, kind, extra = {}) {
     if (!node) return;
     mark(node, s);
@@ -63,9 +72,9 @@ function analyze(source) {
       pattern(node.children[0], s, kind, { ...extra, outer: node.kind === 'outer' || extra.outer });
     } else if (node.kind === '::') {
       if (node.children.length === 2) pattern(node.children[0], s, kind, { ...extra, typed: true });
-      visit(node.children.at(-1), s);
+      visit(node.children.at(-1), extra.typeScope ?? s);
     } else if (node.kind === '=') {
-      visit(node.children[1], s); pattern(node.children[0], s, kind, extra);
+      visit(node.children[1], extra.defaultScope ?? s); pattern(node.children[0], s, kind, extra);
     } else visit(node, s); // property/index mutation reads its receiver and indices
   }
   function typeParameters(nodes, s) {
@@ -73,9 +82,9 @@ function analyze(source) {
     for (const p of params) for (const n of bindingNames(p)) define(n, s, 'type-parameter', { parameter: p, force: true });
     for (const p of params) {
       mark(p, s);
-      if (['<:', '>:'].includes(p.kind)) p.children.slice(1).forEach(n => visit(n, s));
+      if (['<:', '>:'].includes(p.kind)) p.children.slice(1).forEach(n => visit(n, signatureScope(s)));
       else if (p.kind === 'comparison') { // lower < T <: upper
-        visit(p.children[0], s); visit(p.children.at(-1), s);
+        visit(p.children[0], signatureScope(s)); visit(p.children.at(-1), signatureScope(s));
       }
     }
     return params;
@@ -93,7 +102,7 @@ function analyze(source) {
     let args;
     if (sig.kind === 'call') {
       let head = sig.children[isInfixCall(sig) ? 1 : 0];
-      if (head?.kind === 'curly') { head.children.slice(1).forEach(n => visit(n, s)); head = head.children[0]; }
+      if (head?.kind === 'curly') { head.children.slice(1).forEach(n => visit(n, signatureScope(s))); head = head.children[0]; }
       if (identifierName(head) !== null) {
         const n = head.kind === 'var' ? head.children[0] : head;
         define(n, outer, fn.node.kind === 'macro' ? 'macro' : 'function', { assignment: fn.node,
@@ -109,12 +118,12 @@ function analyze(source) {
     }
     function argument(arg, keyword) {
       if (!arg) return;
-      // Defaults can see earlier arguments and type parameters, never later args/body locals.
-      const prior = new Set(s.candidates.filter(d => ['argument', 'keyword', 'type-parameter'].includes(d.kind)).map(d => d.name));
-      const start = references.length;
+      // Defaults run in wrapper methods: earlier parameters are aliases, body locals are unavailable.
+      const prior = s.candidates.filter(d => ['argument', 'keyword', 'type-parameter', 'implicit-argument'].includes(d.kind));
+      const defaults = defaulted(arg) ? scope('default', arg, outer, { aliasDefinitions: prior }) : null;
       const names = bindingNames(arg);
-      pattern(arg, s, keyword ? 'keyword' : 'argument', { force: true, parameter: arg, assignment: arg });
-      for (const r of references.slice(start)) r.visibility = { scope: s, names: prior };
+      pattern(arg, s, keyword ? 'keyword' : 'argument', { force: true, parameter: arg, assignment: arg,
+        defaultScope: defaults ?? outer, typeScope: signatureScope(s) });
       fn.arguments.push(...names.map(n => nodeDefinitions.get(n)).filter(Boolean));
     }
   }
@@ -168,11 +177,14 @@ function analyze(source) {
       case 'macro_name': return;
       case 'macrocall': {
         s.dynamic = true;
+        if (c[0]?.kind === '.') visit(c[0].children[0], s.module); // compile-time namespace lookup; never consumes a runtime local
+        const macroName = c[0]?.kind === '.' ? identifierName(c[0].children[1]) : identifierName(c[0]);
         // Written normal declarations still count; naked DSL operands are opaque reads.
         const assignmentMacro = ['@views', '@view', '@inbounds', '@inline', '@noinline', '@time', '@elapsed',
-          '@allocated', '@allocations', '@sync', '@async', '@spawn', '@simd', '@fastmath', '@__dot__', '@eval'].includes(identifierName(c[0]));
-        for (const arg of c.slice(1)) {
-          if (!assignmentMacro && arg.kind === '=') visit(arg.children[1], s, { opaque: true });
+          '@allocated', '@allocations', '@show', '@showtime', '@assert', '@boundscheck', '@timed', '@sync', '@async', '@spawn', '@simd', '@fastmath', '@__dot__', '@eval'].includes(macroName);
+        for (const [index, arg] of c.slice(1).entries()) {
+          const firstExpression = index === 0 && ['@test', '@test_broken', '@test_skip', '@error', '@warn', '@info', '@debug', '@logmsg'].includes(macroName);
+          if (!assignmentMacro && !firstExpression && arg.kind === '=') visit(arg.children[1], s, { opaque: true });
           else visit(arg, s, { opaque: true });
         }
         return;
@@ -187,28 +199,29 @@ function analyze(source) {
       case 'function': case 'macro': case '->': case 'do': {
         const inner = scope('function', node, s);
         const fn = { node, scope: inner, arguments: [], typeParameters: [], call: null }; functions.push(fn);
+        if (node.kind === 'macro') for (const name of ['__module__', '__source__'])
+          define({ kind: 'Identifier', value: name, range: node.range, loc: node.loc }, inner, 'implicit-argument', { force: true });
         if (['function', 'macro'].includes(node.kind) && identifierName(c[0]) !== null)
           define(c[0], s, node.kind, { assignment: node, name: node.kind === 'macro' ? `@${identifierName(c[0])}` : identifierName(c[0]) });
         else signature(c[0], inner, s, fn);
-        if (node.kind === 'macro') for (const name of ['__module__', '__source__'])
-          define({ kind: 'Identifier', value: name, range: node.range, loc: node.loc }, inner, 'implicit-argument', { force: true });
         visit(c[1], inner); return;
       }
       case 'struct': case 'abstract': case 'primitive': {
         const inner = scope('type', node, s);
         let head = c[0];
-        if (head?.kind === '<:') { visit(head.children[1], inner); head = head.children[0]; }
+        if (head?.kind === '<:') { visit(head.children[1], signatureScope(inner)); head = head.children[0]; }
         if (head?.kind === 'curly') { typeParameters(head.children.slice(1), inner); head = head.children[0]; }
-        define(head, s, 'type', { assignment: node });
+        inner.typeDefinition = define(head, s, 'type', { assignment: node });
+        inner.typeName = identifierName(head);
         if (node.kind === 'struct') {
           define({ kind: 'Identifier', value: 'new', range: head.range, loc: head.loc }, inner, 'intrinsic', { force: true });
           const body = c.at(-1); mark(body, inner);
           for (let field of body.children) {
             if (field.kind === 'const') field = field.children[0];
             if (identifierName(field) !== null) continue;
-            if (field.kind === '::') visit(field.children.at(-1), inner);
+            if (field.kind === '::') visit(field.children.at(-1), signatureScope(inner));
             else if (field.kind === '=' && ['Identifier', '::'].includes(field.children[0]?.kind)) {
-              if (field.children[0].kind === '::') visit(field.children[0].children.at(-1), inner);
+              if (field.children[0].kind === '::') visit(field.children[0].children.at(-1), signatureScope(inner));
               visit(field.children[1], inner);
             } else visit(field, inner);
           }
@@ -300,16 +313,19 @@ function analyze(source) {
       } else { visit(node.children[1], s); pattern(node.children[0], s, 'assignment', { ...extra, assignment: node, initialized: true }); }
     } else pattern(node, s, 'declaration', { ...extra, force: extra.declaration === 'local' });
   }
-  function lookup(name, s, visibility) {
+  function lookup(name, s) {
     for (let at = s; at; at = at.parent) {
       const b = at.bindings.get(name);
-      if (b && (!visibility || at !== visibility.scope || visibility.names.has(name))) return b;
+      if (b) return b;
       if (at.kind === 'module') return (!at.bare || at.bareUsing.includes('Base') || core.has(name)) ? builtin.get(name) ?? null : null;
     }
     return null;
   }
   function localOuter(name, s) {
-    for (let at = s.parent; at && at.kind !== 'module'; at = at.parent) if (at.bindings.has(name)) return at.bindings.get(name);
+    for (let at = s.parent; at && at.kind !== 'module'; at = at.parent) if (at.bindings.has(name)) {
+      const b = at.bindings.get(name);
+      if (b.scope.kind !== 'module' || at.declarations.get(name) === 'global') return b;
+    }
     return null;
   }
   function makeBinding(d, s) {
@@ -342,15 +358,36 @@ function analyze(source) {
   };
   if (source.diagnostics.some(d => d.level === 1)) return manager;
   visit(source.ast, root);
+  // Static method type expressions run in the outer value environment. Type-parameter
+  // aliases stay local; other written definitions belong to the enclosing scope.
+  for (const s of scopes.filter(s => s.transparent)) {
+    const retained = [];
+    for (const d of s.candidates) {
+      let target = s;
+      while (target.transparent && d.declaration !== 'local'
+        && !target.aliasesFrom.candidates.some(p => p.kind === 'type-parameter' && p.name === d.name)) target = target.parent;
+      if (target === s) retained.push(d);
+      else { d.scope = target; target.candidates.push(d); }
+    }
+    s.candidates = retained;
+  }
   // Declarations are scope-wide, even when written after assignments.
   for (const d of definitions) if (d.declaration) d.scope.declarations.set(d.name, d.declaration);
   // Parent scopes are finalized first; a later parent assignment is still captured.
   for (const s of scopes) {
+    for (const d of s.aliasDefinitions ?? s.aliasesFrom?.candidates.filter(d => d.kind === 'type-parameter') ?? [])
+      if (d.binding) s.bindings.set(d.name, d.binding);
     const ordered = [...s.candidates].sort((a, b) => Number(Boolean(b.force)) - Number(Boolean(a.force)));
     for (const d of ordered) {
       const declaration = s.declarations.get(d.name);
       let b;
-      if (declaration === 'global' || d.declaration === 'global') b = makeBinding(d, s.module);
+      if (declaration === 'global' || d.declaration === 'global') {
+        b = makeBinding(d, s.module);
+        if (s !== s.module) s.bindings.set(d.name, b); // lexical global declaration, inherited by descendants
+      }
+      else if (s.kind === 'type' && d.kind === 'function' && d.name === s.typeName && s.typeDefinition?.binding) {
+        b = s.typeDefinition.binding; s.bindings.set(d.name, b);
+      }
       else if (s.bindings.has(d.name)) b = s.bindings.get(d.name);
       else if (d.force && !d.outer || declaration === 'local' || s.kind === 'module') b = makeBinding(d, s);
       else b = localOuter(d.name, s) ?? makeBinding(d, s);
@@ -360,7 +397,7 @@ function analyze(source) {
   }
   for (const r of references) {
     const declaration = r.scope.declarations.get(r.name);
-    r.binding = lookup(r.name, declaration === 'global' ? r.scope.module : r.scope, r.visibility);
+    r.binding = lookup(r.name, declaration === 'global' ? r.scope.module : r.scope);
     if (r.binding && r.binding.kind !== 'builtin') r.binding.references.push(r);
   }
   for (const s of scopes) for (const b of s.bindings.values()) {
