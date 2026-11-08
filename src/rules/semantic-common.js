@@ -29,3 +29,14 @@ export function stableType(node, m) {
   const b = m.resolve(node);
   return b?.kind === 'type-parameter' && !b.writes.length ? b : null;
 }
+
+// A different function frame can observe writes between the two reads. Opaque
+// macro payloads may introduce tasks/captures that syntax cannot reconstruct.
+export function hasCaptureOrOpaqueUse(binding, source) {
+  const frame = scope => {
+    for (let s = scope; s; s = s.parent) if (['function', 'module'].includes(s.kind)) return s;
+  };
+  const owner = frame(binding.scope);
+  return [...binding.references, ...binding.definitions].some(r => r.opaque || frame(r.scope) !== owner
+    || (() => { for (let p = r.node; p; p = source.getParent(p)) if (p.kind === 'macrocall') return true; return false; })());
+}

@@ -33,6 +33,7 @@ import noUnusedExpressionsRule from './rules/no-unused-expressions.js';
 import noUnusedTypeParametersRule from './rules/no-unused-type-parameters.js';
 import noUnusedVarsRule from './rules/no-unused-vars.js';
 import noUseBeforeDefineRule from './rules/no-use-before-define.js';
+import noUselessAssignmentRule from './rules/no-useless-assignment.js';
 import noUselessCatchRule from './rules/no-useless-catch.js';
 import parseErrorsRule from './rules/parse-errors.js';
 import preferConstGlobalRule from './rules/prefer-const-global.js';
@@ -80,6 +81,7 @@ const plugin = {
     'no-unused-type-parameters': noUnusedTypeParametersRule,
     'no-unused-vars': noUnusedVarsRule,
     'no-use-before-define': noUseBeforeDefineRule,
+    'no-useless-assignment': noUselessAssignmentRule,
     'no-useless-catch': noUselessCatchRule,
     'parse-errors': parseErrorsRule,
     'prefer-const-global': preferConstGlobalRule,
