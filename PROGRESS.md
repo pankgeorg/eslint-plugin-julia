@@ -18,6 +18,8 @@ Each measurement enables only the named rule, uses the physical file path, the c
 
 | no-nothing-return-conversion | d9ed6e7 | Node 22 + 24: 1166 pass | 0 / 0 / 0 | initial 0 / 2 / 0; both excluded | none | warn: stock builtin conversion fails on modeled nothing paths; narrowed after realdomains.jl:24,38 exposed deliberate empty interface methods; caller contracts can still make fallthrough intentional |
 
-| no-invalid-foreign-call-signature | this commit | Node 22 + 24: 1180 pass | 0 / 0 / 0 | 0 / 0 / 0 (no findings) | none | error: literal fixed-arity mismatch and missing builtin @ccall annotations fail lowering/expansion; varargs and opaque macros tested as negative controls |
+| no-invalid-foreign-call-signature | aa4c66f | Node 22 + 24: 1180 pass | 0 / 0 / 0 | 0 / 0 / 0 (no findings) | none | error: literal fixed-arity mismatch and missing builtin @ccall annotations fail lowering/expansion; varargs and opaque macros tested as negative controls |
+
+| no-eval-local-symbol | this commit | Node 22 + 24: 1201 pass | 0 / 0 / 0 | 0 / 0 / 0 (no findings) | none | strict-only: explicit globals, unknown module facts, includes and dynamic writers suppress reports; intentional global lookup and later external writes remain possible |
 
 No changes to the shared scope or module-resolution implementation. `scripts/measure-rule.mjs` applies a normalized ESLint config through Linter so external files are analyzed with real paths instead of silently falling outside ESLint's configuration boundary. Rule helpers resolve module facts lazily after a syntax match; suggestions are suppressed if replacing comments.
