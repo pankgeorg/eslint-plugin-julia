@@ -91,6 +91,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-unused-type-parameters](docs/rules/no-unused-type-parameters.md) | Off (strict: warn) | None |
 | [no-unused-vars](docs/rules/no-unused-vars.md) | Off (strict: warn) | None |
 | [no-use-before-define](docs/rules/no-use-before-define.md) | Off (strict: warn) | None |
+| [no-useless-catch](docs/rules/no-useless-catch.md) | Off (strict: warn) | None |
 | [parse-errors](docs/rules/parse-errors.md) | Error | None |
 | [prefer-const-global](docs/rules/prefer-const-global.md) | Off (strict: warn) | Suggestions |
 | [prefer-eachindex](docs/rules/prefer-eachindex.md) | Off (strict: warn) | Suggestions |
