@@ -107,3 +107,20 @@ type/module declarations and ordinary blocks remain analyzable inside macros.
 
 Files with parser errors receive an empty scope model, including in recovery mode.
 Name analysis cannot establish reliable binding structure from a recovered tree.
+
+Explicit global declarations are inherited by nested scopes, including closures.
+Such scopes may contain binding-map aliases whose binding.scope is the owning
+module. Consumers counting declarations should process only entries they own.
+
+Qualified macro/string-macro namespaces resolve in the module at expansion time;
+they do not consume runtime arguments/locals of the same spelling. Only explicit
+identifiers in macro arguments count as local reads. Macro-function names themselves
+are excluded from executable identifier reads.
+
+Method type annotations and where bounds use static signature environments, which
+see type parameters and outer bindings, not the method’s value arguments or body
+locals. Default expressions have wrapper environments aliasing earlier arguments
+and type parameters. Their own written locals do not leak into the method body.
+Static method-type expression assignments affect the outer environment; struct
+type-building expressions remain local. Inner constructor names resolve to the
+declared type. These extra environments may contain non-owning binding aliases.

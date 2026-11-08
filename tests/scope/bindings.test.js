@@ -193,3 +193,89 @@ test('scope: recovered parse errors leave an empty conservative manager', () => 
   const m=getScopeManager(new JuliaSourceCode(code,parsed));
   assert.equal(m.definitions.length,0); assert.equal(m.references.length,0);
 });
+
+test('scope: standard expression macros retain written assignments', () => {
+  const [m]=analyze('f()=(@show x=1; @assert y=true; x+y)');
+  assert.ok(m.references.filter(r=>['x','y'].includes(r.name)).every(r=>r.binding));
+});
+test('scope: first test expression can assign, while test metadata cannot bind', () => {
+  const [m]=analyze('f()=(@test x=true atol=0.1; x)');
+  assert.ok(m.references.find(r=>r.name==='x').binding);
+  assert.ok(!m.definitions.some(d=>d.name==='atol'));
+});
+
+test('scope: explicit global declarations propagate through nested loops and closures', () => {
+  const [m]=analyze('x=0; f()=(global x; for i in xs; x=1; end; g()=(x=2); g())');
+  const ds=m.definitions.filter(d=>d.name==='x');
+  assert.equal(new Set(ds.map(d=>d.binding)).size,1);
+  assert.equal(ds[0].binding.scope.kind,'module');
+});
+test('scope: a forced inner local overrides an inherited global declaration', () => {
+  const [m]=analyze('x=0; f()=(global x; let x=1; x; end)');
+  const ds=m.definitions.filter(d=>d.name==='x');
+  assert.notEqual(ds[0].binding,ds.at(-1).binding);
+});
+
+test('scope: qualified macro namespaces resolve in the module rather than runtime locals', () => {
+  const [m]=analyze('module M end; f(M,x)=(M.@m x; M.r"text")');
+  assert.equal(m.references.filter(r=>r.name==='M').length,2);
+  assert.ok(m.references.filter(r=>r.name==='M').every(r=>r.binding?.kind==='module'));
+  assert.ok(!m.references.some(r=>r.name==='m'));
+});
+test('scope: quoted macro declaration names match written var exports', () => {
+  const [m]=analyze('macro var"odd macro"(x);x;end; export var"@odd macro"');
+  assert.ok(m.lookup(m.exports[0].name));
+});
+
+test('scope: argument types use static bindings rather than value arguments', () => {
+  const [m]=analyze('T=Int; f(T,x::T)=T');
+  const refs=m.references.filter(r=>r.name==='T');
+  assert.equal(refs[0].binding.scope.kind,'module');
+  assert.equal(refs[1].binding.kind,'argument');
+});
+test('scope: a value argument cannot supply an undeclared signature type', () => {
+  const [m]=analyze('f(T,x::T)=x');
+  assert.equal(m.references.find(r=>r.name==='T').binding,null);
+});
+test('scope: keyword types are static, while defaults see earlier value arguments', () => {
+  const [m]=analyze('T=Int; f(T;x::T=one(T))=x');
+  const refs=m.references.filter(r=>r.name==='T').sort((a,b)=>a.node.range[0]-b.node.range[0]);
+  assert.equal(refs[0].binding.scope.kind,'module');
+  assert.equal(refs[1].binding.kind,'argument');
+});
+test('scope: default-expression locals do not become method-body locals', () => {
+  const [m]=analyze('f(x=(y=1))=y');
+  assert.equal(m.references.find(r=>r.name==='y').binding,null);
+  assert.equal(m.definitions.find(d=>d.name==='y').scope.kind,'default');
+});
+test('scope: default callbacks do not capture later body-local assignments', () => {
+  const [m]=analyze('f(g=()->(y=1;y))=(y=2;g)');
+  assert.equal(new Set(m.definitions.filter(d=>d.name==='y').map(d=>d.binding)).size,2);
+});
+test('scope: static method-type expression assignments affect the outer environment', () => {
+  const [m]=analyze('f(x::(Y=Int)) where T=x; Y');
+  assert.equal(m.references.at(-1).binding.scope.kind,'module');
+});
+test('scope: struct type expressions have a local type-building environment', () => {
+  const [m]=analyze('Z=Float64; struct S; x::(Z=Int); end; Z');
+  assert.equal(new Set(m.definitions.filter(d=>d.name==='Z').map(d=>d.binding)).size,2);
+  assert.equal(m.references.at(-1).binding.scope.kind,'module');
+});
+test('scope: inner constructor names and recursive field types refer to the declared type', () => {
+  const [m]=analyze('struct S; x::S; S(x::S)=new(x); end');
+  const type=m.lookup('S');
+  assert.ok(m.definitions.filter(d=>d.name==='S').every(d=>d.binding===type));
+  assert.ok(m.references.filter(r=>r.name==='S').every(r=>r.binding===type));
+});
+test('scope: constructor body assignment can shadow its global type name', () => {
+  const [m]=analyze('struct S; S()=(S=1;new()); end');
+  assert.notEqual(m.definitions.find(d=>d.name==='S' && d.initialized).binding,m.lookup('S'));
+});
+test('scope: where bounds cannot read later method-body locals', () => {
+  const [m]=analyze('f(x::T) where T<:S=(S=Real;x)');
+  assert.equal(m.references.find(r=>r.name==='S').binding,null);
+});
+test('scope: macro defaults can read language-supplied arguments', () => {
+  const [m]=analyze('macro m(x=__module__);x;end');
+  assert.equal(m.references.find(r=>r.name==='__module__').binding.kind,'implicit-argument');
+});
