@@ -64,6 +64,7 @@ import preferInRule from './rules/prefer-in.js';
 import preferIsaRule from './rules/prefer-isa.js';
 import preferIsemptyRule from './rules/prefer-isempty.js';
 import preferIsmissingRule from './rules/prefer-ismissing.js';
+import preferParenthesizedInterpolationRule from './rules/prefer-parenthesized-interpolation.js';
 import preferSizeDimensionRule from './rules/prefer-size-dimension.js';
 import preferSizedPushBufferRule from './rules/prefer-sized-push-buffer.js';
 import useIsnanRule from './rules/use-isnan.js';
@@ -135,6 +136,7 @@ const plugin = {
     'prefer-isa': preferIsaRule,
     'prefer-isempty': preferIsemptyRule,
     'prefer-ismissing': preferIsmissingRule,
+    'prefer-parenthesized-interpolation': preferParenthesizedInterpolationRule,
     'prefer-size-dimension': preferSizeDimensionRule,
     'prefer-sized-push-buffer': preferSizedPushBufferRule,
     'use-isnan': useIsnanRule,
