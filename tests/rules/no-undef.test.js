@@ -2,6 +2,8 @@ import { tester, plugin } from '../helpers.js';
 const bad=(code,names,options)=>({code,...(options?{options:[options]}:{}),errors:names.map(name=>({messageId:'undefined',data:{name}}))});
 tester.run('no-undef',plugin.rules['no-undef'],{
  valid:[
+  { filename: fileURLToPath(new URL('../fixtures/packages/TestEntry/test/nested/leaf.jl', import.meta.url)),
+    code: 'm.package_helper(); test_helper(); child_helper(); year' },
   '@dsl [unknown for i in xs]', '@dsl for i in xs; unknown; end',
   '@isdefined(x)', 'f() = @isdefined(local_name)',
   'using Dates; year(now())', 'import LinearAlgebra; norm([1, 2])',
@@ -19,6 +21,10 @@ tester.run('no-undef',plugin.rules['no-undef'],{
   {code:'f()=project_name',options:[{globals:['project_name']}]},
   {code:'unknown()',options:[{unknownGlobals:'ignore'}]},
  ],invalid:[
+  { filename: fileURLToPath(new URL('../fixtures/packages/TestEntry/test/nested/leaf.jl', import.meta.url)),
+    ...bad('m.package_helper(); missing_test_helper()', ['missing_test_helper']) },
+  { filename: fileURLToPath(new URL('../fixtures/packages/TestEntry/test/orphan.jl', import.meta.url)),
+    ...bad('m; test_helper', ['m', 'test_helper']) },
   bad('function f(x); x+offest; end',['offest']),
   bad('f()=missing_helper(1)',['missing_helper']),
   bad('using LinearAlgebra; @enum Fruit apple pear; apple',['apple']),
