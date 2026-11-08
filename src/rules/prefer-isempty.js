@@ -6,7 +6,7 @@ export default rule('Suggest isempty for zero-length or zero-dimension tests.', 
   if (!parts || !ordinary(node, source) || options.allowLengthComparison) return;
   if (!m.isUnshadowedBuiltin(parts[1], parts[1].value)) return;
   let [a, op, b] = parts, operator = op.value, n = integer(b);
-  if (n === null) { n = integer(a); [a,b] = [b,a]; operator = ({ '<': '>', '>': '<', '<=': '>=', '>=': '<=' })[operator] ?? operator; }
+  if (n === null) { n = integer(a); a = b; operator = ({ '<': '>', '>': '<', '<=': '>=', '>=': '<=' })[operator] ?? operator; }
   if (n !== 0n && n !== 1n) return;
   let args = call(strip(a), 'length', m), dimension = false;
   if (!args && options.dimensions !== false) { args = call(strip(a), 'size', m); dimension = true; }

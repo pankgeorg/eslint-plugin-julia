@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Regenerate the rule registry (src/index.js), the test runner (tests/run.js) and the README
 // rules table from the files in src/rules/, tests/ and docs/rules/. Run after adding a rule:
 //   node scripts/gen-registry.mjs

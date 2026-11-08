@@ -79,7 +79,6 @@ test('scope: cache and builtin helper respect later shadowing', () => {
   assert.equal(getScopeManager(s), m);
   const refs=m.references.filter(r=>r.name==='sin');
   assert.ok(isUnshadowedBuiltin(refs[0].node,'sin')); assert.ok(!isUnshadowedBuiltin(refs[1].node,'sin'));
-  const dot=s.ast.children[0].children.at(-1)?.children?.[0];
   const dots=[]; const walk=n=>{if(n.kind==='.')dots.push(n);n.children.forEach(walk);}; walk(s.ast);
   assert.ok(isUnshadowedBuiltin(dots[0],'sin'));
 });
