@@ -12,6 +12,8 @@ Each measurement enables only the named rule, uses the physical file path, the c
 
 | prefer-any | 28eaca0 | Node 22 + 24: 1110 pass | 1 / 0 / 0 | 1 / 0 / 0 | suggestion | strict-only: basic_method_caches.jl:103 counts solely for existence; short-circuit effects still require review |
 
-| no-overwritten-literal-index | this commit | Node 22 + 24: 1124 pass | 0 / 0 / 0 | 0 / 0 / 0 (no findings) | none | strict-only: narrow fresh-vector correctness pattern passes targeted capture/escape tests, but no observed corpus yield |
+| no-overwritten-literal-index | a4394df | Node 22 + 24: 1124 pass | 0 / 0 / 0 | 0 / 0 / 0 (no findings) | none | strict-only: narrow fresh-vector correctness pattern passes targeted capture/escape tests, but no observed corpus yield |
+
+| no-isdefined-local-call | this commit | Node 22 + 24: 1139 pass | 0 / 0 / 0 | 0 / 0 / 0 (no findings) | none | error: resolved one-argument Core API calls have invalid arity; tests establish local-symbol and shadowing boundaries, with no corpus counterexamples |
 
 No changes to the shared scope or module-resolution implementation. `scripts/measure-rule.mjs` applies a normalized ESLint config through Linter so external files are analyzed with real paths instead of silently falling outside ESLint's configuration boundary. Rule helpers resolve module facts lazily after a syntax match; suggestions are suppressed if replacing comments.

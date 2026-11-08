@@ -18,6 +18,7 @@ import noEmptyLiteralRangeRule from './rules/no-empty-literal-range.js';
 import noFillWithMutableRule from './rules/no-fill-with-mutable.js';
 import noIdenticalBranchesRule from './rules/no-identical-branches.js';
 import noImportAssignRule from './rules/no-import-assign.js';
+import noIsdefinedLocalCallRule from './rules/no-isdefined-local-call.js';
 import noOverwrittenLiteralIndexRule from './rules/no-overwritten-literal-index.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
 import noShadowedLoopVarRule from './rules/no-shadowed-loop-var.js';
@@ -65,6 +66,7 @@ const plugin = {
     'no-fill-with-mutable': noFillWithMutableRule,
     'no-identical-branches': noIdenticalBranchesRule,
     'no-import-assign': noImportAssignRule,
+    'no-isdefined-local-call': noIsdefinedLocalCallRule,
     'no-overwritten-literal-index': noOverwrittenLiteralIndexRule,
     'no-self-assign': noSelfAssignRule,
     'no-shadowed-loop-var': noShadowedLoopVarRule,
