@@ -39,6 +39,7 @@ import './rules/prefer-in.test.js';
 import './rules/prefer-isa.test.js';
 import './rules/prefer-isempty.test.js';
 import './rules/prefer-ismissing.test.js';
+import './rules/prefer-size-dimension.test.js';
 import './rules/prefer-sized-push-buffer.test.js';
 import './rules/prototype.test.js';
 import './rules/use-isnan.test.js';

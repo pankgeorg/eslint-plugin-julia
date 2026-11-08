@@ -106,6 +106,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [prefer-isa](docs/rules/prefer-isa.md) | Off (strict: warn) | Suggestions |
 | [prefer-isempty](docs/rules/prefer-isempty.md) | Off (strict: warn) | Suggestions |
 | [prefer-ismissing](docs/rules/prefer-ismissing.md) | Error | Suggestions |
+| [prefer-size-dimension](docs/rules/prefer-size-dimension.md) | Off (strict: warn) | Suggestions |
 | [prefer-sized-push-buffer](docs/rules/prefer-sized-push-buffer.md) | Off (strict: warn) | Suggestions |
 | [use-isnan](docs/rules/use-isnan.md) | Error | Suggestions |
 
