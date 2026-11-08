@@ -1,5 +1,8 @@
 import { tester, plugin } from '../helpers.js';
-const invalid = (code, output) => ({ code, errors: [{ messageId: 'diagnostic', suggestions: [{ messageId: 'replace', output }] }] });
+const invalid = (code, output) => ({
+  code,
+  errors: [{ messageId: 'diagnostic', suggestions: [{ messageId: 'replace', output }] }],
+});
 tester.run('prefer-generator-sum', plugin.rules['prefer-generator-sum'], {
   valid: [
     'sum(x*x for x in xs)',
@@ -18,6 +21,9 @@ tester.run('prefer-generator-sum', plugin.rules['prefer-generator-sum'], {
     invalid('f(xs)=sum([x*x for x in xs])', 'f(xs)=sum((x*x for x in xs))'),
     invalid('f()=Base.sum([i+1 for i in 1:100])', 'f()=Base.sum((i+1 for i in 1:100))'),
     invalid('f(α)=sum([abs(β) for β in α])', 'f(α)=sum((abs(β) for β in α))'),
-    { code: 'sum([x # retain\n for x in xs])', errors: [{ messageId: 'diagnostic', suggestions: [] }] },
+    {
+      code: 'sum([x # retain\n for x in xs])',
+      errors: [{ messageId: 'diagnostic', suggestions: [] }],
+    },
   ],
 });

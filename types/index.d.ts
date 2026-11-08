@@ -3,9 +3,15 @@ import { TextSourceCodeBase } from '@eslint/plugin-kit';
 import type { VisitNodeStep } from '@eslint/plugin-kit';
 import type { JuliaFile, JuliaNode, SyntaxElement, Range, Location } from './ast.js';
 export type { JuliaFile, JuliaNode, SyntaxElement, Range, Location } from './ast.js';
-export interface JuliaLanguageOptions extends Record<string, unknown> { recover?: boolean }
-export interface PreferIdentityNothingOptions { fix?: boolean }
-export interface NoEmptyCatchOptions { allowComment?: boolean }
+export interface JuliaLanguageOptions extends Record<string, unknown> {
+  recover?: boolean;
+}
+export interface PreferIdentityNothingOptions {
+  fix?: boolean;
+}
+export interface NoEmptyCatchOptions {
+  allowComment?: boolean;
+}
 export interface Diagnostic {
   readonly message: string;
   readonly level: number;

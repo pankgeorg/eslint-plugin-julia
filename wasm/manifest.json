@@ -3,8 +3,8 @@
   "sha256": "08b1b81beac1f8a5aa7b4467bd5a1024f99f32cf03c1f33f7fca81a556fe8859",
   "bytes": 735576,
   "sources": {
-    "parser": "https://github.com/pankgeorg/topiary-julia/blob/main/jlparse/parser.jl",
-    "build": "https://github.com/pankgeorg/topiary-julia/blob/main/jlparse/build.jl",
+    "parser": "https://github.com/pankgeorg/topiary-julia/blob/jlparse/jlparse/parser.jl",
+    "build": "https://github.com/pankgeorg/topiary-julia/blob/jlparse/jlparse/build.jl",
     "snapshot": "scripts/parser.jl and scripts/build-parser.jl (vendored artifact inputs)"
   },
   "versions": {

@@ -14,7 +14,7 @@ No automatic fix or suggestion: the intended correction requires review.
 
 ## Fallbacks and limitations
 
-Supports ordinary module-injected eval(:name) and Core.eval(@__MODULE__, :name). Bare modules, explicit target modules, computed expressions and global name collisions are skipped. Unknown module exports/includes, visible macros and other eval/include/setglobal! writers suppress reports. The current call itself is allowed as the sole dynamic evaluator. Absence of future external global mutation cannot be proven: this is strict-only advice, with no automatic correction.
+Supports ordinary module-injected eval(:name) and Core.eval(@**MODULE**, :name). Bare modules, explicit target modules, computed expressions and global name collisions are skipped. Unknown module exports/includes, visible macros and other eval/include/setglobal! writers suppress reports. The current call itself is allowed as the sole dynamic evaluator. Absence of future external global mutation cannot be proven: this is strict-only advice, with no automatic correction.
 
 Builtin identity uses the scope and module resolver. Shadowed or unresolved helpers are skipped. Opaque macros and quoted code are skipped. This rule is opt-in; it is included in `strict` as a warning.
 

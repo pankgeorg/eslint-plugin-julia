@@ -1,4 +1,9 @@
-import { TextSourceCodeBase, VisitNodeStep, ConfigCommentParser, Directive } from '@eslint/plugin-kit';
+import {
+  TextSourceCodeBase,
+  VisitNodeStep,
+  ConfigCommentParser,
+  Directive,
+} from '@eslint/plugin-kit';
 
 const commentParser = new ConfigCommentParser();
 const inlinePattern = /^\s*eslint(?:-enable|-disable(?:(?:-next)?-line)?)?(?:\s|$)/u;
@@ -12,24 +17,30 @@ export class JuliaSourceCode extends TextSourceCodeBase {
     this.#parents = parents;
     this.#withComments = [...this.tokens, ...this.comments].sort((a, b) => a.range[0] - b.range[0]);
   }
-  getParent(node) { return this.#parents.get(node); }
+  getParent(node) {
+    return this.#parents.get(node);
+  }
   // Strictly before/after the node's half-open range. Zero-width nodes use
   // the same boundary: a token ending/starting there qualifies.
   getTokenBefore(node, { includeComments = false } = {}) {
     const list = includeComments ? this.#withComments : this.tokens;
-    let lo = 0, hi = list.length;
+    let lo = 0,
+      hi = list.length;
     while (lo < hi) {
       const mid = (lo + hi) >>> 1;
-      if (list[mid].range[1] <= node.range[0]) lo = mid + 1; else hi = mid;
+      if (list[mid].range[1] <= node.range[0]) lo = mid + 1;
+      else hi = mid;
     }
     return list[lo - 1] ?? null;
   }
   getTokenAfter(node, { includeComments = false } = {}) {
     const list = includeComments ? this.#withComments : this.tokens;
-    let lo = 0, hi = list.length;
+    let lo = 0,
+      hi = list.length;
     while (lo < hi) {
       const mid = (lo + hi) >>> 1;
-      if (list[mid].range[0] < node.range[1]) lo = mid + 1; else hi = mid;
+      if (list[mid].range[0] < node.range[1]) lo = mid + 1;
+      else hi = mid;
     }
     return list[lo] ?? null;
   }
@@ -48,22 +59,35 @@ export class JuliaSourceCode extends TextSourceCodeBase {
     return comment.value.startsWith('#=') ? comment.value.slice(2, -2) : comment.value.slice(1);
   }
   getInlineConfigNodes() {
-    return this.comments.filter(c => inlinePattern.test(this.commentValue(c)));
+    return this.comments.filter((c) => inlinePattern.test(this.commentValue(c)));
   }
   getDisableDirectives() {
-    const problems = [], directives = [];
+    const problems = [],
+      directives = [];
     for (const node of this.getInlineConfigNodes()) {
       const { label, value, justification } = commentParser.parseDirective(this.commentValue(node));
       if (label === 'eslint-disable-line' && node.loc.start.line !== node.loc.end.line) {
-        problems.push({ ruleId: null, message: `${label} comment should not span multiple lines.`, loc: node.loc });
-      } else if (['eslint-disable', 'eslint-enable', 'eslint-disable-line', 'eslint-disable-next-line'].includes(label)) {
+        problems.push({
+          ruleId: null,
+          message: `${label} comment should not span multiple lines.`,
+          loc: node.loc,
+        });
+      } else if (
+        [
+          'eslint-disable',
+          'eslint-enable',
+          'eslint-disable-line',
+          'eslint-disable-next-line',
+        ].includes(label)
+      ) {
         directives.push(new Directive({ type: label.slice(7), node, value, justification }));
       }
     }
     return { problems, directives };
   }
   applyInlineConfig() {
-    const problems = [], configs = [];
+    const problems = [],
+      configs = [];
     for (const node of this.getInlineConfigNodes()) {
       const { label, value } = commentParser.parseDirective(this.commentValue(node));
       if (label !== 'eslint') continue;
@@ -74,4 +98,3 @@ export class JuliaSourceCode extends TextSourceCodeBase {
     return { problems, configs };
   }
 }
-
