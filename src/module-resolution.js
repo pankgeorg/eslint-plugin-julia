@@ -16,15 +16,26 @@ const stdlibs = JSON.parse(
 const factsCache = new Map(),
   graphCache = new Map(),
   tomlCache = new Map();
+const hash = (text) => createHash('sha256').update(text).digest('hex');
+// A file's version for the caches. Timestamps can't distinguish two same-size writes within
+// one timestamp tick (coarse on some filesystems), so a recently modified file's version
+// also includes its content hash, as git does for "racily clean" files.
+const RACY_MS = 2000;
 const stamp = (path) => {
+  let s;
   try {
-    const s = statSync(path);
-    return `${s.mtimeMs}:${s.ctimeMs}:${s.size}`;
+    s = statSync(path);
   } catch {
     return null;
   }
+  const base = `${s.mtimeMs}:${s.ctimeMs}:${s.size}`;
+  if (!s.isFile() || Date.now() - Math.max(s.mtimeMs, s.ctimeMs) > RACY_MS) return base;
+  try {
+    return `${base}:${hash(readFileSync(path))}`;
+  } catch {
+    return base;
+  }
 };
-const hash = (text) => createHash('sha256').update(text).digest('hex');
 const exists = (path) => stamp(path) !== null;
 const virtual = (path) => !path || /^<.*>$/u.test(path);
 const textOf = (source, node) => source.getText(node).replace(/\s/gu, '');
