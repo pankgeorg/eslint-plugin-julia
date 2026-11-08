@@ -115,6 +115,13 @@ not binders. Expression decorators (views/inbounds/time/async/eval and related
 standard wrappers) retain written assignment binding behavior. Written function/
 type/module declarations and ordinary blocks remain analyzable inside macros.
 
+The body of `@testset ... begin ... end` or `@testset for ... end` has a
+local scope, including qualified calls such as `Test.@testset`. New assignments
+stay local; nested closures capture existing testset locals. Nested testsets
+reuse enclosing locals by ordinary assignment rules. Header descriptions and
+options are evaluated outside the body scope. Other macro DSLs retain their
+existing scope treatment.
+
 Files with parser errors receive an empty scope model, including in recovery mode.
 Name analysis cannot establish reliable binding structure from a recovered tree.
 

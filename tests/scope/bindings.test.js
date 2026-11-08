@@ -326,3 +326,36 @@ test('Pluto bind respects module and quoted-code boundaries', () => {
   const [m] = analyze('module A; @bind x 1; x; end; x; :(@bind y 1); y');
   assert.deepEqual(m.references.filter(r => !r.binding && !r.opaque).map(r => r.name), ['x', 'y']);
 });
+
+test('testset body locals are captured by closures instead of becoming globals', () => {
+  const [m] = analyze('@testset "updates" begin last_position=1; function update(); last_position; last_position=2; end; end');
+  const body = m.scopes.find(s => s.kind === 'testset');
+  const binding = body.bindings.get('last_position');
+  assert.equal(m.globalScope.bindings.has('last_position'), false);
+  assert.equal(binding.definitions.length, 2);
+  assert.equal(m.references.find(r => r.name === 'last_position').binding, binding);
+  assert.equal(m.functions[0].scope.bindings.has('last_position'), false);
+});
+test('testset loop bindings and body assignments stay local to the testset', () => {
+  const [m] = analyze('@testset for i in 1:2; x=i; f()=(x=x+1); end; x; i');
+  assert.equal(m.globalScope.bindings.has('x'), false);
+  assert.equal(m.globalScope.bindings.has('i'), false);
+  assert.deepEqual(m.references.filter(r => !r.binding && !r.opaque).map(r => r.name), ['x', 'i']);
+  const writes = m.definitions.filter(d => d.name === 'x');
+  assert.equal(writes[0].binding, writes[1].binding);
+});
+test('nested testsets capture outer locals and keep new locals separate', () => {
+  const [m] = analyze('f()=(outer=1; Test.@testset "one" begin outer+=1; inner=1; @testset "two" begin inner+=1; nested=1; end; end)');
+  const bodies = m.scopes.filter(s => s.kind === 'testset');
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[0].bindings.has('outer'), false);
+  assert.equal(bodies[0].bindings.get('inner').definitions.length, 2);
+  assert.ok(bodies[1].bindings.has('nested'));
+});
+test('testset header expressions run outside the body scope', () => {
+  const [m] = analyze('label="test"; @testset "$label" begin label=1; end');
+  const reads = m.references.filter(r => r.name === 'label');
+  assert.equal(reads.length, 1);
+  assert.equal(reads[0].scope, m.globalScope);
+  assert.notEqual(reads[0].binding, m.scopes.find(s => s.kind === 'testset').bindings.get('label'));
+});

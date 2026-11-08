@@ -214,7 +214,9 @@ function analyze(source, context) {
           '@allocated', '@allocations', '@show', '@showtime', '@assert', '@boundscheck', '@timed', '@sync', '@async', '@spawn', '@simd', '@fastmath', '@__dot__', '@eval'].includes(macroName);
         for (const [index, arg] of c.slice(1).entries()) {
           const firstExpression = index === 0 && ['@test', '@test_broken', '@test_skip', '@error', '@warn', '@info', '@debug', '@logmsg'].includes(macroName);
-          if (!assignmentMacro && !firstExpression && arg.kind === '=') visit(arg.children[1], s, { opaque: true });
+          if (macroName === '@testset' && arg === c.at(-1) && ['block', 'for'].includes(arg.kind))
+            visit(arg, scope('testset', arg, s));
+          else if (!assignmentMacro && !firstExpression && arg.kind === '=') visit(arg.children[1], s, { opaque: true });
           else visit(arg, s, { opaque: true });
         }
         return;

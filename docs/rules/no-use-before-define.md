@@ -22,4 +22,7 @@ captures from a different scope, and signature expressions (which have separate
 evaluation rules). Deferred closures and mutually recursive methods
 are accepted. Unresolved names belong to no-undef. Literal quoted code is data;
 the documented `@gensym` exception initializes its written names; other
+are accepted. `@testset` block and loop bodies have local scopes, so a
+closure updating an initialized testset local is treated as a capture rather
+than an uninitialized function local. Unresolved names belong to no-undef. Literal quoted code is data;
 macro expansion never initializes a binding. Exact spellings only.
