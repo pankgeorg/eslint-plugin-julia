@@ -171,7 +171,7 @@ function analyze(source, context) {
       for (const p of paths) {
         const target = p.kind === 'as' ? p.children[1] : p.children.at(-1);
         if (!target) continue;
-        const d = define(target, s, 'import', { force: true, moduleName, named, importKind: node.kind, imported: source.getText(p), assignment: node });
+        const d = define(target, s, 'import', { force: true, moduleName, named, aliased: p.kind === 'as', importKind: node.kind, imported: source.getText(p), assignment: node });
         if (d) imports.push(d);
       }
     }

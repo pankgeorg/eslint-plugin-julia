@@ -71,6 +71,10 @@ invocations invent no bindings.
 policy, including the documented Pluto `@bind` global-binding exception.
 Other macro invocations invent no bindings.
 
+Module-wide import use tracking also recognizes string macros: `md"text"`
+reads `@md_str`, and `r"pattern"` reads `@r_str`. A qualified string macro reads
+its module receiver instead. Literal quoted calls contribute no reads.
+
 File facts, project metadata and module models are cached per process by absolute
 path and modification time (also ctime and size). Models are shared between linted
 files; cached models retain compact facts, not dependency syntax trees. Editing,

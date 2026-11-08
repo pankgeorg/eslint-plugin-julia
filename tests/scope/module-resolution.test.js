@@ -160,3 +160,12 @@ test('modules: package tests do not leak into unreachable tests or source files'
 test('modules: test entry overlays retain the include context', () => {
   assert.deepEqual(unresolved(analyze('TestEntry/test/nested/leaf.jl', 'm; test_helper(); absent')), ['absent']);
 });
+
+test('modules: string macros read their imported macro name, qualified calls read the module', () => {
+  const m = analyze('Tree/src/unreachable.jl', 'using Markdown: @md_str; import Base: @r_str; md"hello"; r"pattern"; :(raw"quoted"); Markdown.html"text"');
+  const [model] = m.moduleResolution.scopes.get(m.globalScope);
+  assert.ok(model.reads.has('@md_str')); assert.ok(model.reads.has('@r_str'));
+  assert.ok(model.reads.has('Markdown'));
+  assert.equal(model.reads.has('@html_str'), false);
+  assert.equal(model.reads.has('@raw_str'), false);
+});

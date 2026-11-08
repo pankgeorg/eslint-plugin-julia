@@ -359,3 +359,11 @@ test('testset header expressions run outside the body scope', () => {
   assert.equal(reads[0].scope, m.globalScope);
   assert.notEqual(reads[0].binding, m.scopes.find(s => s.kind === 'testset').bindings.get('label'));
 });
+
+test('import definitions distinguish bare module bindings from explicit aliases and lists', () => {
+  const [m] = analyze('using Markdown; import Dates; import LinearAlgebra as LA; using Base: @r_str');
+  const definitions = m.imports;
+  assert.deepEqual(definitions.map(d => [d.name, d.named, d.aliased]), [
+    ['Markdown', false, false], ['Dates', false, false], ['LA', false, true], ['@r_str', true, false],
+  ]);
+});

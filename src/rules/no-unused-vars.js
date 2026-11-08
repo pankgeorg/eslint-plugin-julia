@@ -27,15 +27,11 @@ export default defineRule({
       if (b.definitions.length && b.definitions.every(d => macroOption(d, context.sourceCode))) continue;
       if (s.kind === 'module') {
         if (b.kind !== 'import' || b.external || !b.definitions.length || o.imports === 'none'
+          || !b.definitions.some(d => d.named || d.aliased)
           || b.definitions.some(d => ['function', 'macro'].includes(d.kind))) continue;
         const models = m.moduleResolution.scopes.get(s) ?? [];
         if (models.some(model => model.reads.has(b.name) || model.exports.has(b.name)
           || model.unresolvedIncludes || model.dynamicEvaluation)) continue;
-        // A wildcard import is useful when its module or any of its exports is
-        // used. Unknown wildcard exports cannot prove that an import is unused.
-        if (b.definitions.some(d => !d.named && models.some(model => model.imports.some(imp =>
-          imp.wildcard && imp.path === d.moduleName && (!imp.resolvedExports ||
-            [...imp.resolvedExports].some(name => model.reads.has(name) || model.exports.has(name))))))) continue;
         context.report({ node: b.definitions[0].node, messageId: 'unusedImport', data: { name: b.name } });
         continue;
       }

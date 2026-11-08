@@ -32,6 +32,13 @@ bad('f()=(@gensym x y; x)',['y']),
 
 tester.run('no-unused-vars imports',plugin.rules['no-unused-vars'],{
  valid:[
+  'using Markdown', 'using InteractiveUtils', 'import LinearAlgebra',
+  'using LinearAlgebra, Dates', 'import LinearAlgebra, Dates',
+  'module A; module B; end; using .B; end',
+  'using Markdown: @md_str; md"hello"',
+  'import Base: @r_str; r"pattern"i',
+  'import Base: @raw_str; raw"text"',
+  'import Markdown: @md_str as @doc_str; doc"hello"',
   'using LinearAlgebra: norm; @eval $(Symbol("generated"))()=1',
   'f()=(@parameters x [description="a", misc="final"])',
   'f()=(@variables (x(t)::Real), [input=true])',
@@ -46,9 +53,16 @@ tester.run('no-unused-vars imports',plugin.rules['no-unused-vars'],{
   'import LinearAlgebra: norm as _norm',
   {code:'using LinearAlgebra: norm',options:[{imports:'none'}]},
  ],invalid:[
+  {code:'import LinearAlgebra as LA',errors:[{messageId:'unusedImport',data:{name:'LA'}}]},
+  {code:'import LinearAlgebra as LA; norm([1])',errors:[{messageId:'unusedImport',data:{name:'LA'}}]},
+  {code:'using Markdown: Markdown',errors:[{messageId:'unusedImport',data:{name:'Markdown'}}]},
+  {code:'import Markdown: Markdown',errors:[{messageId:'unusedImport',data:{name:'Markdown'}}]},
+  {code:'using Markdown: @md_str; "md"',errors:[{messageId:'unusedImport',data:{name:'@md_str'}}]},
+  {code:'using Markdown: @md_str; :(md"quoted")',errors:[{messageId:'unusedImport',data:{name:'@md_str'}}]},
+  {code:'using Markdown: @md_str; Markdown.md"hello"',errors:[{messageId:'unusedImport',data:{name:'@md_str'}}]},
+  {code:'using Markdown: @md_str; module A; md"hello"; end',errors:[{messageId:'unusedImport',data:{name:'@md_str'}}]},
   {code:'f()=(@views tmp=1)',errors:[{messageId:'unused',data:{name:'tmp'}}]},
   {code:'using LinearAlgebra: norm',errors:[{messageId:'unusedImport',data:{name:'norm'}}]},
-  {code:'using LinearAlgebra',errors:[{messageId:'unusedImport',data:{name:'LinearAlgebra'}}]},
   {code:'import LinearAlgebra: norm as α',errors:[{messageId:'unusedImport',data:{name:'α'}}]},
   {code:'using LinearAlgebra: norm; f()=(norm=1; norm)',errors:[{messageId:'unusedImport',data:{name:'norm'}}]},
   {code:'module A; using LinearAlgebra: norm; end; module B; norm=1; end',errors:[{messageId:'unusedImport',data:{name:'norm'}}]},
@@ -62,4 +76,19 @@ test('unused imports count sibling reads across a custom include tree', async ()
  const entry=fileURLToPath(new URL('../fixtures/packages/custom/entry.jl',import.meta.url));
  const [r]=await engine({'julia/no-unused-vars':'error'}).lintText('module Custom; using Dates: year, now; include("child.jl"); end',{filePath:entry});
  assert.deepEqual(r.messages,[]);
+});
+
+
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+test('string macros count as explicit import uses across literal includes', async () => {
+ const dir=mkdtempSync(join(tmpdir(),'julia-string-macros-'));
+ const file=join(dir,'entry.jl');
+ const code='using Markdown: @md_str; include("child.jl")';
+ writeFileSync(file,code); writeFileSync(join(dir,'child.jl'),'md"hello"');
+ try {
+  const [r]=await engine({'julia/no-unused-vars':'error'},{cwd:dir}).lintText(code,{filePath:file});
+  assert.deepEqual(r.messages,[]);
+ } finally { rmSync(dir,{recursive:true,force:true}); }
 });

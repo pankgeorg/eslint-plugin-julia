@@ -4,8 +4,14 @@ Reports local bindings with no resolved read. Assignments alone are not reads;
 closure captures and identifiers written in macro arguments are reads. Module
 variables, declaration names and type parameters are excluded. Explicit imported
 names are checked across the resolved module include tree; exports/public API names
-count as uses, as do method extensions of an imported function. Wildcard imports count as used if their module or an exported name
-is read. Automatically imported wildcard members are never individually reported. Opt-in
+count as uses, as do method extensions of an imported function. Bare module
+bindings from `using M` or `import M` are exempt, including notebook boilerplate
+such as `using Markdown, InteractiveUtils`. Only explicitly listed names
+(`using M: x`, `import M: x`) and aliases (`import M as A`) are checked.
+String macros count as uses of the corresponding imported macro: `md"text"`
+uses `@md_str`, and `r"pattern"` uses `@r_str`. Qualified calls count as uses of
+the module receiver; literal quoted macro calls are data. Automatically imported
+wildcard members are never individually reported. Opt-in
 (`all`), no edits: an initializer can have effects and arguments affect dispatch.
 
 ```julia
