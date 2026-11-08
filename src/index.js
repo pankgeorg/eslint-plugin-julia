@@ -19,6 +19,7 @@ import noFillWithMutableRule from './rules/no-fill-with-mutable.js';
 import noIdenticalBranchesRule from './rules/no-identical-branches.js';
 import noImportAssignRule from './rules/no-import-assign.js';
 import noImpossibleLengthComparisonRule from './rules/no-impossible-length-comparison.js';
+import noRedundantUnionMembersRule from './rules/no-redundant-union-members.js';
 import noSelfAssignRule from './rules/no-self-assign.js';
 import noShadowedLoopVarRule from './rules/no-shadowed-loop-var.js';
 import noUnboundTypeParametersRule from './rules/no-unbound-type-parameters.js';
@@ -64,6 +65,7 @@ const plugin = {
     'no-identical-branches': noIdenticalBranchesRule,
     'no-import-assign': noImportAssignRule,
     'no-impossible-length-comparison': noImpossibleLengthComparisonRule,
+    'no-redundant-union-members': noRedundantUnionMembersRule,
     'no-self-assign': noSelfAssignRule,
     'no-shadowed-loop-var': noShadowedLoopVarRule,
     'no-unbound-type-parameters': noUnboundTypeParametersRule,
