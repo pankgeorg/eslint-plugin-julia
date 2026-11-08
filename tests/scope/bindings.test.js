@@ -8,6 +8,9 @@ function analyze(code) {
   const source = new JuliaSourceCode(code, parsed); return [getScopeManager(source), source];
 }
 const cases = [
+  ['Pluto bind', '@bind x 1; x', 'x', 'assignment'],
+  ['qualified Pluto bind', 'PlutoUI.@bind α 1; α', 'α', 'assignment'],
+  ['Pluto quoted name', '@bind var"a b" 1; var"a b"', 'a b', 'assignment'],
   ['empty generic declaration', 'function f end; f', 'f', 'function'],
   ['Unicode empty generic declaration', 'function α end; α', 'α', 'function'],
   ['alias parameter', 'const A{T}=Vector{T}', 'T', 'type-parameter'],
@@ -286,4 +289,21 @@ test('scope: macro defaults can read language-supplied arguments', () => {
 test('scope: isdefined macro probes are not value reads', () => {
   const [m] = analyze('@isdefined(x); f() = @isdefined(y)');
   assert.ok(!m.references.some(r => ['x', 'y'].includes(r.name)));
+});
+
+
+test('Pluto bind writes a module global and reads its widget in the caller scope', () => {
+  const [m] = analyze('f(widget)=(@bind x widget; x); x');
+  const x = m.globalScope.bindings.get('x');
+  assert.equal(x.definitions.length, 1);
+  assert.equal(x.definitions[0].initialized, true);
+  assert.equal(x.definitions[0].assignment.kind, 'macrocall');
+  assert.equal(x.references.length, 2);
+  const widget = m.functions[0].scope.bindings.get('widget');
+  assert.equal(widget.references.length, 1);
+  assert.equal(widget.references[0].read, true);
+});
+test('Pluto bind respects module and quoted-code boundaries', () => {
+  const [m] = analyze('module A; @bind x 1; x; end; x; :(@bind y 1); y');
+  assert.deepEqual(m.references.filter(r => !r.binding && !r.opaque).map(r => r.name), ['x', 'y']);
 });

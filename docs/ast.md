@@ -95,7 +95,11 @@ Properties, keyword labels, named-tuple keys and struct fields are not reads.
 Exact `var"..."` contents are supported without decoding escape sequences or Unicode
 normalization. Quotes are data except interpolation at the matching quote depth.
 Macro names are excluded; written arguments can be reads and written ordinary Julia
-constructs can bind names, but expansion never supplies bindings. Opaque macro
+constructs can bind names. Pluto's `@bind x expr` is a documented syntax
+exception: it reads `expr` in the caller's scope and initializes the named module
+global, including when invoked in a local scope. Qualified invocations have the
+same treatment. This convention is recognized by spelling; an unrelated custom
+macro named `@bind` may have different behavior. Other macro expansion supplies no bindings. Opaque macro
 operands are marked for diagnostic rules to suppress. Literal includes and resolvable bare using/import statements add module members.
 Unresolved wildcard modules remain in the owning scope's `bareUsing`; eval and
 nonliteral includes never invent definitions. Pass the ESLint rule context for

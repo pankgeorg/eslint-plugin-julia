@@ -195,6 +195,12 @@ function analyze(source, context) {
         s.dynamic = true;
         if (c[0]?.kind === '.') visit(c[0].children[0], s.module); // compile-time namespace lookup; never consumes a runtime local
         const macroName = c[0]?.kind === '.' ? identifierName(c[0].children[1]) : identifierName(c[0]);
+        // Pluto's @bind evaluates the widget and assigns the named global.
+        if (macroName === '@bind' && c.length === 3 && identifierName(c[1]) !== null) {
+          visit(c[2], s);
+          pattern(c[1], s, 'assignment', { declaration: 'global', assignment: node, initialized: true });
+          return;
+        }
         // Written normal declarations still count; naked DSL operands are opaque reads.
         const assignmentMacro = ['@views', '@view', '@inbounds', '@inline', '@noinline', '@time', '@elapsed',
           '@allocated', '@allocations', '@show', '@showtime', '@assert', '@boundscheck', '@timed', '@sync', '@async', '@spawn', '@simd', '@fastmath', '@__dot__', '@eval'].includes(macroName);

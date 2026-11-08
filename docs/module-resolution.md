@@ -59,7 +59,8 @@ Macro-generated exports do not count. The sole special case is
 exports. An unresolved reexport leaves the export inventory incomplete, so
 consumers retain the unknown-module fallback as well. Relative reexport cycles converge by adding names until stable. Written
 ordinary Julia definitions inside macros still obey the scope pass's existing
-policy; a macro invocation itself invents no binding.
+policy, including the documented Pluto `@bind` global-binding exception.
+Other macro invocations invent no bindings.
 
 File facts, project metadata and module models are cached per process by absolute
 path and modification time (also ctime and size). Models are shared between linted

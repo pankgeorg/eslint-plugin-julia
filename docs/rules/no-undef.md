@@ -12,6 +12,8 @@ f(x) = x + offest  # offest is unresolved
 @enum Shade light dark
 light             # macro-generated bindings do not count
 @isdefined(x)     # tests for a binding; x is not a value read
+@bind x 1        # documented Pluto exception: initializes global x
+x
 ```
 
 Options:

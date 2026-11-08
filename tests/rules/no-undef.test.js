@@ -2,6 +2,10 @@ import { tester, plugin } from '../helpers.js';
 const bad=(code,names,options)=>({code,...(options?{options:[options]}:{}),errors:names.map(name=>({messageId:'undefined',data:{name}}))});
 tester.run('no-undef',plugin.rules['no-undef'],{
  valid:[
+  '@bind x 1; x', 'PlutoUI.@bind α 1; α',
+  'f(widget)=(@bind x widget; x); x',
+  'let widget=1; @bind selected widget; end; selected',
+  '@bind var"a b" 1; var"a b"',
   '@dsl [unknown for i in xs]', '@dsl for i in xs; unknown; end',
   '@isdefined(x)', 'f() = @isdefined(local_name)',
   'using Dates; year(now())', 'import LinearAlgebra; norm([1, 2])',
@@ -19,6 +23,9 @@ tester.run('no-undef',plugin.rules['no-undef'],{
   {code:'f()=project_name',options:[{globals:['project_name']}]},
   {code:'unknown()',options:[{unknownGlobals:'ignore'}]},
  ],invalid:[
+  bad('@bind x 1; y', ['y']),
+  bad('@bind x (() -> missing_widget())()', ['missing_widget']),
+  bad('module A; @bind x 1; end; x', ['x']),
   bad('function f(x); x+offest; end',['offest']),
   bad('f()=missing_helper(1)',['missing_helper']),
   bad('using LinearAlgebra; @enum Fruit apple pear; apple',['apple']),
