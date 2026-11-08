@@ -32,6 +32,7 @@ import './rules/no-use-before-define.test.js';
 import './rules/prefer-const-global.test.js';
 import './rules/prefer-count-over-findall-length.test.js';
 import './rules/prefer-eachindex.test.js';
+import './rules/prefer-extreme-over-sort.test.js';
 import './rules/prefer-generator-sum.test.js';
 import './rules/prefer-in.test.js';
 import './rules/prefer-isa.test.js';
