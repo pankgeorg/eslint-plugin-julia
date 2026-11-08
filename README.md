@@ -94,6 +94,7 @@ Adding a rule: put it in `src/rules/<name>.js` with `docs/rules/<name>.md` and `
 | [no-unused-vars](docs/rules/no-unused-vars.md) | Off (strict: warn) | None |
 | [no-use-before-define](docs/rules/no-use-before-define.md) | Off (strict: warn) | None |
 | [parse-errors](docs/rules/parse-errors.md) | Error | None |
+| [prefer-any](docs/rules/prefer-any.md) | Off (strict: warn) | Suggestions |
 | [prefer-const-global](docs/rules/prefer-const-global.md) | Off (strict: warn) | Suggestions |
 | [prefer-eachindex](docs/rules/prefer-eachindex.md) | Off (strict: warn) | Suggestions |
 | [prefer-identity-nothing](docs/rules/prefer-identity-nothing.md) | Off (strict: warn) | Fix + suggestions |

@@ -28,6 +28,7 @@ import './rules/no-unused-expressions.test.js';
 import './rules/no-unused-type-parameters.test.js';
 import './rules/no-unused-vars.test.js';
 import './rules/no-use-before-define.test.js';
+import './rules/prefer-any.test.js';
 import './rules/prefer-const-global.test.js';
 import './rules/prefer-eachindex.test.js';
 import './rules/prefer-in.test.js';

@@ -8,6 +8,8 @@ Each measurement enables only the named rule, uses the physical file path, the c
 
 | no-single-iteration-loop | 0465880 | Node 22 + 24: 1075 pass | 2 / 0 / 0 | 0 / 2 / 0 | none | strict-only: both findings are deliberate inference regression fixtures (inference.jl:3768,3775), so no default promotion |
 
-| no-empty-literal-range | this commit | Node 22 + 24: 1090 pass | 2 / 0 / 0 | 0 / 2 / 0 | none | strict-only: both empty iterators are deliberate compiler regression fixtures (inference.jl:633,2964) |
+| no-empty-literal-range | a7eb782 | Node 22 + 24: 1090 pass | 2 / 0 / 0 | 0 / 2 / 0 | none | strict-only: both empty iterators are deliberate compiler regression fixtures (inference.jl:633,2964) |
+
+| prefer-any | this commit | Node 22 + 24: 1110 pass | 1 / 0 / 0 | 1 / 0 / 0 | suggestion | strict-only: basic_method_caches.jl:103 counts solely for existence; short-circuit effects still require review |
 
 No changes to the shared scope or module-resolution implementation. `scripts/measure-rule.mjs` applies a normalized ESLint config through Linter so external files are analyzed with real paths instead of silently falling outside ESLint's configuration boundary. Rule helpers resolve module facts lazily after a syntax match; suggestions are suppressed if replacing comments.

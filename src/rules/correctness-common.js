@@ -1,5 +1,5 @@
 import { defineRule } from './common.js';
-import { strip } from './idiom-common.js';
+import { strip, span } from './idiom-common.js';
 import { isInfixCall } from '../parser/flags.js';
 import { getScopeManager, identifierName } from '../scope.js';
 export { identifierName };
@@ -25,7 +25,7 @@ export function report(context, node, message, replacement) {
   const comments = source.comments.some(c => c.range[0] >= node.range[0] && c.range[1] <= node.range[1]);
   context.report({ node, messageId: 'issue', data: { message },
     ...(replacement && !comments && { suggest: [{ messageId: 'replace', data: { message: `Use ${replacement}.` },
-      fix: fixer => fixer.replaceText(node, replacement) }] }) });
+      fix: fixer => fixer.replaceTextRange(span(source, node), replacement) }] }) });
 }
 export function smallInteger(node) {
   while (node?.kind === 'parens' && node.children.length === 1) node = node.children[0];

@@ -33,6 +33,7 @@ import noUnusedTypeParametersRule from './rules/no-unused-type-parameters.js';
 import noUnusedVarsRule from './rules/no-unused-vars.js';
 import noUseBeforeDefineRule from './rules/no-use-before-define.js';
 import parseErrorsRule from './rules/parse-errors.js';
+import preferAnyRule from './rules/prefer-any.js';
 import preferConstGlobalRule from './rules/prefer-const-global.js';
 import preferEachindexRule from './rules/prefer-eachindex.js';
 import preferIdentityNothingRule from './rules/prefer-identity-nothing.js';
@@ -78,6 +79,7 @@ const plugin = {
     'no-unused-vars': noUnusedVarsRule,
     'no-use-before-define': noUseBeforeDefineRule,
     'parse-errors': parseErrorsRule,
+    'prefer-any': preferAnyRule,
     'prefer-const-global': preferConstGlobalRule,
     'prefer-eachindex': preferEachindexRule,
     'prefer-identity-nothing': preferIdentityNothingRule,
