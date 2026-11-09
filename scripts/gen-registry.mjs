@@ -43,8 +43,13 @@ const RECOMMENDED = {
   'no-discarded-copy-result': 'warn',
   'no-duplicate-dict-keys': 'warn',
   'no-nothing-return-conversion': 'warn',
+  'no-debugger': 'warn',
 };
-const STYLE = { 'prefer-identity-nothing': 'warn', 'no-empty-catch': 'warn' };
+const STYLE = {
+  'prefer-identity-nothing': 'warn',
+  'no-empty-catch': 'warn',
+  'prefer-parenthesized-interpolation': 'warn',
+};
 
 const rules = readdirSync(new URL('src/rules/', root))
   .filter((f) => f.endsWith('.js') && !f.endsWith('common.js'))
@@ -86,7 +91,10 @@ export { JuliaSourceCode } from './source-code.js';
 `;
 await writeFileSync(new URL('src/index.js', root), index);
 
-const tests = [];
+const tests = readdirSync(new URL('tests/', root))
+  .sort()
+  .filter((f) => f.endsWith('.test.js'))
+  .map((f) => `./${f}`);
 for (const dir of ['rules', 'scope', 'parser', 'integration'])
   for (const f of readdirSync(new URL(`tests/${dir}/`, root)).sort())
     if (f.endsWith('.test.js')) tests.push(`./${dir}/${f}`);

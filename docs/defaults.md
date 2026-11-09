@@ -4,7 +4,7 @@
 
 Evidence: findings with every rule on, over a 2,518-file sample of real Julia code (Julia base/stdlib/test and package sources; one in ten files of a 25,174-file corpus), and over Pluto.jl (138 files) and Malt.jl (13 files) with their environments instantiated. Per-rule classification of findings is in the pull requests.
 
-66 rules: 12 recommended as error, 11 as warn, 43 opt-in.
+76 rules: 12 recommended as error, 12 as warn, 52 opt-in.
 
 | rule                                 | default                 | corpus sample | Pluto.jl | Malt.jl | why                                                                                                                |
 | ------------------------------------ | ----------------------- | ------------: | -------: | ------: | ------------------------------------------------------------------------------------------------------------------ |
@@ -21,6 +21,7 @@ Evidence: findings with every rule on, over a 2,518-file sample of real Julia co
 | `prefer-ismissing`                   | **recommended (error)** |             0 |        0 |       0 | `x == missing` is `missing`, a TypeError in a condition                                                            |
 | `use-isnan`                          | **recommended (error)** |             0 |        0 |       0 | `x == NaN` is always false                                                                                         |
 | `no-const-reassign`                  | **recommended (warn)**  |             2 |        0 |       0 | reassigning a `const` global; deliberate in scripts                                                                |
+| `no-debugger`                        | **recommended (warn)**  |             0 |        0 |       0 | a leftover `@infiltrate`/`@bp` stops or fails the program; no findings anywhere                                    |
 | `no-discarded-copy-result`           | **recommended (warn)**  |             0 |        0 |       0 | `sort(x)` as a statement drops the result                                                                          |
 | `no-dupe-elseif`                     | **recommended (warn)**  |             0 |        0 |       0 | a repeated condition makes a branch dead; rare                                                                     |
 | `no-duplicate-dict-keys`             | **recommended (warn)**  |             0 |        0 |       0 | a later duplicate key silently wins in `Dict(k => v, …)`                                                           |
@@ -41,6 +42,7 @@ Evidence: findings with every rule on, over a 2,518-file sample of real Julia co
 | `no-empty-block`                     | off (strict: warn)      |            19 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
 | `no-empty-catch`                     | off (strict: warn)      |            27 |        4 |       1 | style / policy / narrow check (opt-in)                                                                             |
 | `no-empty-literal-range`             | off (strict: warn)      |             2 |        0 |       0 | findings were deliberate test fixtures                                                                             |
+| `no-env-mutation`                    | off (strict: warn)      |            16 |        0 |       0 | process-wide mutation to review; findings were deliberate setup (init, docs, tests)                                |
 | `no-eval-local-symbol`               | off (strict: warn)      |             0 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
 | `no-full-slice-in-consumer`          | off (strict: warn)      |             0 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
 | `no-identical-branches`              | off (strict: warn)      |            89 |        8 |       0 | style / policy / narrow check (opt-in)                                                                             |
@@ -48,9 +50,14 @@ Evidence: findings with every rule on, over a 2,518-file sample of real Julia co
 | `no-loss-of-float-integer-precision` | off (strict: warn)      |             0 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
 | `no-obvious-type-piracy`             | off (strict: warn)      |             0 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
 | `no-overwritten-literal-index`       | off (strict: warn)      |             0 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
+| `no-reassigned-capture`              | off (strict: warn)      |           137 |       17 |       0 | performance: every verified finding (110) is a `Core.Box` in Julia 1.13 lowering                                   |
 | `no-redundant-type-assertion`        | off (strict: warn)      |             0 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
 | `no-redundant-union-members`         | off (strict: warn)      |             0 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
+| `no-restricted-calls`                | off (strict: warn)      |             0 |        0 |       0 | project policy; ships with no entries (see docs/policies.md)                                                       |
+| `no-restricted-imports`              | off (strict: warn)      |             0 |        0 |       0 | project policy; ships with no entries (see docs/policies.md)                                                       |
+| `no-restricted-macros`               | off (strict: warn)      |             0 |        0 |       0 | project policy; ships with no entries (see docs/policies.md)                                                       |
 | `no-self-identity-comparison`        | off (strict: warn)      |             0 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
+| `no-show-macro`                      | off (strict: warn)      |            22 |       10 |       0 | debug output (ESLint `no-console` analogue); deliberate in tests/scripts                                           |
 | `no-single-iteration-loop`           | off (strict: warn)      |             2 |        0 |       0 | findings were deliberate test fixtures                                                                             |
 | `no-string-growth-in-loop`           | off (strict: warn)      |             0 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
 | `no-throw-literal`                   | off (strict: warn)      |            30 |        4 |       0 | throwing a String instead of an exception: hygiene (Pluto: 4 real)                                                 |
@@ -72,5 +79,8 @@ Evidence: findings with every rule on, over a 2,518-file sample of real Julia co
 | `prefer-in`                          | off (strict: warn)      |             2 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
 | `prefer-isa`                         | off (strict: warn)      |            71 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
 | `prefer-isempty`                     | off (strict: warn)      |            98 |       12 |       0 | style / policy / narrow check (opt-in)                                                                             |
+| `prefer-parenthesized-interpolation` | off (strict: warn)      |            49 |        3 |       0 | style (in `style`); ambiguous mode found 1 real bug in 52                                                          |
 | `prefer-size-dimension`              | off (strict: warn)      |             0 |        0 |       0 | style / policy / narrow check (opt-in)                                                                             |
 | `prefer-sized-push-buffer`           | off (strict: warn)      |             1 |        0 |       0 | performance advice                                                                                                 |
+| `prefer-typed-empty-array`           | off (strict: warn)      |            42 |        1 |       0 | performance advice; 4 of 10 sampled true, 6 debatable                                                              |
+| `require-typed-global`               | off (strict: warn)      |            28 |        0 |       0 | performance advice; 4 of 10 sampled true, 6 debatable                                                              |

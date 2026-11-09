@@ -26,5 +26,7 @@ are checked separately; macro payloads and quoted code are skipped.
 Fallbacks for unknowables: no name resolution or constant propagation is used.
 Includes/imports/eval do not establish equality. Overloaded comparisons and
 concurrent changes to globals can invalidate assumptions about repeated reads;
-this is a suspicious repetition check, not proof of unreachable code. Medium
-shortlist FP risk; enabled only in `all`.
+this is a suspicious repetition check, not proof of unreachable code. In `recommended` as a
+warning.
+
+Related: [ReLint.jl](https://github.com/RelationalAI-oss/ReLint.jl) check "unreachable branch" (a repeated first condition); this rule also covers longer chains and skips effectful conditions.

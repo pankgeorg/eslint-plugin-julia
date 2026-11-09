@@ -30,3 +30,5 @@ value(ok)::Int = ok ? 1 : 2  # Valid, and outside the bounded flow model.
 ```
 
 Literal empty loops do not make their bodies reachable. A nonempty literal integer range whose body always returns or throws does not introduce a fallthrough path. Renamed type imports and general iterator cardinality are not inferred.
+
+Related: [ReLint.jl](https://github.com/RelationalAI-oss/ReLint.jl) check "return type annotation" (a policy against annotations); this rule reports only annotations that a `nothing` path cannot satisfy.

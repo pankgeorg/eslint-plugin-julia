@@ -1,3 +1,6 @@
 # Mechanical formatting commits; use with: git config blame.ignoreRevsFile .git-blame-ignore-revs
 # style: format with Prettier
 6a7b3538189b9733264f0d661ca09643a334892e
+
+# style: format the ReLint-inspired rules, tests and docs with Prettier
+eb39da5e86d14ba1410536d18ed458877ad17b1c

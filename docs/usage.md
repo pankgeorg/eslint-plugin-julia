@@ -147,9 +147,12 @@ export default [
 ];
 ```
 
-**Project policies.** To ban calls, macros or imports in your project, or to match
-syntax patterns, use ESLint's core `no-restricted-syntax` with selectors over Julia node
-kinds. The [AST reference](ast.md) lists the node kinds.
+**Project policies.** To ban calls, macros or imports in your project, configure
+`julia/no-restricted-calls`, `julia/no-restricted-macros` and `julia/no-restricted-imports`
+(they ship with no entries). For other syntax patterns, use ESLint's core
+`no-restricted-syntax` with [selectors over Julia node kinds](restricted-syntax.md); the
+[AST reference](ast.md) lists the node kinds. [policies.md](policies.md) has a worked
+example config.
 
 ## Run from the command line
 

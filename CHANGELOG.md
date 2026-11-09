@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- 10 rules inspired by [ReLint.jl](https://github.com/RelationalAI-oss/ReLint.jl):
+  `no-debugger` (in `recommended` as a warning), `no-env-mutation`, `require-typed-global`,
+  `prefer-typed-empty-array`, `no-show-macro`, `no-reassigned-capture`,
+  `prefer-parenthesized-interpolation` (also in `style`), and the configurable policy rules
+  `no-restricted-calls`, `no-restricted-macros` and `no-restricted-imports`, which ship
+  with no entries.
+- `docs/policies.md` and `docs/restricted-syntax.md`: project policies with the
+  `no-restricted-*` rules and ESLint core `no-restricted-syntax` over Julia trees.
+- An Influences section in the README.
+
 ## [0.1.0] - 2026-11-08
 
 First release, as a GitHub release (not on npm yet).
