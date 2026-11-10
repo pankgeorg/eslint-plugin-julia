@@ -47,8 +47,9 @@ function toml(path, track) {
   const version = stamp(path);
   track?.set(path, version);
   if (tomlCache.get(path)?.version === version) return tomlCache.get(path).value;
-  const result = { root: {}, packages: new Map() };
-  let current = result.root;
+  const result = { root: {}, packages: new Map(), deps: new Set() };
+  let current = result.root,
+    deps = false;
   try {
     for (const line of readFileSync(path, 'utf8').split(/\r?\n/u)) {
       const table = line.match(/^\s*\[\[\s*(?:deps\.)?(?:"([^"]+)"|([\w-]+))\s*\]\]/u);
@@ -61,8 +62,12 @@ function toml(path, track) {
       }
       if (/^\s*\[/u.test(line)) {
         current = {};
+        deps = /^\s*\[\s*deps\s*\]/u.test(line);
         continue;
       }
+      // Project `[deps]` names, for deciding whether the environment can supply a package.
+      const dep = deps && line.match(/^\s*(?:"([^"]+)"|([\w-]+))\s*=/u);
+      if (dep) result.deps.add(dep[1] ?? dep[2]);
       const field = line.match(
         /^\s*(name|uuid|path|git-tree-sha1)\s*=\s*("(?:[^"\\]|\\.)*"|'[^']*')/u,
       );
@@ -144,7 +149,7 @@ function environmentFor(file, settings, track) {
 const indexed = new Map();
 function packageEntry(name, from, track, state = {}) {
   const local = installedEntry(name, from, track);
-  if (local || !state.environment) return local;
+  if (local || !state.environment || !state.dependsOn?.(name)) return local;
   const environment = state.environment();
   const entry = environment?.packages?.[name]?.entry;
   if (!entry || !exists(entry)) return null;
@@ -578,6 +583,9 @@ function findModule(path, from, graph, state) {
       solve(dependency, state);
       for (const [p, v] of dependency.versions) graph.versions.set(p, v);
       at = dependency.root.children.get(name);
+      // JLL packages generate their exports per platform (in JLLWrappers macros), and a
+      // module that includes files at run time may export anything from them.
+      if (at && (name.endsWith('_jll') || at.dynamicIncludes)) at.unknownExports = true;
       storeIndex(entry, at);
     }
   }
@@ -669,6 +677,18 @@ export function applyModuleResolution(manager, source, context = {}) {
       virtual(file) || !settings?.julia
         ? null
         : () => (environment ??= environmentFor(file, settings, graph.versions) ?? null),
+    // Only a dependency of the linted file's environment (its nearest Project.toml's
+    // `[deps]`, or a transitive one once resolved) is worth resolving.
+    dependsOn: (name) => {
+      for (const dir of upward(file)) {
+        const project = join(dir, 'Project.toml');
+        if (!exists(project)) continue;
+        return (
+          toml(project, graph.versions).deps.has(name) || Boolean(environment?.packages?.[name])
+        );
+      }
+      return false;
+    },
   });
   manager.moduleResolution = {
     entries: graph.entries,
