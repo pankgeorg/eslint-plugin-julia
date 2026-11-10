@@ -190,6 +190,9 @@ const table = {
   '@mtkbuild': BIND,
   '@mtkcompile': BIND,
   '@capture': { args: ['expr', 'pattern'] },
+  // Flux/Functors: a type and its field names.
+  '@layer': { rest: 'symbol' },
+  '@functor': { rest: 'symbol' },
   // Base.Cartesian generates `i_1`, `i_2`, … from its arguments.
   ...Object.fromEntries(
     [

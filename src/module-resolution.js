@@ -417,7 +417,10 @@ function facts(source, file) {
     }
     // Quotes are data, including their export/include-looking syntax.
     if (['quote', 'inert'].includes(node.kind)) return;
-    const next = node.kind === 'macrocall' ? [...macros, identifierName(node.children[0])] : macros;
+    // Qualified macros (`Reexport.@reexport`) count by their own name.
+    const head = node.children[0];
+    const macro = head?.kind === '.' ? identifierName(head.children.at(-1)) : identifierName(head);
+    const next = node.kind === 'macrocall' ? [...macros, macro] : macros;
     node.children.forEach((n) => walk(n, next));
   }
   walk(source.ast);
@@ -757,10 +760,12 @@ export function applyModuleResolution(manager, source, context = {}) {
     fragment =
       Boolean(project) &&
       file !== join(project.dir, 'src', `${project.name}.jl`) &&
-      !ownFacts.some((m) =>
-        m.imports.some(
-          (imp) => imp.path === project.name || imp.path.startsWith(`${project.name}.`),
-        ),
+      !ownFacts.some(
+        (m) =>
+          m.id === -1 &&
+          m.imports.some(
+            (imp) => imp.path === project.name || imp.path.startsWith(`${project.name}.`),
+          ),
       );
   }
   for (const [p, v] of discovery) graph.versions.set(p, v);
