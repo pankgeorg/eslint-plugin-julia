@@ -27,13 +27,13 @@ The plugin is published as GitHub releases (not yet on npm). Install the release
 
 ```sh
 npm install --save-dev eslint \
-  https://github.com/pankgeorg/eslint-plugin-julia/releases/download/v0.1.0/eslint-plugin-julia-0.1.0.tgz
+  https://github.com/pankgeorg/eslint-plugin-julia/releases/download/v0.2.0/eslint-plugin-julia-0.2.0.tgz
 ```
 
 or the tagged commit from git:
 
 ```sh
-npm install --save-dev eslint github:pankgeorg/eslint-plugin-julia#v0.1.0
+npm install --save-dev eslint github:pankgeorg/eslint-plugin-julia#v0.2.0
 ```
 
 Both pin an exact version in `package.json`. Nothing is built or downloaded during

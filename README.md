@@ -9,7 +9,7 @@ Lint Julia code with [ESLint](https://eslint.org).
 - **Julia's own parser.** JuliaSyntax from Julia 1.13.2, compiled to WebAssembly and
   bundled. It parses exactly what Julia parses, and needs no Julia installation, only
   Node.js.
-- **66 rules** for likely bugs (`x == NaN`, a `return` inside `finally`, duplicate
+- **76 rules** for likely bugs (`x == NaN`, a `return` inside `finally`, duplicate
   keyword arguments, unreachable code, …), scope problems (undefined and unused names,
   with `include` and `using` resolved through your Manifest) and performance pitfalls.
   A conservative `recommended` preset, and `strict` for everything.
@@ -27,7 +27,7 @@ src/stats.jl
 
 ```sh
 npm install --save-dev eslint \
-  https://github.com/pankgeorg/eslint-plugin-julia/releases/download/v0.1.0/eslint-plugin-julia-0.1.0.tgz
+  https://github.com/pankgeorg/eslint-plugin-julia/releases/download/v0.2.0/eslint-plugin-julia-0.2.0.tgz
 ```
 
 ```js

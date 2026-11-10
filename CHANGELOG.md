@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-10
+
 ### Added
 
 - 10 rules inspired by [ReLint.jl](https://github.com/RelationalAI-oss/ReLint.jl):
@@ -13,10 +15,21 @@ All notable changes to this project are documented here. The format follows
   `prefer-typed-empty-array`, `no-show-macro`, `no-reassigned-capture`,
   `prefer-parenthesized-interpolation` (also in `style`), and the configurable policy rules
   `no-restricted-calls`, `no-restricted-macros` and `no-restricted-imports`, which ship
-  with no entries.
+  with no entries. (#43)
 - `docs/policies.md` and `docs/restricted-syntax.md`: project policies with the
-  `no-restricted-*` rules and ESLint core `no-restricted-syntax` over Julia trees.
-- An Influences section in the README.
+  `no-restricted-*` rules and ESLint core `no-restricted-syntax` over Julia trees. (#43)
+- An Influences section in the README. (#43)
+
+### Changed
+
+- `wasm/parser.wasm` rebuilt on [WasmCodegen.jl](https://github.com/gbaraldi/WasmCodegen.jl)
+  main `98cad1f` (v0.1.0: `316bbaf`), with WasmBuilder.jl 0.1.1 and `wasm-opt -O3`
+  (Binaryen 130). JuliaSyntax is unchanged: the one shipped in Julia 1.13.2 (also the one in
+  1.13.3). The parser output is identical to v0.1.0's on 25,174 real-world Julia files, and
+  parsing speed is the same within noise (0.156 → 0.159 s/MB). The module is 739,251 bytes
+  (was 735,576). `wasm/manifest.json` also records the WasmBuilder and Binaryen versions.
+  The build was first checked on WasmCodegen main in #45; this release ships it.
+- README: the rule count is 76.
 
 ## [0.1.0] - 2026-11-08
 
@@ -42,5 +55,6 @@ First release, as a GitHub release (not on npm yet).
 - Usage guide (`docs/usage.md`): install from a release or git, CLI, GitHub Actions with
   annotations and code scanning, pre-commit hooks, and editors.
 
-[Unreleased]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pankgeorg/eslint-plugin-julia/releases/tag/v0.1.0
