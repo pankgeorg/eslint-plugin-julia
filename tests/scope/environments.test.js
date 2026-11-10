@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readdirSync,
+  existsSync,
+  readFileSync,
+} from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { parseJulia } from '../../src/parser/syntax-tree.js';
@@ -17,7 +24,6 @@ function tree(files) {
   return root;
 }
 function analyze(file, settings) {
-  const { readFileSync } = globalThis.process.getBuiltinModule('node:fs');
   const text = readFileSync(file, 'utf8');
   return getScopeManager(new JuliaSourceCode(text, parseJulia(text)), {
     physicalFilename: file,
