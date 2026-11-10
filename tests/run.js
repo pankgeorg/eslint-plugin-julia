@@ -74,6 +74,7 @@ import './rules/prototype.test.js';
 import './rules/require-typed-global.test.js';
 import './rules/use-isnan.test.js';
 import './scope/bindings.test.js';
+import './scope/environments.test.js';
 import './scope/module-resolution.test.js';
 import './parser/parser.test.js';
 import './integration/eslint.test.js';

@@ -1,5 +1,5 @@
 // Syntactic module resolution only: never loads a package or executes Julia.
-import { readFileSync, statSync, readdirSync } from 'node:fs';
+import { readFileSync, statSync, readdirSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { resolve, dirname, join, basename, delimiter, isAbsolute, relative, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
@@ -140,11 +140,63 @@ function environmentFor(file, settings, track) {
   }
   return result;
 }
+// Entries that came from the resolver's cache, with the folder of their export index.
+const indexed = new Map();
 function packageEntry(name, from, track, state = {}) {
   const local = installedEntry(name, from, track);
   if (local || !state.environment) return local;
-  const entry = state.environment()?.packages?.[name]?.entry;
-  return entry && exists(entry) ? entry : null;
+  const environment = state.environment();
+  const entry = environment?.packages?.[name]?.entry;
+  if (!entry || !exists(entry)) return null;
+  if (environment.envDir) indexed.set(entry, join(dirname(dirname(environment.envDir)), 'index'));
+  return entry;
+}
+// The export index of a cached, immutable package source tree: its solved module tree
+// (exports and submodules), so later runs don't parse the package again.
+const INDEX_VERSION = 1;
+const indexFile = (entry) =>
+  join(indexed.get(entry), `${hash(`${INDEX_VERSION}\0${entry}`).slice(0, 24)}.json`);
+const indexMemo = new Map();
+function loadIndex(entry) {
+  if (!indexed.has(entry)) return null;
+  if (indexMemo.has(entry)) return indexMemo.get(entry);
+  let data;
+  try {
+    data = JSON.parse(readFileSync(indexFile(entry), 'utf8'));
+  } catch {
+    return null;
+  }
+  const build = (d, parent) => {
+    const m = moduleModel(d.name, parent);
+    d.exports.forEach((n) => m.exports.add(n));
+    m.unknownExports = Boolean(d.unknownExports);
+    for (const c of d.children) m.children.set(c.name, build(c, m));
+    return m;
+  };
+  const model =
+    data.version === INDEX_VERSION && data.entry === entry ? build(data.module, null) : null;
+  indexMemo.set(entry, model);
+  return model;
+}
+function storeIndex(entry, model) {
+  if (!indexed.has(entry) || !model) return;
+  const dump = (m) => ({
+    name: m.name,
+    exports: [...m.exports],
+    unknownExports: m.unknownExports,
+    children: [...m.children.values()].map(dump),
+  });
+  try {
+    const file = indexFile(entry);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(
+      `${file}.${process.pid}.tmp`,
+      JSON.stringify({ version: INDEX_VERSION, entry, module: dump(model) }),
+    );
+    renameSync(`${file}.${process.pid}.tmp`, file);
+  } catch {
+    /* An unwritable cache only costs a re-parse. */
+  }
 }
 function installedEntry(name, from, track) {
   const own = projectFor(from, track);
@@ -415,8 +467,21 @@ function addFile(graph, file, into, active = new Set()) {
   }
   return true;
 }
+// Solved graphs depend on the resolver settings of the analysis that built them.
+let variant = '';
+const resolverIds = new WeakMap();
+function resolverVariant(settings) {
+  const j = settings?.julia;
+  if (!j) return '';
+  let resolver = j.resolver ?? null;
+  if (typeof resolver === 'function') {
+    if (!resolverIds.has(resolver)) resolverIds.set(resolver, `fn:${Math.random()}`);
+    resolver = resolverIds.get(resolver);
+  }
+  return JSON.stringify([resolver, j.pkgjl ?? null, j.cacheDir ?? null, j.offline ?? null]);
+}
 function graphFor(entries, overlay) {
-  const key = JSON.stringify([entries, depots(), overlay?.file, overlay?.hash]);
+  const key = JSON.stringify([entries, depots(), overlay?.file, overlay?.hash, variant]);
   const previous = graphCache.get(key);
   if (previous && [...previous.versions].every(([p, v]) => stamp(p) === v)) return previous;
   const baseEntry = entries.find(
@@ -507,10 +572,14 @@ function findModule(path, from, graph, state) {
   if (!at) {
     const entry = packageEntry(name, state.file, graph.versions, state);
     if (!entry) return null;
-    const dependency = graphFor([entry]);
-    solve(dependency, state);
-    for (const [p, v] of dependency.versions) graph.versions.set(p, v);
-    at = dependency.root.children.get(name);
+    at = loadIndex(entry);
+    if (!at) {
+      const dependency = graphFor([entry]);
+      solve(dependency, state);
+      for (const [p, v] of dependency.versions) graph.versions.set(p, v);
+      at = dependency.root.children.get(name);
+      storeIndex(entry, at);
+    }
   }
   for (const part of parts) at = at?.children.get(part);
   return at ? { exports: at.exports, module: at } : null;
@@ -566,6 +635,7 @@ function solve(graph, state) {
 }
 
 export function applyModuleResolution(manager, source, context = {}) {
+  variant = resolverVariant(context.settings);
   const file = virtual(context.physicalFilename) ? '<input>' : resolve(context.physicalFilename);
   const ownFacts = facts(source, file);
   const overlay = { file, facts: ownFacts, hash: hash(source.text) };
