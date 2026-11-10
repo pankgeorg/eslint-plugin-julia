@@ -1,11 +1,12 @@
 // Syntactic module resolution only: never loads a package or executes Julia.
 import { readFileSync, statSync, readdirSync } from 'node:fs';
-import { resolve, dirname, join, basename, delimiter, isAbsolute } from 'node:path';
+import { resolve, dirname, join, basename, delimiter, isAbsolute, relative, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { parseJulia } from './parser/syntax-tree.js';
 import { JuliaSourceCode } from './source-code.js';
 import { getLocalScopeManager, identifierName } from './scope.js';
+import { resolveEnvironment } from './resolver/index.js';
 
 const inventory = JSON.parse(
   readFileSync(new URL('../data/base-core-exports.json', import.meta.url)),
@@ -114,7 +115,38 @@ function depots() {
     .map((p) => p || join(homedir(), '.julia'))
     .map((p) => resolve(p));
 }
-function packageEntry(name, from, track) {
+// The environment resolver (settings.julia.resolver): a throwaway, cached, source-only
+// copy of the linted file's environment, asked for once, when a package isn't installed.
+function environmentFor(file, settings, track) {
+  let projectFile = null;
+  for (const dir of upward(file)) {
+    const path = join(dir, 'Project.toml');
+    if (exists(path)) {
+      projectFile = path;
+      break;
+    }
+  }
+  if (!projectFile) return null;
+  const dir = dirname(projectFile);
+  const manifestFile =
+    ['Manifest-v1.13.toml', 'Manifest.toml'].map((m) => join(dir, m)).find(exists) ?? null;
+  const result = resolveEnvironment(
+    { projectFile, manifestFile, packageName: projectFor(file, track)?.name },
+    settings,
+  );
+  if (result?.envDir) {
+    const marker = join(result.envDir, 'env.json');
+    track.set(marker, stamp(marker));
+  }
+  return result;
+}
+function packageEntry(name, from, track, state = {}) {
+  const local = installedEntry(name, from, track);
+  if (local || !state.environment) return local;
+  const entry = state.environment()?.packages?.[name]?.entry;
+  return entry && exists(entry) ? entry : null;
+}
+function installedEntry(name, from, track) {
   const own = projectFor(from, track);
   if (own?.name === name) return join(own.dir, 'src', `${name}.jl`);
   const manifest = manifestFor(from, track);
@@ -186,6 +218,7 @@ function facts(source, file) {
       macroIncludes: [],
       reads: [],
       unresolvedIncludes: false,
+      dynamicIncludes: false,
       dynamicEvaluation: false,
     });
   }
@@ -284,7 +317,12 @@ function facts(source, file) {
             : null;
         if (path !== null && !virtual(file))
           m.includes.push({ path: resolve(dirname(file), path), literal: path });
-        else m.unresolvedIncludes = true;
+        else {
+          m.unresolvedIncludes = true;
+          // A computed path, or an include run inside a function or block: its file's
+          // globals are unknowable here.
+          if (!virtual(file)) m.dynamicIncludes = true;
+        }
       }
     }
     // Quotes are data, including their export/include-looking syntax.
@@ -330,6 +368,7 @@ function moduleModel(name, parent, bare = false) {
     unknownExports: false,
     reads: new Set(),
     unresolvedIncludes: false,
+    dynamicIncludes: false,
     dynamicEvaluation: false,
   };
 }
@@ -356,6 +395,7 @@ function addFile(graph, file, into, active = new Set()) {
     m.imports.push(...fact.imports.map((imp) => ({ ...imp })));
     fact.reads.forEach((name) => m.reads.add(name));
     m.unresolvedIncludes ||= fact.unresolvedIncludes;
+    m.dynamicIncludes ||= fact.dynamicIncludes;
     m.dynamicEvaluation ||= fact.dynamicEvaluation;
     fact.includeMacros.forEach((name) => m.includeMacros.add(name));
     for (const include of fact.includes) {
@@ -410,6 +450,10 @@ function entryCandidates(file, context, track) {
   if (project) {
     candidates.push([join(project.dir, 'src', `${project.name}.jl`)]);
     candidates.push([join(project.dir, 'test', 'runtests.jl')]);
+    // A package extension's own files: ext/<Ext>/<Ext>.jl includes ext/<Ext>/*.jl.
+    const parts = relative(project.dir, file).split(sep);
+    if (parts[0] === 'ext' && parts.length > 2)
+      candidates.push([join(project.dir, 'ext', parts[1], `${parts[1]}.jl`)]);
   }
   for (const dir of upward(file)) {
     if (basename(dir) === 'base' && exists(join(dir, 'Base.jl'))) {
@@ -461,7 +505,7 @@ function findModule(path, from, graph, state) {
   if (known) return known;
   let at = graph.root.children.get(name);
   if (!at) {
-    const entry = packageEntry(name, state.file, graph.versions);
+    const entry = packageEntry(name, state.file, graph.versions, state);
     if (!entry) return null;
     const dependency = graphFor([entry]);
     solve(dependency, state);
@@ -545,7 +589,17 @@ export function applyModuleResolution(manager, source, context = {}) {
     occurrences = graph.files.get(file) ?? [];
   }
   for (const [p, v] of discovery) graph.versions.set(p, v);
-  solve(graph, { active: new Set(), file });
+  let environment;
+  const settings = context.settings;
+  solve(graph, {
+    active: new Set(),
+    file,
+    // Asked lazily: only a package that isn't installed locally starts the resolver.
+    environment:
+      virtual(file) || !settings?.julia
+        ? null
+        : () => (environment ??= environmentFor(file, settings, graph.versions) ?? null),
+  });
   manager.moduleResolution = {
     entries: graph.entries,
     files: [...graph.files.keys()],
@@ -555,6 +609,7 @@ export function applyModuleResolution(manager, source, context = {}) {
     const id = s === manager.globalScope ? -1 : s.node.range[0];
     const models = [...new Set(occurrences.filter((o) => o.id === id).map((o) => o.module))];
     s.bareUsing = [...new Set(models.flatMap((m) => [...m.unknown]))];
+    s.dynamicIncludes = models.some((m) => m.dynamicIncludes);
     manager.moduleResolution.scopes.set(s, models);
     for (const m of models) {
       if (s === manager.globalScope && m.parent) s.bare = m.bare;

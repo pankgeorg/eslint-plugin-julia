@@ -54,6 +54,11 @@ export function getScopeManager(sourceCode, context = {}) {
     context.physicalFilename,
     context.settings?.julia?.entryFiles,
     context.settings?.julia?.macros,
+    typeof context.settings?.julia?.resolver === 'function'
+      ? 'function'
+      : context.settings?.julia?.resolver,
+    context.settings?.julia?.pkgjl,
+    context.settings?.julia?.cacheDir,
     process.env.JULIA_DEPOT_PATH,
   ]);
   if (!cache.has(sourceCode)) cache.set(sourceCode, new Map());
