@@ -30,6 +30,10 @@ defined like any other read. The exceptions:
   aren't reported.
 - `seriestype --> :path` and `xguide := "x"` (plot recipes) name attributes: their left
   side is not a read anywhere.
+- Smaller syntax rules: `@simd ivdep` is a flag; `@test_throws UndefVarError expr` expects
+  `expr` to be undefined; reads guarded by `@isdefined(x) && …` or `if @isdefined(x)` are
+  not reported; a documented signature without a definition (`"doc" f(x)`) is not code;
+  a plot recipe (`@recipe`) reads the `plotattributes` it is given (the `inject` field).
 
 ## Signatures
 

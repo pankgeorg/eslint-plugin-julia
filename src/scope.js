@@ -350,6 +350,15 @@ function analyze(source, context, localMacros) {
         }
         c.forEach((n) => visit(n, s, extra));
         return;
+      case 'doc':
+        // `"doc" f(x)`: documents a signature; the call isn't evaluated.
+        if (['call', 'where', 'tuple'].includes(c.at(-1)?.kind)) {
+          c.slice(0, -1).forEach((n) => visit(n, s, extra));
+          mark(c.at(-1), s);
+          return;
+        }
+        c.forEach((n) => visit(n, s, extra));
+        return;
       case '-->':
       case ':=':
         // Plot-recipe attribute arrows (`seriestype --> :path`, `xguide := "x"`): the
@@ -686,9 +695,15 @@ function analyze(source, context, localMacros) {
       case '...':
         again(c[0]);
         return;
+      case 'vect':
+        // `[i in 1:n]` / `[i = 1:n]`: an index set (JuMP's `@constraint(m, [i in 1:n], …)`).
+        if (!top) break;
+      // falls through
       case 'ref':
-        again(c[0]);
-        for (const index of c.slice(1)) {
+      case 'typed_vcat':
+      case 'typed_hcat':
+        if (node.kind !== 'vect') again(c[0]);
+        for (const index of node.kind === 'vect' ? c : c.slice(1)) {
           const iterator =
             index.kind === '=' ||
             (index.kind === 'call' &&
@@ -859,6 +874,32 @@ function analyze(source, context, localMacros) {
         visit(arg, s, { ...extra, opaque: true, checked: false });
       }
     };
+    // `@simd ivdep for …`: a flag, not a variable.
+    if (name === '@simd' && identifierName(args[0]) === 'ivdep') {
+      opaque(args[0]);
+      args.slice(1).forEach((arg) => visit(arg, s, read));
+      return;
+    }
+    // `@test_throws UndefVarError expr`: the expression is expected to be undefined.
+    if (name === '@test_throws' && identifierName(args[0]) === 'UndefVarError') {
+      args.slice(1).forEach((arg) => role(arg, 'skip'));
+      return;
+    }
+    // Names the macro defines around its arguments (`plotattributes` in a plot recipe).
+    for (const injected of spec.inject ?? []) {
+      s.module.macroBindings ??= new Map();
+      if (!s.module.macroBindings.has(injected))
+        s.module.macroBindings.set(injected, {
+          name: injected,
+          kind: 'macro-binding',
+          scope: s.module,
+          definitions: [],
+          references: [],
+          writes: [],
+          constant: false,
+          macro: true,
+        });
+    }
     switch (spec.form) {
       case 'eval':
         args.forEach((arg, i) => role(arg, args.length === 2 && i === 0 ? 'expr' : 'quote'));

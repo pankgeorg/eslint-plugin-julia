@@ -46,7 +46,9 @@ export default defineRule({
           );
         }
         for (const d of m.definitions) {
-          if (!d.initialized || d.binding.scope.kind !== 'module') continue;
+          // A macro declaration (`@independent_variables t`) isn't a written assignment.
+          if (!d.initialized || d.kind === 'macro-binding' || d.binding.scope.kind !== 'module')
+            continue;
           const explicit = d.binding.definitions.some(
             (n) => n.kind === 'import' && !exclusive(d.node, n.node),
           );

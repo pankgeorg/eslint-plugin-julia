@@ -61,6 +61,28 @@ function exportLike(node, source) {
   if (['curly', 'where'].includes(parent.kind)) return true;
   return false;
 }
+// `@isdefined(x) && f(x)`, `if @isdefined(x) … end`: a guarded read.
+function guarded(reference, source) {
+  const isdef = (n) =>
+    n?.kind === 'macrocall' &&
+    identifierName(n.children[0]) === '@isdefined' &&
+    identifierName(n.children[1]) === reference.name;
+  for (
+    let at = reference.node, parent = source.getParent(at);
+    parent;
+    at = parent, parent = source.getParent(parent)
+  ) {
+    if (BODY.has(parent.kind)) return false;
+    if (parent.kind === '&&' && at !== parent.children[0] && isdef(parent.children[0])) return true;
+    if (
+      ['if', 'elseif'].includes(parent.kind) &&
+      at !== parent.children[0] &&
+      isdef(parent.children[0])
+    )
+      return true;
+  }
+  return false;
+}
 // Inside a function whose statement-level macro may define locals (see scope.js).
 function injected(scope) {
   for (let at = scope; at && at.kind !== 'module'; at = at.parent)
@@ -133,6 +155,7 @@ export default defineRule({
             globals.has(r.name) ||
             /^_+$/u.test(r.name ?? '') ||
             opaqueRead(r, source, m) ||
+            guarded(r, source) ||
             injected(r.scope)
           )
             continue;

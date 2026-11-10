@@ -28,6 +28,7 @@
 // `form` selects one of the handlers in scope.js for shapes a role list can't express:
 // `kwdef` (field defaults may read earlier fields), `ccall` (the callee is a symbol),
 // `deprecate` (the old signature defines a global, the new one reads only its callee),
+// `inject: [names]` lists names the macro defines around its arguments.
 // `placeholders: true` makes the arguments of a bound call head (`f(t)`) symbols, not reads.
 // `binding: 'assignment'` makes `bind` names ordinary assignments in the current scope
 // (`@gensym x`, Pluto's `@bind x widget`) instead of macro bindings. A `kw` role applies
@@ -193,6 +194,8 @@ const table = {
   '@mtkbuild': BIND,
   '@mtkcompile': BIND,
   '@capture': { args: ['expr', 'pattern'] },
+  // RecipesBase: a recipe's body reads the `plotattributes` it is given.
+  '@recipe': { rest: 'expr', inject: ['plotattributes'] },
   // Index notation (TensorOperations, Tullio, Einsum, TensorCast): indices are bound by
   // the macro.
   '@tensor': { rest: 'skip' },
