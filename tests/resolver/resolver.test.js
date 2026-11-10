@@ -91,7 +91,8 @@ function fixture(t, mode = 'ok') {
 function files(dir, prefix = '') {
   return readdirSync(dir, { withFileTypes: true })
     .flatMap((item) => {
-      const path = join(prefix, item.name);
+      // Forward slashes on every platform, for comparison.
+      const path = prefix ? `${prefix}/${item.name}` : item.name;
       return item.isDirectory() ? files(join(dir, item.name), path) : [path];
     })
     .sort();
