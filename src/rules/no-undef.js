@@ -89,6 +89,10 @@ export default defineRule({
       undefined: '"{{name}}" has no binding in this module.',
       unresolvedOnly:
         '"{{name}}" is not defined in this function or module; it could only come from the unresolved `using {{module}}` (if so, import it explicitly: `using {{module}}: {{name}}`).',
+      unresolvedContext:
+        '"{{name}}" is not defined in this function or file; it could only come from the file that includes this one (no entry of the package includes it).',
+      unresolvedEval:
+        '"{{name}}" is not defined in this function or module; it could only be defined by code this module generates with `@eval` under a computed name.',
       unresolvedInclude:
         '"{{name}}" is not defined in this function or module; it could only come from a file this module includes at run time or by a computed path.',
     },
@@ -129,8 +133,11 @@ export default defineRule({
           const wildcards = r.scope.module.bareUsing;
           if (wildcards.some((n) => moduleExports[n]?.includes(r.name))) continue;
           const unknown = wildcards.filter((n) => !Object.hasOwn(moduleExports, n));
-          const included = r.scope.module.dynamicIncludes;
-          if ((unknown.length || included) && o.unknownModules !== 'report') {
+          const generated =
+            r.scope.module.dynamicIncludes ||
+            r.scope.module.dynamicDefinitions ||
+            r.scope.module.includeFragment;
+          if ((unknown.length || generated) && o.unknownModules !== 'report') {
             // An unresolved `using` could export any name. Only a value read inside a
             // function body of a lowercase, non-trivial name that the module never uses
             // the way imported names are used is reported.
@@ -143,7 +150,13 @@ export default defineRule({
               continue;
             context.report({
               node: r.node,
-              messageId: unknown.length ? 'unresolvedOnly' : 'unresolvedInclude',
+              messageId: unknown.length
+                ? 'unresolvedOnly'
+                : r.scope.module.dynamicIncludes
+                  ? 'unresolvedInclude'
+                  : r.scope.module.dynamicDefinitions
+                    ? 'unresolvedEval'
+                    : 'unresolvedContext',
               data: { name: r.name, module: unknown[0] },
             });
             continue;

@@ -413,6 +413,7 @@ function analyze(source, context) {
           if (extra.kwdef) {
             defaults = scope('kwdef', body, inner);
             for (let field of body.children) {
+              if (field.kind === 'doc') field = field.children.at(-1);
               if (field.kind === 'const') field = field.children[0];
               let name = field.kind === '=' ? field.children[0] : field;
               if (name?.kind === '::') name = name.children[0];
@@ -421,6 +422,11 @@ function analyze(source, context) {
             }
           }
           for (let field of body.children) {
+            // A documented field: `"doc" name::T`.
+            if (field.kind === 'doc') {
+              visit(field.children[0], inner);
+              field = field.children.at(-1);
+            }
             if (field.kind === 'const') field = field.children[0];
             if (identifierName(field) !== null) continue;
             if (field.kind === '::') visit(field.children.at(-1), signatureScope(inner));
@@ -606,11 +612,11 @@ function analyze(source, context) {
   ]);
   // Head positions bind (`x`, `x = …`, `x::T`, `x(t)`, `x[1:3]`, comparison operands at the
   // top of an argument or a `begin` block); everything else in the argument is read.
-  function macroHeads(node, s, mode, where, read, call, top, binding) {
+  function macroHeads(node, s, mode, where, read, call, top, binding, placeholders) {
     if (!node) return;
     mark(node, s);
     const c = node.children,
-      again = (n, t = false) => macroHeads(n, s, mode, where, read, call, t, binding);
+      again = (n, t = false) => macroHeads(n, s, mode, where, read, call, t, binding, placeholders);
     if (identifierName(node) !== null && node.kind !== 'macro_name') {
       macroHead(node.kind === 'var' ? c[0] : node, s, mode, where, call, binding);
       return;
@@ -680,7 +686,12 @@ function analyze(source, context) {
           return;
         }
         again(c[0]);
-        c.slice(1).forEach((n) => visit(n, s, read));
+        // `u(..)`: a placeholder argument of a symbolic declaration, not a read.
+        c.slice(1).forEach((n) => {
+          if (identifierName(n) === '..') return;
+          if (placeholders && mode === 'bind') opaqueMacroArgs.add(n);
+          else visit(n, s, read);
+        });
         return;
       }
     }
@@ -747,7 +758,7 @@ function analyze(source, context) {
         opaque(arg);
         visit(arg, s, { ...extra, opaque: true, interp: true });
       } else if (r === 'bind' || r === 'maybe')
-        macroHeads(arg, s, r, spec.scope, read, node, true, spec.binding);
+        macroHeads(arg, s, r, spec.scope, read, node, true, spec.binding, spec.placeholders);
       else if (r === 'fields') {
         opaque(arg);
         macroFields(arg, s, read);
@@ -784,6 +795,16 @@ function analyze(source, context) {
           else opaque(arg); // a documented method signature is not code
         });
         return;
+      case 'signature': {
+        const [sig, ...rest] = args;
+        let head = sig;
+        while (['where', '::'].includes(head?.kind)) head = head.children[0];
+        if (head?.kind === 'call') head = head.children[0];
+        if (head && identifierName(head) !== null)
+          macroHeads(head, s, 'bind', 'global', read, node, true);
+        [sig, ...rest].forEach((arg) => arg && opaque(arg));
+        return;
+      }
       case 'deprecate': {
         const [old, replacement, ...rest] = args;
         let head = old;
@@ -801,6 +822,20 @@ function analyze(source, context) {
         rest.forEach((arg) => visit(arg, s, read));
         return;
       }
+    }
+    // `@testset "$name" for name in xs … end`: every argument is evaluated per iteration.
+    const last = args.at(-1);
+    if (spec.scope === 'inner' && last?.kind === 'for') {
+      const inner = scope('testset', last, s);
+      mark(last, inner);
+      const each = iteration(last.children[0], inner);
+      args.slice(0, -1).forEach((arg) => {
+        if (spec.kw && arg.kind === '=' && identifierName(arg.children[0]) !== null)
+          role(arg.children[1], spec.kw);
+        else visit(arg, each, read);
+      });
+      visit(last.children[1], each, read);
+      return;
     }
     args.forEach((arg, i) => {
       if (spec.kw && i > 0 && arg.kind === '=' && identifierName(arg.children[0]) !== null) {

@@ -26,14 +26,16 @@
 // `form` selects one of the handlers in scope.js for shapes a role list can't express:
 // `kwdef` (field defaults may read earlier fields), `ccall` (the callee is a symbol),
 // `deprecate` (the old signature defines a global, the new one reads only its callee),
+// `placeholders: true` makes the arguments of a bound call head (`f(t)`) symbols, not reads.
 // `binding: 'assignment'` makes `bind` names ordinary assignments in the current scope
 // (`@gensym x`, Pluto's `@bind x widget`) instead of macro bindings. A `kw` role applies
-// from the second argument on. Forms: `doc` (a documented signature is not code), `eval` (`@eval [module] code`: the code is
+// from the second argument on. Forms: `signature` (`@register_symbolic f(x::Real)` defines the global `f`; its
+// arguments are parameter names), `doc` (a documented signature is not code), `eval` (`@eval [module] code`: the code is
 // `quote`d).
 
 const EXPR = { rest: 'expr', kw: 'expr' };
 const CODE = { rest: 'expr' };
-const BIND = { rest: 'bind', kw: 'expr' };
+const BIND = { rest: 'bind' };
 
 export const ROLES = new Set([
   'expr',
@@ -169,12 +171,19 @@ const table = {
   '@with_kw': { form: 'kwdef' },
   '@with_kw_noshow': { form: 'kwdef' },
   '@ccall': { form: 'ccall' },
+  // A method signature, not code (ChainRulesCore, Symbolics).
+  '@non_differentiable': { form: 'doc' },
+  '@scalar_rule': { rest: 'skip' },
+  '@register_symbolic': { form: 'signature' },
+  '@register_array_symbolic': { form: 'signature' },
+  '@register_derivative': { rest: 'skip' },
   // Destructuring and symbolic declarations.
   '@unpack': BIND,
   '@variables': BIND,
   '@parameters': BIND,
   '@constants': BIND,
-  '@syms': BIND,
+  // `@syms f(t)`: `t` names an argument of the symbolic function, it isn't read.
+  '@syms': { rest: 'bind', placeholders: true },
   '@brownian': BIND,
   '@independent_variables': BIND,
   '@named': BIND,

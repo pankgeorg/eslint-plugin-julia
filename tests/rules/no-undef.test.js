@@ -64,6 +64,8 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     '@doc "documented" g(x); g(y) = y',
     'f(ex) = (@capture(ex, h_(args__)) && (h, args))',
     'f(x) = (@info "value" x key=x; nothing)',
+    'cases = []; @testset "$name" for (name, f) in cases; f(name); end',
+    '@testset "$a and $b" for a in xs, b in xs; end; xs = 1',
     '@recipe function f(x); seriestype --> :path; xguide := "x"; x; end',
     'quote x; end',
     'x=1; :($x)',
@@ -92,11 +94,20 @@ tester.run('no-undef', plugin.rules['no-undef'], {
       ),
       ...bad('m.package_helper(); missing_test_helper()', ['missing_test_helper']),
     },
+    // A package file no entry includes, and that doesn't load the package, is an include
+    // fragment: only names its includer can't plausibly supply are reported.
     {
       filename: fileURLToPath(
         new URL('../fixtures/packages/TestEntry/test/orphan.jl', import.meta.url),
       ),
-      ...bad('m; test_helper', ['m', 'test_helper']),
+      code: 'm; test_helper; f(x) = x + missing_offset',
+      errors: [{ messageId: 'unresolvedContext', data: { name: 'missing_offset' } }],
+    },
+    {
+      filename: fileURLToPath(
+        new URL('../fixtures/packages/TestEntry/test/orphan.jl', import.meta.url),
+      ),
+      ...bad('using TestEntry; m; test_helper', ['m', 'test_helper']),
     },
     bad('f()=(@gensym x; x); x', ['x']),
     bad('@gensym x; y', ['y']),

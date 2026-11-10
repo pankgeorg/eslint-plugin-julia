@@ -267,15 +267,23 @@ function facts(source, file) {
       parent: ids.get(s.parent?.module),
       name: s === manager.globalScope ? null : identifierName(s.node.children[0]),
       bare: s.bare,
-      names: [...s.bindings.values()].map((b) => ({ name: b.name, kind: b.kind })),
+      // Module-level names an unknown macro declares (`@verbosity_specifier V begin … end`)
+      // are visible to sibling files too.
+      names: [...s.bindings.values(), ...(s.macroBindings?.values() ?? [])].map((b) => ({
+        name: b.name,
+        kind: b.kind,
+      })),
       exports: [],
       imports: [],
       includes: [],
       includeMacros: [],
+      importMacros: [],
+      topMacros: [],
       macroIncludes: [],
       reads: [],
       unresolvedIncludes: false,
       dynamicIncludes: false,
+      dynamicDefinitions: false,
       dynamicEvaluation: false,
     });
   }
@@ -293,6 +301,19 @@ function facts(source, file) {
     // Record syntax only; the macro is never expanded or executed.
     if (m && node.kind === 'macro') {
       const [signature, body] = node.children;
+      // A macro that builds `using`/`import` statements (`Expr(:using, …)`) imports names
+      // nothing here can list.
+      const generatesImports = (n) =>
+        (n.kind === 'call' &&
+          identifierName(n.children[0]) === 'Expr' &&
+          n.children[1]?.kind === 'quote' &&
+          ['using', 'import'].includes(identifierName(n.children[1].children[0]))) ||
+        (n.kind === 'quote' && n.children.some((c) => ['using', 'import'].includes(c.kind))) ||
+        n.children?.some(generatesImports);
+      let macroName = signature;
+      while (['call', 'where'].includes(macroName?.kind)) macroName = macroName.children[0];
+      if (body && identifierName(macroName) && generatesImports(body))
+        m.importMacros.push(`@${identifierName(macroName)}`);
       if (signature?.kind === 'call' && signature.children.length === 2) {
         const parameter = signature.children[1];
         const name = identifierName(parameter.kind === '::' ? parameter.children[0] : parameter);
@@ -316,6 +337,7 @@ function facts(source, file) {
     }
     if (m && node.kind === 'macrocall') {
       let head = node.children[0];
+      if (s?.kind === 'module' && identifierName(head)) m.topMacros.push(identifierName(head));
       const path =
         node.children.length === 2 && s?.kind === 'module' ? literal(node.children[1], file) : null;
       if (path !== null && !virtual(file))
@@ -323,8 +345,16 @@ function facts(source, file) {
       if (
         identifierName(head) === '@eval' ||
         (head?.kind === '.' && identifierName(head.children.at(-1)) === '@eval')
-      )
+      ) {
         m.dynamicEvaluation = true;
+        const code = node.children.at(-1);
+        if (
+          code?.kind === '$' ||
+          (code?.kind === 'block' && code.children.some((c) => c.kind === '$'))
+        )
+          m.dynamicDefinitions = true;
+        generatedNames(m, node.children.slice(1), source);
+      }
       if (head?.kind === 'StrMacroName') m.reads.push(`@${head.value}_str`);
       else if (identifierName(head)) m.reads.push(identifierName(head));
       else if (head?.kind === '.') {
@@ -366,7 +396,10 @@ function facts(source, file) {
       const head = node.children[0];
       const name =
         identifierName(head) ?? (head?.kind === '.' ? identifierName(head.children.at(-1)) : null);
-      if (['eval', 'include_string'].includes(name)) m.dynamicEvaluation = true;
+      if (['eval', 'include_string'].includes(name)) {
+        m.dynamicEvaluation = true;
+        generatedNames(m, node.children.slice(1), source);
+      }
       if (name === 'include') {
         const path =
           s?.kind === 'module' && identifierName(head) === 'include' && node.children.length === 2
@@ -389,6 +422,47 @@ function facts(source, file) {
   }
   walk(source.ast);
   return modules;
+}
+// The interpolations that name what generated code defines (`@eval $fname(x) = …`,
+// `function $(Symbol(:get_, p))(…)`, `const $name = …`).
+function interpolatedNames(node, out = []) {
+  if (!node) return out;
+  const named = (n) => {
+    while (['where', '::', 'curly', 'call'].includes(n?.kind)) n = n.children[0];
+    return n?.kind === '$' ? n : null;
+  };
+  const kinds = ['function', 'macro', 'struct', 'abstract', 'primitive', '=', 'const', 'global'];
+  const name = kinds.includes(node.kind) ? named(node.children[0]) : null;
+  if (name) out.push(name);
+  node.children?.forEach((c) => interpolatedNames(c, out));
+  return out;
+}
+// The symbols `$f` takes when an enclosing `for f in (:a, :b)` iterates literal symbols.
+function loopSymbols(interpolation, source) {
+  const variable = identifierName(interpolation.children[0]);
+  if (!variable) return null;
+  for (let at = source.getParent(interpolation); at; at = source.getParent(at)) {
+    if (at.kind !== 'for') continue;
+    const clause = at.children[0];
+    for (const pair of clause?.kind === 'iteration' ? clause.children : []) {
+      if (identifierName(pair.children[0]) !== variable) continue;
+      const values = pair.children[1];
+      if (!['tuple', 'vect'].includes(values?.kind)) return null;
+      const names = values.children.map((v) =>
+        v.kind === 'quote' && v.children.length === 1 ? identifierName(v.children[0]) : null,
+      );
+      return names.every(Boolean) ? names : null;
+    }
+  }
+  return null;
+}
+// Generated code under interpolated names: literal-loop names are defined, others unknowable.
+function generatedNames(m, args, source) {
+  for (const interpolation of args.flatMap((c) => interpolatedNames(c))) {
+    const names = loopSymbols(interpolation, source);
+    if (names) m.names.push(...names.map((name) => ({ name, kind: 'function' })));
+    else m.dynamicDefinitions = true;
+  }
 }
 function fileFacts(file, graph) {
   const version = stamp(file);
@@ -419,6 +493,8 @@ function moduleModel(name, parent, bare = false) {
     names: new Map(),
     children: new Map(),
     includeMacros: new Set(),
+    importMacros: new Set(),
+    topMacros: new Set(),
     exports: new Set(),
     imports: [],
     unknown: new Set(),
@@ -426,6 +502,7 @@ function moduleModel(name, parent, bare = false) {
     reads: new Set(),
     unresolvedIncludes: false,
     dynamicIncludes: false,
+    dynamicDefinitions: false,
     dynamicEvaluation: false,
   };
 }
@@ -453,8 +530,11 @@ function addFile(graph, file, into, active = new Set()) {
     fact.reads.forEach((name) => m.reads.add(name));
     m.unresolvedIncludes ||= fact.unresolvedIncludes;
     m.dynamicIncludes ||= fact.dynamicIncludes;
+    m.dynamicDefinitions ||= fact.dynamicDefinitions;
     m.dynamicEvaluation ||= fact.dynamicEvaluation;
     fact.includeMacros.forEach((name) => m.includeMacros.add(name));
+    fact.importMacros.forEach((name) => m.importMacros.add(name));
+    fact.topMacros.forEach((name) => m.topMacros.add(name));
     for (const include of fact.includes) {
       let included = include.path;
       // Base's bootstrap include is cwd-relative, before it installs Julia's
@@ -585,7 +665,8 @@ function findModule(path, from, graph, state) {
       at = dependency.root.children.get(name);
       // JLL packages generate their exports per platform (in JLLWrappers macros), and a
       // module that includes files at run time may export anything from them.
-      if (at && (name.endsWith('_jll') || at.dynamicIncludes)) at.unknownExports = true;
+      if (at && (name.endsWith('_jll') || at.dynamicIncludes || at.dynamicDefinitions))
+        at.unknownExports = true;
       storeIndex(entry, at);
     }
   }
@@ -602,6 +683,10 @@ function solve(graph, state) {
   if (graph.solved || state.active.has(graph)) return;
   state.active.add(graph);
   const modules = allModules(graph.root);
+  // A module that runs, at top level, its own macro that generates imports.
+  for (const m of modules)
+    for (let at = m; at; at = at.parent)
+      if ([...m.topMacros].some((name) => at.importMacros.has(name))) m.dynamicDefinitions = true;
   // Monotone fixed point handles relative imports and re-export cycles.
   let changed = true;
   while (changed) {
@@ -660,11 +745,23 @@ export function applyModuleResolution(manager, source, context = {}) {
         break;
       }
     }
+  let fragment = false;
   if (!graph) {
     graph = virtual(file) ? graphFor([file], overlay) : graphFor([file]);
     if (!virtual(file) && factsCache.get(file)?.hash !== overlay.hash)
       graph = graphFor([file], overlay);
     occurrences = graph.files.get(file) ?? [];
+    // A file of a package that no entry's include tree reaches, and that doesn't load the
+    // package itself, is an include fragment: its includer's imports are unknown here.
+    const project = virtual(file) ? null : projectFor(file, discovery);
+    fragment =
+      Boolean(project) &&
+      file !== join(project.dir, 'src', `${project.name}.jl`) &&
+      !ownFacts.some((m) =>
+        m.imports.some(
+          (imp) => imp.path === project.name || imp.path.startsWith(`${project.name}.`),
+        ),
+      );
   }
   for (const [p, v] of discovery) graph.versions.set(p, v);
   let environment;
@@ -700,10 +797,28 @@ export function applyModuleResolution(manager, source, context = {}) {
     const models = [...new Set(occurrences.filter((o) => o.id === id).map((o) => o.module))];
     s.bareUsing = [...new Set(models.flatMap((m) => [...m.unknown]))];
     s.dynamicIncludes = models.some((m) => m.dynamicIncludes);
+    s.includeFragment = fragment && s === manager.globalScope;
+    s.dynamicDefinitions = models.some((m) => m.dynamicDefinitions);
     manager.moduleResolution.scopes.set(s, models);
     for (const m of models) {
       if (s === manager.globalScope && m.parent) s.bare = m.bare;
-      for (const [name, kind] of m.names)
+      for (const [name, kind] of m.names) {
+        if (kind === 'macro-binding') {
+          // Declared by a macro somewhere in the module: suppresses reports only.
+          s.macroBindings ??= new Map();
+          if (!s.bindings.has(name) && !s.macroBindings.has(name))
+            s.macroBindings.set(name, {
+              name,
+              kind,
+              scope: s,
+              definitions: [],
+              references: [],
+              writes: [],
+              constant: false,
+              macro: true,
+            });
+          continue;
+        }
         if (!s.bindings.has(name))
           s.bindings.set(name, {
             name,
@@ -715,6 +830,7 @@ export function applyModuleResolution(manager, source, context = {}) {
             constant: false,
             external: true,
           });
+      }
     }
   }
 }
