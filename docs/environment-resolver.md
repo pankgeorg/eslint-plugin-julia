@@ -76,7 +76,7 @@ node scripts/resolve-env.mjs Project.toml \
 
 ## Export index
 
-The solved export tree of each package read from the resolver's cache (its exported and `public` names, its submodules, and what `@reexport using` adds) is kept in `<cache>/index/`, keyed by the package's entry file. The cached sources live in content-addressed directories, so an index entry never goes stale. A later lint process loads the index instead of parsing the package again.
+The solved export tree of each package read from the resolver's cache depot (its exported and `public` names, its submodules, and what `@reexport using` adds) is kept in `<cache>/index/`. It is keyed by the package's entry file, the environment (re-exports depend on the versions it resolved), the plugin version, the standard-library inventory and the macro settings. The cached sources live in content-addressed directories. `path` dependencies (the developer's own editable directories) are never indexed. A later lint process loads the index instead of parsing the package again.
 
 ## Measured
 

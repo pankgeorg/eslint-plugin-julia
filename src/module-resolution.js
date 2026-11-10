@@ -153,14 +153,25 @@ function packageEntry(name, from, track, state = {}) {
   const environment = state.environment();
   const entry = environment?.packages?.[name]?.entry;
   if (!entry || !exists(entry)) return null;
-  if (environment.envDir) indexed.set(entry, join(dirname(dirname(environment.envDir)), 'index'));
+  // Only the resolver's own, content-addressed copies are indexed (a `path` dependency is
+  // the developer's editable directory). Re-exports depend on the environment's versions,
+  // so the index is per environment.
+  const cache = environment.envDir && dirname(dirname(environment.envDir));
+  if (cache && entry.startsWith(join(cache, 'depot', 'packages') + sep))
+    indexed.set(entry, { dir: join(cache, 'index'), key: environment.key ?? environment.envDir });
   return entry;
 }
 // The export index of a cached, immutable package source tree: its solved module tree
 // (exports and submodules), so later runs don't parse the package again.
-const INDEX_VERSION = 1;
-const indexFile = (entry) =>
-  join(indexed.get(entry), `${hash(`${INDEX_VERSION}\0${entry}`).slice(0, 24)}.json`);
+const INDEX_VERSION = 2;
+const { version: pluginVersion } = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url)),
+);
+const indexFile = (entry) => {
+  const { dir, key } = indexed.get(entry);
+  const id = [INDEX_VERSION, pluginVersion, stdlibs.julia ?? '', key, entry, variant].join('\0');
+  return join(dir, `${hash(id).slice(0, 24)}.json`);
+};
 const indexMemo = new Map();
 function loadIndex(entry) {
   if (!indexed.has(entry)) return null;
@@ -254,7 +265,7 @@ function literal(node, file) {
   return null;
 }
 function facts(source, file) {
-  const manager = getLocalScopeManager(source),
+  const manager = getLocalScopeManager(source, currentMacros),
     modules = [];
   const ids = new Map(
     manager.scopes
@@ -481,7 +492,8 @@ function fileFacts(file, graph) {
   const version = stamp(file);
   graph.versions.set(file, version);
   if (graph.overlay?.file === file) return graph.overlay.facts;
-  if (factsCache.get(file)?.version === version) return factsCache.get(file).facts;
+  const cached = factsCache.get(file);
+  if (cached?.version === version && cached.variant === variant) return cached.facts;
   let result = [],
     digest;
   if (version) {
@@ -495,7 +507,7 @@ function fileFacts(file, graph) {
       /* unreadable/invalid dependency contributes no names */
     }
   }
-  factsCache.set(file, { version, facts: result, hash: digest });
+  factsCache.set(file, { version, variant, facts: result, hash: digest });
   return result;
 }
 function moduleModel(name, parent, bare = false) {
@@ -567,6 +579,8 @@ function addFile(graph, file, into, active = new Set()) {
 }
 // Solved graphs depend on the resolver settings of the analysis that built them.
 let variant = '';
+// The user's macro signatures (`settings.julia.macros`), for dependency and sibling facts.
+let currentMacros;
 const resolverIds = new WeakMap();
 function resolverVariant(settings) {
   const j = settings?.julia;
@@ -576,7 +590,13 @@ function resolverVariant(settings) {
     if (!resolverIds.has(resolver)) resolverIds.set(resolver, `fn:${Math.random()}`);
     resolver = resolverIds.get(resolver);
   }
-  return JSON.stringify([resolver, j.pkgjl ?? null, j.cacheDir ?? null, j.offline ?? null]);
+  return JSON.stringify([
+    resolver,
+    j.pkgjl ?? null,
+    j.cacheDir ?? null,
+    j.offline ?? null,
+    j.macros ?? null,
+  ]);
 }
 function graphFor(entries, overlay) {
   const key = JSON.stringify([entries, depots(), overlay?.file, overlay?.hash, variant]);
@@ -742,6 +762,7 @@ function solve(graph, state) {
 
 export function applyModuleResolution(manager, source, context = {}) {
   variant = resolverVariant(context.settings);
+  currentMacros = context.settings?.julia?.macros;
   const file = virtual(context.physicalFilename) ? '<input>' : resolve(context.physicalFilename);
   const ownFacts = facts(source, file);
   const overlay = { file, facts: ownFacts, hash: hash(source.text) };
@@ -774,13 +795,14 @@ export function applyModuleResolution(manager, source, context = {}) {
         (m) =>
           m.id === -1 &&
           m.imports.some(
-            // `using Pkg`/`import Pkg` (not `using Pkg: name`): a script of its own.
-            (imp) => imp.path === project.name && imp.wildcard,
+            // Any import of the package itself: a script of its own.
+            (imp) => imp.path === project.name || imp.path.startsWith(`${project.name}.`),
           ),
       );
   }
   for (const [p, v] of discovery) graph.versions.set(p, v);
-  let environment;
+  let environment,
+    asked = false;
   const settings = context.settings;
   solve(graph, {
     active: new Set(),
@@ -789,7 +811,11 @@ export function applyModuleResolution(manager, source, context = {}) {
     environment:
       virtual(file) || !settings?.julia
         ? null
-        : () => (environment ??= environmentFor(file, settings, graph.versions) ?? null),
+        : () => {
+            if (!asked) environment = environmentFor(file, settings, graph.versions) ?? null;
+            asked = true;
+            return environment;
+          },
     // Only a dependency of the linted file's environment (its nearest Project.toml's
     // `[deps]`, or a transitive one once resolved) is worth resolving.
     dependsOn: (name) => {

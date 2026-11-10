@@ -103,17 +103,29 @@ export function resolveEnvironment(request, settings = {}) {
         const ready = cached(envDir, key);
         if (ready) return exclude(ready, request.packageName);
         if (failed(envDir)) return null;
-        if (Date.now() >= deadline) throw new Error('Resolver lock timeout');
+        if (Date.now() >= deadline)
+          throw Object.assign(new Error('Resolver lock timeout'), { transient: true });
         try {
-          writeFileSync(path, token, { flag: 'wx' });
+          // The holder records its own deadline: staleness is judged by the holder's timeout.
+          writeFileSync(path, `${token} ${deadline}`, { flag: 'wx' });
           locks.push({ path, token });
           break;
         } catch (error) {
           if (error.code !== 'EEXIST') throw error;
           try {
-            if (Date.now() - statSync(path).mtimeMs > timeout) unlinkSync(path);
+            const held = readFileSync(path, 'utf8');
+            const until = Number(held.split(' ')[1]) || statSync(path).mtimeMs + timeout;
+            if (Date.now() > until + 5000) {
+              // Take a stale lock over atomically: only one waiter's rename succeeds, and a
+              // lock that changed hands in between is put back.
+              const aside = `${path}.${token}`;
+              renameSync(path, aside);
+              if (readFileSync(aside, 'utf8') === held) unlinkSync(aside);
+              else if (!existsSync(path)) renameSync(aside, path);
+              else unlinkSync(aside);
+            }
           } catch {
-            /* Another worker released it. */
+            /* Another worker released or took it. */
           }
           Atomics.wait(sleep, 0, 0, Math.min(50, Math.max(1, deadline - Date.now())));
         }
@@ -141,7 +153,8 @@ export function resolveEnvironment(request, settings = {}) {
     if (!result) throw new Error('Resolver did not produce a complete environment');
     return exclude({ ...result, cached: false }, request.packageName);
   } catch (error) {
-    if (envDir) {
+    // Waiting out another worker's lock isn't a failure of this environment.
+    if (envDir && !error.transient) {
       failures.add(envDir);
       try {
         mkdirSync(envDir, { recursive: true });
@@ -159,7 +172,7 @@ export function resolveEnvironment(request, settings = {}) {
   } finally {
     for (const { path, token } of locks.reverse()) {
       try {
-        if (readFileSync(path, 'utf8') === token) unlinkSync(path);
+        if (readFileSync(path, 'utf8').split(' ')[0] === token) unlinkSync(path);
       } catch {
         /* Already released. */
       }

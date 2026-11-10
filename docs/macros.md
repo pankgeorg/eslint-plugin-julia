@@ -22,7 +22,12 @@ defined like any other read. The exceptions:
   index iterator `i = 1:n`); operands of a top-level comparison (`0 <= x <= 1`); the left
   side of `~` (`x ~ Normal()`); the left side of `=>` directly in a `begin` block (pattern
   arms); the same inside a `begin` block argument. Call arguments, interpolations and
-  keyword values of unknown macros are still reads.
+  keyword values of unknown macros are still reads, except a bare name (or a tuple of
+  names) as the value of a top-level option (`infer=no`, `trainable=(a, b)`), which is
+  treated like a head position. An unknown macro used as a statement in a function with at
+  least two arguments, all names or types and one of them capitalized
+  (`@OnDemandTableauExtract Tab T`), may define locals: that function's unresolved reads
+  aren't reported.
 - `seriestype --> :path` and `xguide := "x"` (plot recipes) name attributes: their left
   side is not a read anywhere.
 
@@ -63,7 +68,8 @@ The built-in table (`src/macro-signatures.js`) covers:
   `@doc` (forms);
 - `@enum`, `@cenum` (`bind`, global); `@gensym`, Pluto's `@bind` (assignments);
 - `@unpack`, `@variables`, `@parameters`, `@constants`, `@syms`, `@named`, `@mtkbuild`
-  (`bind`); `@capture` (`pattern`); `@NamedTuple`, `@Kwargs` (`fields`); `@goto`, `@label`
+  (`bind`); `@capture` (`pattern`); index notation (`@tensor`, `@tullio`, `@einsum`,
+  `@cast`: `skip`); Markdown's `@breaking`/`@trigger` (`decorator`); `@NamedTuple`, `@Kwargs` (`fields`); `@goto`, `@label`
   (`symbol`); Base.Cartesian's `@nloops`, `@nref`, … (`skip`).
 
 Macros are matched by name, without their module (`Base.@kwdef` is `@kwdef`).

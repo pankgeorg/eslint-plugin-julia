@@ -66,6 +66,10 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     '@doc "documented" g(x); g(y) = y',
     'f(ex) = (@capture(ex, h_(args__)) && (h, args))',
     'f(x) = (@info "value" x key=x; nothing)',
+    '@match x begin; Foo(a, b) => a + b; end',
+    '@compiler_options compile=min infer=no',
+    'struct Trio; a; b; c; end; @layer Trio trainable=(a, b)',
+    'f(A, B) = @tensor C[i, k] := A[i, j] * B[j, k]',
     'f() = ccall((:GlobalFree, "kernel32"), stdcall, Cint, ())',
     '@breaking true -> function rule(stream); stream; end; const F = [rule]',
     'function step(tab); @unpack_tableau tab Float64; a21 * c2; end',
@@ -148,14 +152,26 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     bad('f(x) = @inbounds x[idx]', ['idx']),
     bad('f() = @mydsl g(typo_arg)', ['typo_arg']),
     bad('f() = @mydsl "$typo_interp"', ['typo_interp']),
+    bad('function f(a); @mylog a; return b + 1; end', ['b']),
     bad('function step(tab); @unpack_tableau tab g(x); a21; end', ['x', 'a21']),
     bad('@dsl [unknown for i in xs]', ['unknown', 'xs']),
     bad('@dsl for i in xs; unknown; end', ['xs', 'unknown']),
     bad('for n in (:a,); @eval f() = $missing_name; end', ['missing_name']),
+    // A default can read only the fields before it.
     bad('Base.@kwdef struct Q; a::Int = later; later::Int = 1; b = nothing_here; end', [
+      'later',
       'nothing_here',
     ]),
     bad('f() = @ccall strlen(undefined_arg::Cstring)::Csize_t', ['undefined_arg']),
+    {
+      // A user signature also applies to the module's facts (no maybe-binding for xyz).
+      code: '@foo xyz; f() = xyz + 1',
+      settings: { julia: { macros: { '@foo': 'expr' } } },
+      errors: [
+        { messageId: 'undefined', data: { name: 'xyz' } },
+        { messageId: 'undefined', data: { name: 'xyz' } },
+      ],
+    },
     {
       code: 'f() = (@thing ab; ab)',
       settings: { julia: { macros: { '@thing': 'expr' } } },

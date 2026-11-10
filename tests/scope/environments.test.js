@@ -86,14 +86,14 @@ test('environments: a function resolver is asked once, only for uninstalled pack
   const root = tree({
     'P/Project.toml': `${project('P')}[deps]\nDep = "11111111-2222-4333-8444-555555555555"\n`,
     'P/src/P.jl': 'module P\nusing Dates, Dep\nf() = (now(), dep_value, x, nope)\nend\n',
-    'cache/depot/Dep/src/Dep.jl':
+    'cache/depot/packages/Dep/AbCdE/src/Dep.jl':
       'module Dep\nusing Reexport\n@reexport using .Inner\nmodule Inner\nexport x\nx = 1\nend\nexport dep_value\ndep_value = 2\nend\n',
   });
   const requests = [];
   const resolver = (request) => {
     requests.push(request);
     return {
-      packages: { Dep: join(root, 'cache/depot/Dep/src/Dep.jl') },
+      packages: { Dep: join(root, 'cache/depot/packages/Dep/AbCdE/src/Dep.jl') },
       envDir: join(root, 'cache/envs/0123456789abcdef'),
     };
   };

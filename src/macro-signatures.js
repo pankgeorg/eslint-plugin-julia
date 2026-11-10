@@ -154,7 +154,6 @@ const table = {
       '@series',
       '@muladd',
       '@pack!',
-      '@with',
       '@__doc__',
     ].map((m) => [m, CODE]),
   ),
@@ -194,12 +193,18 @@ const table = {
   '@mtkbuild': BIND,
   '@mtkcompile': BIND,
   '@capture': { args: ['expr', 'pattern'] },
+  // Index notation (TensorOperations, Tullio, Einsum, TensorCast): indices are bound by
+  // the macro.
+  '@tensor': { rest: 'skip' },
+  '@tensoropt': { rest: 'skip' },
+  '@tullio': { rest: 'skip' },
+  '@einsum': { rest: 'skip' },
+  '@cast': { rest: 'skip' },
+  '@reduce': { rest: 'skip' },
+  '@matmul': { rest: 'skip' },
   // Markdown's parser registration: the function is defined at module scope.
   '@breaking': { rest: 'decorator' },
   '@trigger': { rest: 'decorator' },
-  // Flux/Functors: a type and its field names.
-  '@layer': { rest: 'symbol' },
-  '@functor': { rest: 'symbol' },
   // Base.Cartesian generates `i_1`, `i_2`, … from its arguments.
   ...Object.fromEntries(
     [

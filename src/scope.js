@@ -67,16 +67,18 @@ export function getScopeManager(sourceCode, context = {}) {
   return managers.get(key);
 }
 // Internal, filesystem-free pass used to extract facts from dependency syntax trees.
-export function getLocalScopeManager(sourceCode) {
-  if (!localCache.has(sourceCode)) localCache.set(sourceCode, analyze(sourceCode, null));
-  return localCache.get(sourceCode);
+export function getLocalScopeManager(sourceCode, macros) {
+  if (!localCache.has(sourceCode)) localCache.set(sourceCode, new Map());
+  const managers = localCache.get(sourceCode);
+  if (!managers.has(macros)) managers.set(macros, analyze(sourceCode, null, macros));
+  return managers.get(macros);
 }
 export const resolve = (node) => owners.get(node)?.resolve(node) ?? null;
 export const isReadReference = (node) => owners.get(node)?.referenceFor(node)?.read === true;
 export const isUnshadowedBuiltin = (node, name) =>
   owners.get(node)?.isUnshadowedBuiltin(node, name) ?? false;
 
-function analyze(source, context) {
+function analyze(source, context, localMacros) {
   const scopes = [],
     references = [],
     definitions = [],
@@ -90,7 +92,7 @@ function analyze(source, context) {
     opaqueMacroArgs = new WeakSet(),
     // `$` interpolations in generated code, and the scope they are evaluated in.
     interpolations = new WeakMap(),
-    userMacros = context?.settings?.julia?.macros;
+    userMacros = context?.settings?.julia?.macros ?? localMacros;
   function scope(kind, node, parent, extra = {}) {
     const s = {
       kind,
@@ -412,21 +414,28 @@ function analyze(source, context) {
           mark(body, inner);
           // `@kwdef`: a field's default may read the fields before it (they are the keyword
           // constructor's arguments).
-          let defaults = inner;
+          // The scope each field's default is read in: under `@kwdef`, one holding the
+          // fields before it.
+          const defaults = new Map();
           if (extra.kwdef) {
-            defaults = scope('kwdef', body, inner);
-            for (let field of body.children) {
+            let before = inner;
+            for (const written of body.children) {
+              let field = written;
+              defaults.set(field, before);
               if (field.kind === 'doc') field = field.children.at(-1);
               if (field.kind === 'macrocall' && identifierName(field.children[0]) === '@atomic')
                 field = field.children.at(-1);
               if (field.kind === 'const') field = field.children[0];
               let name = field.kind === '=' ? field.children[0] : field;
               if (name?.kind === '::') name = name.children[0];
-              if (identifierName(name) !== null)
-                define(name, defaults, 'macro-binding', { force: true, opaque: true });
+              if (identifierName(name) !== null) {
+                before = scope('kwdef', written, before);
+                define(name, before, 'macro-binding', { force: true, opaque: true });
+              }
             }
           }
           for (let field of body.children) {
+            const fieldDefaults = defaults.get(field) ?? inner;
             // A documented field: `"doc" name::T`.
             if (field.kind === 'doc') {
               visit(field.children[0], inner);
@@ -443,7 +452,7 @@ function analyze(source, context) {
                 visit(field.children[0].children.at(-1), signatureScope(inner));
               visit(
                 field.children[1],
-                defaults,
+                fieldDefaults,
                 extra.kwdef ? { opaque: true, checked: true } : {},
               );
             } else visit(field, inner);
@@ -643,7 +652,11 @@ function analyze(source, context) {
         // An unknown macro's `begin … end` is code (`GC.@preserve x begin … end`): only
         // statements that are bare names (`@variables begin x; y end`) may declare.
         if (mode === 'maybe') {
-          c.forEach((n) => (identifierName(n) !== null ? again(n, true) : visit(n, s, read)));
+          const arm = (n) =>
+            n.kind === 'call' && isInfixCall(n) && identifierName(n.children[1]) === '=>';
+          c.forEach((n) =>
+            identifierName(n) !== null || arm(n) ? again(n, true) : visit(n, s, read),
+          );
           return;
         }
         c.forEach((n) => again(n, true));
@@ -654,10 +667,18 @@ function analyze(source, context) {
         c.forEach((n) => again(n, top));
         return;
       case '=':
-      case 'op=':
+      case 'op=': {
         again(c[0], true);
-        visit(c.at(-1), s, read);
+        // `@compiler_options infer=no`, `trainable=(a, b)`: a bare name (or a tuple of
+        // names) as the value of an unknown macro's option may be a symbol.
+        const value = c.at(-1);
+        const names = (n) =>
+          identifierName(n) !== null ||
+          (['tuple', 'parens'].includes(n?.kind) && n.children.every(names));
+        if (mode === 'maybe' && top && names(value)) again(value, true);
+        else visit(value, s, read);
         return;
+      }
       case '::':
         if (c.length === 2) again(c[0]);
         visit(c.at(-1), s, read);
@@ -785,8 +806,9 @@ function analyze(source, context) {
       (n.kind === 'curly' && n.children.every(name_));
     if (
       spec === UNKNOWN &&
-      args.length &&
+      args.length >= 2 &&
       args.every(name_) &&
+      args.some((n) => /^[A-Z]/u.test(identifierName(n) ?? '')) &&
       source.getParent(node)?.kind === 'block' &&
       enclosingScope(s).kind === 'function'
     )
@@ -804,7 +826,10 @@ function analyze(source, context) {
             n.children?.forEach((child) => collect(child, depth + (n.kind === 'quote' ? 1 : 0)));
         };
         collect(arg, 1);
-        visit(arg, spec.form === 'eval' ? s.module : s, { ...extra, opaque: true, interp: true });
+        // Only an `@eval` outside functions is visited at module scope: separate `@eval`s in
+        // separate functions shouldn't look like one module-level sequence of definitions.
+        const at = spec.form === 'eval' && enclosingScope(s).kind === 'module' ? s.module : s;
+        visit(arg, at, { ...extra, opaque: true, checked: false, interp: true });
       } else if (r === 'bind' || r === 'maybe')
         macroHeads(arg, s, r, spec.scope, read, node, true, spec.binding, spec.placeholders);
       else if (r === 'fields') {
@@ -827,7 +852,12 @@ function analyze(source, context) {
           code = code.children[1];
         }
         visit(code, s.module, read);
-      } else opaque(arg); // symbol, skip
+      } else {
+        // symbol, skip: not checked, but references are kept (so locals read only here
+        // still count as read, and `$` interpolations still resolve).
+        opaque(arg);
+        visit(arg, s, { ...extra, opaque: true, checked: false });
+      }
     };
     switch (spec.form) {
       case 'eval':
