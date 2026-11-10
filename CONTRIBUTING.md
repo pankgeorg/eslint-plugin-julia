@@ -65,6 +65,11 @@ topiary-julia's `jlparse/` directory. The module has no imports and exports a sm
 numeric ABI (17 functions, listed in `wasm/manifest.json`). The host uploads the source,
 calls `parse_src`, and reads back the green tree and diagnostics.
 
+The same build on WasmCodegen main `10cff8e` (2026-11-10, every PR it waited for merged) gives
+the same green trees and diagnostics on 150 files of Julia's `base/`, passes `npm test` of this
+package and of prettier-plugin-julia, and parses at the same speed (0.14 s/MB); the artifact here
+stays the `316bbaf` build until it is refreshed on purpose.
+
 To rebuild it, follow [scripts/build-parser.md](scripts/build-parser.md). Then:
 
 - replace `wasm/parser.wasm`;
