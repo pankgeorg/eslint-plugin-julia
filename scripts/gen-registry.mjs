@@ -95,7 +95,7 @@ const tests = readdirSync(new URL('tests/', root))
   .sort()
   .filter((f) => f.endsWith('.test.js'))
   .map((f) => `./${f}`);
-for (const dir of ['rules', 'scope', 'parser', 'integration'])
+for (const dir of ['rules', 'scope', 'parser', 'integration', 'resolver'])
   for (const f of readdirSync(new URL(`tests/${dir}/`, root)).sort())
     if (f.endsWith('.test.js')) tests.push(`./${dir}/${f}`);
 await writeFileSync(
