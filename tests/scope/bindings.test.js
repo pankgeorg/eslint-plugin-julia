@@ -69,7 +69,8 @@ const cases = [
   ['builtin', 'sin(1)', 'sin', 'builtin'],
   ['Core in baremodule', 'baremodule M; Int; end', 'Int', 'builtin'],
   ['Base absent in baremodule', 'baremodule M; sin; end', 'sin', null],
-  ['macro generates nothing', '@enum X a b; a', 'a', null],
+  ['macro signature binding', '@enum X a b; a', 'a', 'macro-binding'],
+  ['unknown macro generates nothing', '@m a; b', 'b', null],
   ['macro written assignment', '@views x=a[:]; x', 'x', 'assignment'],
   ['decorated definition', '@inline f(x)=x; f(1)', 'f', 'function'],
   ['new intrinsic', 'struct X; x; X(x)=new(x); end', 'new', 'intrinsic'],
@@ -145,11 +146,17 @@ test('scope: quote depth and executable interpolation', () => {
     ['b', 'd'],
   );
 });
-test('scope: macro arguments count written reads, but never synthesized bindings', () => {
-  const [m] = analyze('f(x)=(@show x; @enum X a b; a)');
-  assert.ok(m.references.find((r) => r.name === 'x').binding);
-  assert.equal(m.references.at(-1).binding, null);
-  assert.ok(!m.definitions.some((d) => d.name === 'a'));
+test('scope: macro arguments count written reads; only signatures synthesize bindings', () => {
+  const [m] = analyze('f(x)=(@show x; @enum X a b; a; @m c; c; d)');
+  const ref = (name) => m.references.filter((r) => r.name === name).at(-1);
+  assert.ok(ref('x').binding && ref('x').checked);
+  // `@enum` (signature table) defines module globals.
+  assert.equal(ref('a').binding.kind, 'macro-binding');
+  assert.equal(ref('a').binding.scope.kind, 'module');
+  // An unknown macro's bare operand becomes a binding only for downstream reads.
+  assert.ok(ref('c').binding.macro);
+  assert.ok(!m.definitions.some((d) => d.name === 'c'));
+  assert.equal(ref('d').binding, null);
 });
 test('scope: outer iteration reuses enclosing local', () => {
   const [m] = analyze('f()=(i=0; for outer i in xs; i; end)');
@@ -169,10 +176,13 @@ test('scope: logging and test macro metadata labels never bind locals', () => {
   assert.ok(!m.definitions.some((d) => ['exception', 'atol'].includes(d.name)));
 });
 
-test('scope: arbitrary macro DSL keyword operands are not bindings', () => {
+test('scope: unknown macro DSL keyword operands are maybe-bindings, never definitions', () => {
   const [m] = analyze('@cuda blocks=1 f(x); @parameters p=1; p; blocks');
-  assert.ok(!m.definitions.some((d) => ['blocks', 'p'].includes(d.name)));
-  assert.equal(m.references.at(-1).binding, null);
+  assert.ok(!m.definitions.some((d) => d.name === 'blocks'));
+  assert.ok(m.definitions.some((d) => d.name === 'p' && d.kind === 'macro-binding'));
+  assert.ok(m.references.at(-1).binding.macro);
+  // Call arguments are still reads.
+  assert.ok(m.references.find((r) => r.name === 'x').checked);
 });
 
 test('scope: indexing keyword labels are not assignments or reads', () => {

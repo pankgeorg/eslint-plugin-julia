@@ -254,6 +254,8 @@ function facts(source, file) {
             : clause;
         m.imports.push({
           path: textOf(source, path),
+          kind: node.kind,
+          alias: clause.kind === 'as' ? textOf(source, clause.children[1]) : null,
           wildcard: !named,
           reexport: macros.includes('@reexport'),
           file,
@@ -430,12 +432,33 @@ function findModule(path, from, graph, state) {
   if (dots) {
     let at = from;
     for (let i = 1; i < dots && at; i++) at = at.parent;
-    for (const part of parts) at = at?.children.get(part) ?? (at?.name === part ? at : null);
+    for (const [i, part] of parts.entries()) {
+      const child = at?.children.get(part) ?? (at?.name === part ? at : null);
+      if (child || !at) {
+        at = child;
+        continue;
+      }
+      // `..TOML` where the parent did `import TOML`/`using TOML`: follow that import.
+      const via = at.imports.find(
+        (imp) => !imp.names.length && (imp.alias ?? imp.path.split('.').at(-1)) === part,
+      );
+      if (!via || (state.depth ?? 0) > 16) return null;
+      const target = findModule(via.path, at, graph, { ...state, depth: (state.depth ?? 0) + 1 });
+      if (!target) return null;
+      const rest = parts.slice(i + 1);
+      if (!rest.length) return target;
+      return target.module
+        ? findModule(`.${rest.join('.')}`, target.module, graph, state)
+        : (stdlibInventory(`${target.key}.${rest.join('.')}`) ?? null);
+    }
     return at ? { exports: at.exports, module: at } : null;
   }
   const name = parts.shift();
-  if (!parts.length && Object.hasOwn(inventory, name)) return { exports: new Set(inventory[name]) };
-  if (!parts.length && Object.hasOwn(stdlibs, name)) return { exports: new Set(stdlibs[name]) };
+  if (!parts.length && Object.hasOwn(inventory, name))
+    return { exports: new Set(inventory[name]), key: name };
+  // Standard libraries and Base/Core/stdlib submodules (`Base.BinaryPlatforms`, `LinearAlgebra.BLAS`).
+  const known = stdlibInventory([name, ...parts].join('.'));
+  if (known) return known;
   let at = graph.root.children.get(name);
   if (!at) {
     const entry = packageEntry(name, state.file, graph.versions);
@@ -447,6 +470,9 @@ function findModule(path, from, graph, state) {
   }
   for (const part of parts) at = at?.children.get(part);
   return at ? { exports: at.exports, module: at } : null;
+}
+function stdlibInventory(key) {
+  return Object.hasOwn(stdlibs, key) ? { exports: new Set(stdlibs[key]), key } : null;
 }
 function allModules(root) {
   return [root, ...[...root.children.values()].flatMap(allModules)];
@@ -466,7 +492,9 @@ function solve(graph, state) {
         const uncertain = !target || target.module?.unknownExports;
         imp.resolvedExports = uncertain ? undefined : target.exports;
         if (uncertain) {
-          if (imp.wildcard) m.unknown.add(imp.path);
+          // Only `using M` can bring in unknown names: an unresolved `import M`/`import ..f`
+          // binds just the written name (and may not even be a module).
+          if (imp.wildcard && imp.kind !== 'import') m.unknown.add(imp.path);
           if (imp.reexport && !m.unknownExports) {
             m.unknownExports = true;
             changed = true;

@@ -60,6 +60,7 @@ export default defineRule({
           'type-parameter',
           'intrinsic',
           'implicit-argument',
+          'macro-binding',
         ]);
         for (const s of m.scopes)
           for (const b of s.bindings.values()) {
