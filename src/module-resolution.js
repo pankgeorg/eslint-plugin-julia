@@ -401,8 +401,15 @@ function facts(source, file) {
         generatedNames(m, node.children.slice(1), source);
       }
       if (name === 'include') {
+        // `include` evaluates the file at module scope, also from a `@testset`, `let`, loop
+        // or conditional block; only one inside a function body runs at an unknown time.
+        let topLevel = false;
+        for (let at = s; at; at = at.parent) {
+          if (at.kind === 'module') topLevel = true;
+          if (['module', 'function'].includes(at.kind)) break;
+        }
         const path =
-          s?.kind === 'module' && identifierName(head) === 'include' && node.children.length === 2
+          topLevel && identifierName(head) === 'include' && node.children.length === 2
             ? literal(node.children[1], file)
             : null;
         if (path !== null && !virtual(file))
@@ -764,7 +771,8 @@ export function applyModuleResolution(manager, source, context = {}) {
         (m) =>
           m.id === -1 &&
           m.imports.some(
-            (imp) => imp.path === project.name || imp.path.startsWith(`${project.name}.`),
+            // `using Pkg`/`import Pkg` (not `using Pkg: name`): a script of its own.
+            (imp) => imp.path === project.name && imp.wildcard,
           ),
       );
   }

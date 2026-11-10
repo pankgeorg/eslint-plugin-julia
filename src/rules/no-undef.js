@@ -61,6 +61,12 @@ function exportLike(node, source) {
   if (['curly', 'where'].includes(parent.kind)) return true;
   return false;
 }
+// Inside a function whose statement-level macro may define locals (see scope.js).
+function injected(scope) {
+  for (let at = scope; at && at.kind !== 'module'; at = at.parent)
+    if (at.macroInjected) return true;
+  return false;
+}
 function insideBody(reference) {
   for (let at = reference.scope; at && at.kind !== 'module'; at = at.parent)
     if (at.kind === 'function') return true;
@@ -126,7 +132,8 @@ export default defineRule({
             r.maybe ||
             globals.has(r.name) ||
             /^_+$/u.test(r.name ?? '') ||
-            opaqueRead(r, source, m)
+            opaqueRead(r, source, m) ||
+            injected(r.scope)
           )
             continue;
           // Module boundaries isolate both known exports and unknown-module fallbacks.

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { applyModuleResolution } from './module-resolution.js';
 import { isInfixCall } from './parser/flags.js';
-import { macroSignature, roleOf } from './macro-signatures.js';
+import { macroSignature, roleOf, UNKNOWN } from './macro-signatures.js';
 
 const inventory = JSON.parse(
   readFileSync(new URL('../data/base-core-exports.json', import.meta.url)),
@@ -546,6 +546,15 @@ function analyze(source, context) {
       case 'ref':
       case 'call':
       case 'dotcall':
+        // `ccall(f, stdcall, …)`: a calling convention, not a variable.
+        if (
+          identifierName(c[0]) === 'ccall' &&
+          ['cdecl', 'stdcall', 'fastcall', 'thiscall', 'llvmcall'].includes(identifierName(c[2]))
+        ) {
+          mark(c[2], s);
+          [c[0], c[1], ...c.slice(3)].forEach((arg) => visit(arg, s, extra));
+          return;
+        }
         if (
           ['include', 'eval', 'include_string'].includes(identifierName(c[0])) ||
           (c[0]?.kind === '.' &&
@@ -760,6 +769,20 @@ function analyze(source, context) {
       spec = macroSignature(name, userMacros),
       read = { ...extra, opaque: true, checked: true },
       opaque = (arg) => opaqueMacroArgs.add(arg);
+    // An unknown macro used as a statement in a function, with only names and types as
+    // arguments (`@unpack_tableau Tab T`), plausibly defines locals the source never writes.
+    const name_ = (n) =>
+      identifierName(n) !== null ||
+      (n.kind === '.' && name_(n.children[0])) ||
+      (n.kind === 'curly' && n.children.every(name_));
+    if (
+      spec === UNKNOWN &&
+      args.length &&
+      args.every(name_) &&
+      source.getParent(node)?.kind === 'block' &&
+      enclosingScope(s).kind === 'function'
+    )
+      enclosingScope(s).macroInjected = true;
     const role = (arg, r) => {
       if (r === 'expr') visit(arg, s, read);
       else if (r === 'quote') {
@@ -789,6 +812,13 @@ function analyze(source, context) {
           node,
           (n) => n.match(/^(.+?)__?(?:[A-Z]\w*)?$/u)?.[1] ?? null,
         );
+      } else if (r === 'decorator') {
+        let code = arg;
+        while (code?.kind === '->') {
+          visit(code.children[0], s, read);
+          code = code.children[1];
+        }
+        visit(code, s.module, read);
       } else opaque(arg); // symbol, skip
     };
     switch (spec.form) {

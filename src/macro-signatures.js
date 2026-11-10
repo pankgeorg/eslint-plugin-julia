@@ -20,6 +20,8 @@
 //              names are symbols.
 // - `symbol`:  a name that is not a variable (`@goto label`).
 // - `skip`:    not analyzed.
+// - `decorator`: a definition the macro re-emits at module scope, possibly wrapped in a
+//              lambda (Markdown's `@breaking true -> function f(…) … end`).
 //
 // `scope` (for `bind`): `enclosing` (the enclosing function or module, the default) or
 // `global` (the module). `inner` gives the arguments a scope of their own (`@testset`).
@@ -46,6 +48,7 @@ export const ROLES = new Set([
   'pattern',
   'symbol',
   'skip',
+  'decorator',
 ]);
 export const UNKNOWN = Object.freeze({ rest: 'maybe' });
 
@@ -190,6 +193,9 @@ const table = {
   '@mtkbuild': BIND,
   '@mtkcompile': BIND,
   '@capture': { args: ['expr', 'pattern'] },
+  // Markdown's parser registration: the function is defined at module scope.
+  '@breaking': { rest: 'decorator' },
+  '@trigger': { rest: 'decorator' },
   // Flux/Functors: a type and its field names.
   '@layer': { rest: 'symbol' },
   '@functor': { rest: 'symbol' },
