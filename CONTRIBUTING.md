@@ -58,17 +58,16 @@ The formatting commit is listed in `.git-blame-ignore-revs`. To use it:
 ## The parser (`wasm/parser.wasm`)
 
 The parser is Julia 1.13.2's JuliaSyntax, compiled to WebAssembly (GC and exception
-handling) by [WasmCodegen.jl](https://github.com/gbaraldi/WasmCodegen.jl) at commit
-`316bbaf`, then optimized with `wasm-opt -O3`. The entry points are in
+handling) by [WasmCodegen.jl](https://github.com/gbaraldi/WasmCodegen.jl) at main commit
+`98cad1f` (WasmBuilder.jl 0.1.1), then optimized with `wasm-opt -O3`. The entry points are in
 `scripts/parser.jl`, and `scripts/build-parser.jl` builds it. Both come from
 topiary-julia's `jlparse/` directory. The module has no imports and exports a small
 numeric ABI (17 functions, listed in `wasm/manifest.json`). The host uploads the source,
 calls `parse_src`, and reads back the green tree and diagnostics.
 
-The same build on WasmCodegen main `10cff8e` (2026-11-10, every PR it waited for merged) gives
-the same green trees and diagnostics on 150 files of Julia's `base/`, passes `npm test` of this
-package and of prettier-plugin-julia, and parses at the same speed (0.14 s/MB); the artifact here
-stays the `316bbaf` build until it is refreshed on purpose.
+v0.2.0 rebuilt it on WasmCodegen main (v0.1.0 shipped a `316bbaf` build). The new build gives
+the same green trees and diagnostics as the old one on 25,174 real-world Julia files and parses
+at the same speed (0.16 s/MB); see `scripts/build-parser.md`.
 
 To rebuild it, follow [scripts/build-parser.md](scripts/build-parser.md). Then:
 
