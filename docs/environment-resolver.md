@@ -1,6 +1,10 @@
 # Environment resolver
 
-`src/resolver/index.js` exports synchronous `resolveEnvironment(request, settings)`. It prepares a cached copy of a Julia environment's package sources for callers that need dependency entry files. It does not yet connect to module resolution or change lint rules.
+When a linted file imports a package that [module resolution](module-resolution.md) can't find (no Manifest entry, or not installed in any depot), the plugin can ask an environment resolver for it. The resolver prepares a throwaway, cached, source-only copy of the file's environment (the nearest `Project.toml`, and its `Manifest.toml` when there is one) and returns each package's entry file. Module resolution then reads those sources exactly as it reads an installed package. It asks once per linted environment, lazily: files whose imports all resolve locally never start it, and a dependency's own imports are looked up in the same environment.
+
+The default backend runs stock Pkg compiled to WebAssembly under Node: a Pkg-in-Wasm resolver, installed separately and configured via `settings.julia.pkgjl`. It never runs a native `julia`, and never touches the project's own files or the user's depot.
+
+`src/resolver/index.js` exports the synchronous `resolveEnvironment(request, settings)`.
 
 A request contains an absolute `projectFile`, an optional `manifestFile` (or `null`), and optionally `packageName` to exclude the project's own package. The original files are never modified. Relative `path` values in Project `[sources]` tables (including inline tables) and Manifest entries become absolute, relative to the original containing file. The copied Project retains its name and UUID. If instantiation with a Manifest fails, the resolver retries once without it.
 
@@ -69,3 +73,11 @@ node scripts/resolve-env.mjs Project.toml \
 ```
 
 `--pkg-wasm` and `--cache` are optional. The CLI discovers a sibling `Manifest.toml`, prints Result JSON, and exits unsuccessfully on `null`. Save the cache as a CI artifact and set ESLint's `cacheDir` to the same location. Use `offline: true` during linting if network access is undesirable. Failed cache records can be removed to retry immediately in a new process.
+
+## Export index
+
+The solved export tree of each package read from the resolver's cache (its exported and `public` names, its submodules, and what `@reexport using` adds) is kept in `<cache>/index/`, keyed by the package's entry file. The cached sources live in content-addressed directories, so an index entry never goes stale. A later lint process loads the index instead of parsing the package again.
+
+## Measured
+
+On a 2-dependency environment (7 packages after resolution), cold (registry download, instantiate, filter, index) 8.9 s for the whole ESLint run, warm 0.95 s. The cache is 8.6 MB, mostly the registry. No artifact was downloaded, even for environments with JLL packages (`FFTW_jll`, `MKL_jll`, `OpenSpecFun_jll`), and no file other than `src/**/*.jl` and `Project.toml` remains under `depot/packages`.

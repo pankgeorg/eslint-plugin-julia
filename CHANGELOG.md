@@ -6,6 +6,34 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- An environment resolver (`settings.julia.resolver`): when a file imports a package that
+  isn't in a manifest or installed, a throwaway, cached, source-only copy of its
+  environment supplies the package's sources. The default backend is a Pkg-in-Wasm
+  resolver, installed separately and configured via `settings.julia.pkgjl`; no artifacts
+  are downloaded. Resolved packages' exports are kept in a persistent index. See
+  `docs/environment-resolver.md` and `scripts/resolve-env.mjs`.
+- Macro signatures (`src/macro-signatures.js`, `settings.julia.macros`): which macro
+  arguments are reads, which declare names (`@enum`, `@unpack`, `@variables`, …) and which
+  are generated code or symbols. See `docs/macros.md`.
+- Export inventories of 112 submodules of Base, Core and the standard libraries
+  (`Base.BinaryPlatforms`, `LinearAlgebra.BLAS`, …).
+
+### Changed
+
+- `no-undef` checks macro operands, including string interpolations in logging macros
+  (`@info "… $hex …"`, the bug fixed by JuliaLang/Pkg.jl#4909), as the macro's signature
+  describes them.
+- `no-undef`'s `unknownModules: "ignore"` no longer silences the whole module: value reads
+  inside function bodies of names an unresolved `using` can't plausibly export are still
+  reported, with their own message. New option value `"values"`.
+- An unresolved `import M`/`import ..f` binds only the written name; only `using` can bring
+  in unknown names. `..M` follows the parent module's `import M`.
+- Package extensions (`ext/<Ext>/<Ext>.jl`) are include-tree entries. A module that
+  includes files by a computed path or at run time is treated like one with an unresolved
+  `using`.
+
 ## [0.2.0] - 2026-11-10
 
 ### Added
