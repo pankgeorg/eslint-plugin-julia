@@ -55,7 +55,7 @@ covers the rest:
 | preset                      | what it turns on                                                                                                               |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `julia.configs.recommended` | Likely bugs with near-zero false positives: errors when Julia rejects the code or the check can never be right, else warnings. |
-| `julia.configs.strict`      | `recommended` plus every other rule as a warning (style, performance, scope rules such as `no-undef`).                         |
+| `julia.configs.strict`      | `recommended` plus every other rule as a warning (style, performance, scope rules such as `no-unused-vars`).                   |
 | `julia.configs.style`       | The opt-in style rules only, as warnings; combine with `recommended`.                                                          |
 | `julia.configs.all`         | Every rule as an error.                                                                                                        |
 
@@ -120,7 +120,7 @@ and _Suggestions_ are quick fixes offered in editors.
 | [no-string-growth-in-loop](docs/rules/no-string-growth-in-loop.md)                     | Off (strict: warn) | None              |
 | [no-throw-literal](docs/rules/no-throw-literal.md)                                     | Off (strict: warn) | Suggestions       |
 | [no-unbound-type-parameters](docs/rules/no-unbound-type-parameters.md)                 | Off (strict: warn) | None              |
-| [no-undef](docs/rules/no-undef.md)                                                     | Off (strict: warn) | None              |
+| [no-undef](docs/rules/no-undef.md)                                                     | Warn               | None              |
 | [no-undefined-exports](docs/rules/no-undefined-exports.md)                             | Off (strict: warn) | None              |
 | [no-uninitialized-ref-read](docs/rules/no-uninitialized-ref-read.md)                   | Error              | None              |
 | [no-unreachable](docs/rules/no-unreachable.md)                                         | Error              | None              |

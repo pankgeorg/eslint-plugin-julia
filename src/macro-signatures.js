@@ -113,6 +113,7 @@ const table = {
       '@something',
       '@lock',
       '@lock_nofail',
+      '@preserve',
     ].map((m) => [m, CODE]),
   ),
   // Pass-through: the argument is ordinary code.

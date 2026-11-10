@@ -1,8 +1,8 @@
 # julia/no-undef
 
 Reports executable identifier reads without an ordinary Julia binding in the
-containing module or an implicit Julia 1.13.2 Base/Core export. Opt-in (`all`),
-with no edits. Literal includes, sibling files and known exports resolve through
+containing module or an implicit Julia 1.13.2 Base/Core export. In `recommended`
+as a warning, with no edits. Literal includes, sibling files and known exports resolve through
 [module resolution](../module-resolution.md).
 
 ```julia

@@ -444,6 +444,9 @@ function interpolatedNames(node, out = []) {
   const kinds = ['function', 'macro', 'struct', 'abstract', 'primitive', '=', 'const', 'global'];
   const name = kinds.includes(node.kind) ? named(node.children[0]) : null;
   if (name) out.push(name);
+  // `@eval export $(name)`: generated exports.
+  if (['export', 'public'].includes(node.kind))
+    out.push(...node.children.filter((c) => c.kind === '$'));
   node.children?.forEach((c) => interpolatedNames(c, out));
   return out;
 }

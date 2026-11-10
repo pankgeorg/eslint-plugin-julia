@@ -198,6 +198,7 @@ const RECOMMENDED = {
   'no-duplicate-dict-keys': 'warn',
   'no-nothing-return-conversion': 'warn',
   'no-debugger': 'warn',
+  'no-undef': 'warn',
 };
 plugin.configs.recommended = config(
   Object.fromEntries(Object.entries(RECOMMENDED).map(([n, level]) => [`julia/${n}`, level])),

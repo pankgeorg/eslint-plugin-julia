@@ -44,6 +44,7 @@ const RECOMMENDED = {
   'no-duplicate-dict-keys': 'warn',
   'no-nothing-return-conversion': 'warn',
   'no-debugger': 'warn',
+  'no-undef': 'warn',
 };
 const STYLE = {
   'prefer-identity-nothing': 'warn',

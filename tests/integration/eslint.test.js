@@ -252,7 +252,9 @@ test('CLI: discovery, ignores, overrides, stdin, fix, cache and worker config lo
     assert(results.every((r) => r.messages.every((m) => m.severity === 1)));
     const stdin = run(['--stdin', '--stdin-filename', 'α.jl', '--format', 'json'], '🐱 == nothing');
     assert.equal(stdin.status, 0, stdin.stderr);
-    const suggestion = JSON.parse(stdin.stdout)[0].messages[0];
+    const suggestion = JSON.parse(stdin.stdout)[0].messages.find(
+      (m) => m.ruleId === 'julia/prefer-identity-nothing',
+    );
     assert.equal(suggestion.column, 4);
     assert.deepEqual(suggestion.suggestions[0].fix.range, [3, 5]);
     const fatal = run(['--stdin', '--stdin-filename', 'bad.jl', '--format', 'json'], 'α = )');
@@ -269,7 +271,8 @@ test('CLI: discovery, ignores, overrides, stdin, fix, cache and worker config lo
     // Change content without relying on timestamps; the cached warning disappears.
     writeFileSync(join(folder, 'sub/point.jl'), 'struct S; x; y; end');
     const invalidated = run(['.', '--cache', '--cache-strategy', 'content', '--format', 'json']);
-    assert(JSON.parse(invalidated.stdout).every((r) => r.messages.length === 0));
+    const point = JSON.parse(invalidated.stdout).find((r) => r.filePath.endsWith('point.jl'));
+    assert.deepEqual(point.messages, []);
     const workers = run(['.', '--concurrency', '2', '--format', 'json']);
     assert.equal(workers.status, 0, workers.stderr);
     assert.equal(JSON.parse(workers.stdout).length, 2);
@@ -291,8 +294,10 @@ test('SARIF formatter accepts Julia rule results with UTF-16 columns', async () 
   const sarif = JSON.parse(await formatter.format(results));
   assert.equal(sarif.version, '2.1.0');
   const findings = sarif.runs[0].results;
-  assert.equal(findings.length, 3);
+  assert.equal(findings.length, 4);
   assert(findings.some((r) => r.ruleId === 'julia/no-shadowed-loop-var'));
+  // `f` is never defined in the fixture (no-undef is in recommended).
+  assert(findings.some((r) => r.ruleId === 'julia/no-undef'));
   const keyword = findings.find((r) => r.ruleId === 'julia/no-duplicate-keyword-arguments');
   assert.equal(keyword.locations[0].physicalLocation.region.startColumn, 8);
 });

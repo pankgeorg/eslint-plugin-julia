@@ -640,10 +640,18 @@ function analyze(source, context) {
     }
     switch (node.kind) {
       case 'block':
+        // An unknown macro's `begin … end` is code (`GC.@preserve x begin … end`): only
+        // statements that are bare names (`@variables begin x; y end`) may declare.
+        if (mode === 'maybe') {
+          c.forEach((n) => (identifierName(n) !== null ? again(n, true) : visit(n, s, read)));
+          return;
+        }
+        c.forEach((n) => again(n, true));
+        return;
       case 'tuple':
       case 'parens':
       case 'parameters':
-        c.forEach((n) => again(n, top || node.kind === 'block'));
+        c.forEach((n) => again(n, top));
         return;
       case '=':
       case 'op=':
@@ -848,7 +856,7 @@ function analyze(source, context) {
         while (['where', '::'].includes(head?.kind)) head = head.children[0];
         if (head?.kind === 'call') head = head.children[0];
         if (head && identifierName(head) !== null)
-          macroHeads(head, s, 'bind', 'global', read, node, true);
+          macroHeads(head, s, 'maybe', 'global', read, node, true);
         [sig, ...rest].forEach((arg) => arg && opaque(arg));
         return;
       }
@@ -858,7 +866,7 @@ function analyze(source, context) {
         while (['where', '::'].includes(head?.kind)) head = head.children[0];
         if (head?.kind === 'call') head = head.children[0];
         if (head && identifierName(head) !== null)
-          macroHeads(head, s, 'bind', 'global', read, node, true);
+          macroHeads(head, s, 'maybe', 'global', read, node, true);
         if (old) opaque(old);
         let target = replacement;
         while (['where', '::'].includes(target?.kind)) target = target.children[0];

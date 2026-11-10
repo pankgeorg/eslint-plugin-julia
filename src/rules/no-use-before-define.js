@@ -92,6 +92,8 @@ export default defineRule({
               'module',
               'iteration',
               'catch',
+              // declared by a macro: its position isn't known
+              'macro-binding',
             ].includes(b.kind)
           )
             continue;
