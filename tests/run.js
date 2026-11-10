@@ -77,3 +77,4 @@ import './scope/bindings.test.js';
 import './scope/module-resolution.test.js';
 import './parser/parser.test.js';
 import './integration/eslint.test.js';
+import './resolver/resolver.test.js';
