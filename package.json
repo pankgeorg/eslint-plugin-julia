@@ -25,6 +25,9 @@
   "type": "module",
   "main": "./src/index.js",
   "types": "./types/index.d.ts",
+  "bin": {
+    "eslint-plugin-julia-resolve-env": "./src/resolver/warm.mjs"
+  },
   "exports": {
     ".": {
       "types": "./types/index.d.ts",
@@ -37,6 +40,9 @@
     "./scope": {
       "types": "./types/scope.d.ts",
       "import": "./src/scope.js"
+    },
+    "./resolver": {
+      "import": "./src/resolver/index.js"
     }
   },
   "files": [

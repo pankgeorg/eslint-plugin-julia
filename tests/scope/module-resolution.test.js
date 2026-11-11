@@ -61,13 +61,14 @@ test('modules: unreachable files do not inherit package scope', () =>
   withDepot(() => {
     assert.deepEqual(unresolved(analyze('Tree/src/unreachable.jl')), ['sibling']);
   }));
-test('modules: dependency exports, public and reexports traverse each own manifest', () =>
+test('modules: dependency exports and reexports traverse each own manifest; public needs qualification', () =>
   withDepot(() => {
     const m = analyze(
       'Tree/src/unreachable.jl',
       'using Dep; dep_export; dep_public; path_export; leaf_export; manufactured',
     );
-    assert.deepEqual(unresolved(m), ['manufactured']);
+    // `public` names aren't brought in by `using Dep`, only by `using Dep: dep_public`.
+    assert.deepEqual(unresolved(m), ['dep_public', 'manufactured']);
     assert.deepEqual(m.globalScope.bareUsing, []);
   }));
 test('modules: stdlib imports resolve but retain typos', () => {

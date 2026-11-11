@@ -9,9 +9,10 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { homedir } from 'node:os';
+import { homedir, hostname } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { threadId } from 'node:worker_threads';
 import { rewritePaths } from './toml.js';
 
 const memo = new Map(),
@@ -54,6 +55,52 @@ function failed(envDir) {
   }
   return false;
 }
+// A unique temporary name: worker threads share a pid.
+export const temporaryName = (base) => `${base}.${process.pid}.${threadId}.${randomUUID()}.tmp`;
+const wait = (ms) => Atomics.wait(sleep, 0, 0, Math.max(1, ms));
+const alive = (pid) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === 'EPERM';
+  }
+};
+// Runs `fn` while holding `<path>.guard`, created exclusively; undefined if another process
+// holds it. Locks are only created, taken over and released under the guard, so a stale
+// lock is never removed after its replacement was created. A guard is held for a few file
+// operations; one older than 30 s was left by a killed process.
+function guarded(path, fn) {
+  const guard = `${path}.guard`;
+  try {
+    writeFileSync(guard, `${process.pid}`, { flag: 'wx' });
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    try {
+      if (Date.now() - statSync(guard).mtimeMs > 30000) unlinkSync(guard);
+    } catch {
+      /* Released meanwhile. */
+    }
+    return undefined;
+  }
+  try {
+    return fn();
+  } finally {
+    try {
+      unlinkSync(guard);
+    } catch {
+      /* Already removed as stale. */
+    }
+  }
+}
+// A lock records its holder's token, deadline, host and pid: it is stale once the deadline
+// has passed, or at once when its holder on this host has exited.
+function stale(held, path, timeout) {
+  const [, until, host, pid] = held.split(' ');
+  if (host === hostname() && Number(pid) && !alive(Number(pid))) return true;
+  const deadline = Number(until) || statSync(path).mtimeMs + timeout;
+  return Date.now() > deadline + 5000;
+}
 function exclude(result, name) {
   if (!result || !name) return result;
   const packages = { ...result.packages };
@@ -80,13 +127,19 @@ export function resolveEnvironment(request, settings = {}) {
     }
     if (resolver !== 'pkgjl') return null;
     const project = rewritePaths(readFileSync(request.projectFile, 'utf8'), request.projectFile);
-    const manifest = request.manifestFile ? readFileSync(request.manifestFile, 'utf8') : '';
+    // The key hashes what the child receives: relative `path` entries are made absolute, so
+    // two checkouts with the same Manifest don't share an environment.
+    const manifest = request.manifestFile
+      ? rewritePaths(readFileSync(request.manifestFile, 'utf8'), request.manifestFile, true)
+      : '';
     const key = createHash('sha256')
       .update('1.13' + project + manifest)
       .digest('hex');
+    const home = (path) => path.replace(/^~(?=$|[\\/])/u, homedir());
     const cache = resolve(
-      options.cacheDir ??
-        join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'eslint-plugin-julia'),
+      options.cacheDir
+        ? home(options.cacheDir)
+        : join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'eslint-plugin-julia'),
     );
     envDir = join(cache, 'envs', key.slice(0, 16));
     const warm = cached(envDir, key);
@@ -105,48 +158,40 @@ export function resolveEnvironment(request, settings = {}) {
         if (failed(envDir)) return null;
         if (Date.now() >= deadline)
           throw Object.assign(new Error('Resolver lock timeout'), { transient: true });
-        try {
-          // The holder records its own deadline: staleness is judged by the holder's timeout.
-          writeFileSync(path, `${token} ${deadline}`, { flag: 'wx' });
+        const taken = guarded(path, () => {
+          let held = null;
+          try {
+            held = readFileSync(path, 'utf8');
+          } catch (error) {
+            if (error.code !== 'ENOENT') throw error;
+          }
+          if (held !== null && !stale(held, path, timeout)) return false;
+          writeFileSync(path, `${token} ${deadline} ${hostname()} ${process.pid}`);
+          return true;
+        });
+        if (taken) {
           locks.push({ path, token });
           break;
-        } catch (error) {
-          if (error.code !== 'EEXIST') throw error;
-          try {
-            const held = readFileSync(path, 'utf8');
-            const until = Number(held.split(' ')[1]) || statSync(path).mtimeMs + timeout;
-            if (Date.now() > until + 5000) {
-              // Take a stale lock over atomically: only one waiter's rename succeeds, and a
-              // lock that changed hands in between is put back.
-              const aside = `${path}.${token}`;
-              renameSync(path, aside);
-              if (readFileSync(aside, 'utf8') === held) unlinkSync(aside);
-              else if (!existsSync(path)) renameSync(aside, path);
-              else unlinkSync(aside);
-            }
-          } catch {
-            /* Another worker released or took it. */
-          }
-          Atomics.wait(sleep, 0, 0, Math.min(50, Math.max(1, deadline - Date.now())));
         }
+        wait(Math.min(50, deadline - Date.now()));
       }
     }
-    const run = spawnSync(
-      options.node ?? process.execPath,
-      [
-        child,
-        JSON.stringify({
-          key,
-          cache,
-          envDir,
-          project,
-          manifest: request.manifestFile ? rewritePaths(manifest, request.manifestFile, true) : '',
-          pkgjl: options.pkgjl,
-          pkgWasm: options.pkgWasm,
-        }),
-      ],
-      { timeout: Math.max(1, deadline - Date.now()), encoding: 'utf8', maxBuffer: 1024 * 1024 },
-    );
+    // The request goes through stdin: a Manifest can exceed the command-line limit.
+    const run = spawnSync(options.node ?? process.execPath, [child], {
+      input: JSON.stringify({
+        key,
+        cache,
+        envDir,
+        project,
+        manifest,
+        pkgjl: options.pkgjl && home(options.pkgjl),
+        pkgWasm: options.pkgWasm && home(options.pkgWasm),
+      }),
+      stdio: ['pipe', 'ignore', 'pipe'],
+      timeout: Math.max(1, deadline - Date.now()),
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+    });
     if (run.error || run.status !== 0)
       throw run.error ?? new Error(run.stderr?.trim() || `Resolver exited ${run.status}`);
     const result = cached(envDir, key);
@@ -158,7 +203,7 @@ export function resolveEnvironment(request, settings = {}) {
       failures.add(envDir);
       try {
         mkdirSync(envDir, { recursive: true });
-        const file = join(envDir, `failed-${process.pid}.tmp`);
+        const file = temporaryName(join(envDir, 'failed.json'));
         writeFileSync(
           file,
           JSON.stringify({ error: String(error.message ?? error), at: Date.now() }),
@@ -170,12 +215,18 @@ export function resolveEnvironment(request, settings = {}) {
     }
     return null;
   } finally {
-    for (const { path, token } of locks.reverse()) {
-      try {
-        if (readFileSync(path, 'utf8').split(' ')[0] === token) unlinkSync(path);
-      } catch {
-        /* Already released. */
+    for (const { path, token } of locks.reverse())
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const done = guarded(path, () => {
+          try {
+            if (readFileSync(path, 'utf8').split(' ')[0] === token) unlinkSync(path);
+          } catch {
+            /* Already released or taken over. */
+          }
+          return true;
+        });
+        if (done) break;
+        wait(10);
       }
-    }
   }
 }

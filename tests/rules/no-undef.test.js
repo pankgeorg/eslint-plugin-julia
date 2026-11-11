@@ -6,6 +6,10 @@ const bad = (code, names, options) => ({
 });
 tester.run('no-undef', plugin.rules['no-undef'], {
   valid: [
+    'using Base: OneTo; f() = (OneTo(3), Base.Fix1(+, 1), Iterators.flatten(1))',
+    // Computed `eval` definitions (Fable S1): names it generates aren't reported.
+    'for op in (:foo, :bar)\n  eval(make_def(op))\nend\nmake_def(op) = :($op() = 1)\nuse() = foo() + bar()',
+    'Core.eval(@__MODULE__, Expr(:(=), :gen, 1)); f() = gen()',
     {
       filename: fileURLToPath(
         new URL('../fixtures/packages/TestEntry/test/nested/leaf.jl', import.meta.url),
@@ -176,8 +180,14 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     bad('using LinearAlgebra; norm([1,2]); typo()', ['typo'], { unknownModules: 'report' }),
     bad('f()=🐱', ['🐱']),
     bad('include("a.jl"); from_file()', ['from_file']),
-    bad('ex = :(x=1); eval(ex); x', ['x']),
+    {
+      // Computed `eval` code defines names nothing can list: the narrowed check.
+      code: 'ex = :(x=1); eval(ex); f() = 1 + xyz',
+      errors: [{ messageId: 'unresolvedEval', data: { name: 'xyz' } }],
+    },
     bad('baremodule M; sin(1); end', ['sin']),
+    // Public but not exported (`names(Base)` lists them): `using Base` doesn't bring them in.
+    bad('f() = (OneTo(3), Fix1(+, 1), notnothing(1))', ['OneTo', 'Fix1', 'notnothing']),
     bad('x=1; module M; x; end', ['x']),
     bad('f(a=x,x=1)=a', ['x']),
     bad('f()=(let x=x; x; end)', ['x']),

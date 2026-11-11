@@ -233,4 +233,72 @@ describe('no-orphan-file', () => {
       {},
     );
   });
+
+  it('reviews: bounded patterns, project changes, directory words, monorepos, runners', async () => {
+    // Many interpolations next to a long file name must not hang the matcher.
+    const slow = tree({
+      'Project.toml': project('Pkg'),
+      'src/Pkg.jl': `module Pkg\ninclude("parts/${'$a'.repeat(24)}/needle.jl")\nend\n`,
+      [`src/parts/${'x'.repeat(80)}.jl`]: '',
+      'src/other/stale.jl': '',
+    });
+    const started = Date.now();
+    assert.deepEqual(Object.keys(await orphans(slow, ['src/other/stale.jl'])), [
+      'src/other/stale.jl',
+    ]);
+    assert.ok(Date.now() - started < 2000);
+
+    // Declaring an extension later is seen without restarting.
+    const ext = tree({
+      'Project.toml': project('Pkg'),
+      'src/Pkg.jl': 'module Pkg\nend\n',
+      'ext/PExt.jl': 'module PExt end\n',
+    });
+    assert.deepEqual(Object.keys(await orphans(ext, ['ext/PExt.jl'])), ['ext/PExt.jl']);
+    writeFileSync(
+      join(ext, 'Project.toml'),
+      project('Pkg', '[weakdeps]\nDates = "1"\n[extensions]\nPExt = "Dates"\n'),
+    );
+    assert.deepEqual(await orphans(ext, ['ext/PExt.jl']), {});
+
+    // A testset named like a directory doesn't reach the directory.
+    const words = tree({
+      'Project.toml': project('Pkg'),
+      'src/Pkg.jl': 'module Pkg\nend\n',
+      'test/runtests.jl':
+        '@testset "integration" begin\n    include("integration/a.jl")\nend\npush!(LOAD_PATH, "fixtures")\n',
+      'test/integration/a.jl': '',
+      'test/integration/stale.jl': '',
+      'test/fixtures/F.jl': '',
+    });
+    assert.deepEqual(
+      Object.keys(await orphans(words, ['test/integration/stale.jl', 'test/fixtures/F.jl'])),
+      ['test/integration/stale.jl'],
+    );
+
+    // A file included only from a package below this one (a monorepo's sub-package).
+    const mono = tree({
+      'Project.toml': project('Mono'),
+      'src/Mono.jl': 'module Mono\nend\n',
+      'test/runtests.jl': 'include("core.jl")\n',
+      'test/core.jl': '',
+      'test/shared/common.jl': '',
+      'lib/Sub/Project.toml': project('Sub'),
+      'lib/Sub/src/Sub.jl': 'module Sub\nend\n',
+      'lib/Sub/test/runtests.jl': 'include("../../../test/shared/common.jl")\n',
+    });
+    assert.deepEqual(await orphans(mono, ['test/shared/common.jl']), {});
+
+    // A test runner that discovers files itself names none of them.
+    const runner = tree({
+      'Project.toml': project('Ptr'),
+      'src/Ptr.jl': 'module Ptr\nend\n',
+      'src/stale.jl': '',
+      'test/runtests.jl': 'using ParallelTestRunner\nimport Ptr\nruntests(Ptr, ARGS)\n',
+      'test/basics.jl': '@test true\n',
+    });
+    assert.deepEqual(Object.keys(await orphans(runner, ['test/basics.jl', 'src/stale.jl'])), [
+      'src/stale.jl',
+    ]);
+  });
 });

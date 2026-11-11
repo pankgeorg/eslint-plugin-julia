@@ -45,6 +45,7 @@ import './rules/no-single-iteration-loop.test.js';
 import './rules/no-string-growth-in-loop.test.js';
 import './rules/no-throw-literal.test.js';
 import './rules/no-unbound-type-parameters.test.js';
+import './rules/no-undef-harness.test.js';
 import './rules/no-undef.test.js';
 import './rules/no-undefined-exports.test.js';
 import './rules/no-uninitialized-ref-read.test.js';

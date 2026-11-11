@@ -1,4 +1,5 @@
 import {
+  existsSync,
   lstatSync,
   mkdirSync,
   readFileSync,
@@ -16,7 +17,16 @@ async function main(args) {
   const { cache, envDir, key } = args;
   const depot = join(cache, 'depot'),
     project = join(envDir, 'project');
-  for (const dir of [project, depot, join(cache, 'home'), join(cache, 'tmp')])
+  // Pruning deletes everything but sources: only a depot this plugin created is pruned, never
+  // a real depot that a misconfigured cacheDir happens to point at.
+  const marker = join(depot, '.eslint-plugin-julia');
+  if (!existsSync(marker)) {
+    if (existsSync(depot) && readdirSync(depot).length)
+      throw new Error(`${depot} is not a depot created by eslint-plugin-julia; refusing to use it`);
+    mkdirSync(depot, { recursive: true });
+    writeFileSync(marker, 'A cache depot of eslint-plugin-julia: non-source files are deleted.\n');
+  }
+  for (const dir of [project, join(cache, 'home'), join(cache, 'tmp')])
     mkdirSync(dir, { recursive: true });
   writeFileSync(join(project, 'Project.toml'), args.project);
   const manifest = join(project, 'Manifest.toml');
@@ -108,12 +118,15 @@ async function main(args) {
       }
     }
   };
+  // Set when the Manifest couldn't be instantiated and versions were resolved afresh.
+  let manifestIgnored = false;
   try {
     try {
       await instantiate();
     } catch (error) {
       if (!args.manifest) throw error;
       rmSync(manifest, { force: true });
+      manifestIgnored = true;
       await instantiate();
     }
   } catch (error) {
@@ -137,11 +150,14 @@ async function main(args) {
     if (!lstatSync(entry).isFile()) throw new Error(`Missing source entry: ${entry}`);
   stats.seconds = (performance.now() - start) / 1000;
   const temporary = join(envDir, 'env.json.tmp');
-  writeFileSync(temporary, JSON.stringify({ key, julia: '1.13', packages, stats }));
+  writeFileSync(
+    temporary,
+    JSON.stringify({ key, julia: '1.13', packages, stats, manifestIgnored }),
+  );
   renameSync(temporary, join(envDir, 'env.json'));
 }
 try {
-  await main(JSON.parse(process.argv[2]));
+  await main(JSON.parse(readFileSync(0, 'utf8')));
 } catch (error) {
   process.stderr.write(`${error.message}\n`);
   process.exitCode = 1;

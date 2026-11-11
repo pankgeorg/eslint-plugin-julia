@@ -6,8 +6,17 @@ import { macroSignature, roleOf, UNKNOWN } from './macro-signatures.js';
 const inventory = JSON.parse(
   readFileSync(new URL('../data/base-core-exports.json', import.meta.url)),
 );
-const core = new Set([...inventory.Core, 'ccall']),
-  base = new Set(inventory.Base);
+// `names(M)` also lists `public` names that aren't exported; the implicit `using Base`/`using
+// Core` brings in only the exported ones.
+const publicOnly = JSON.parse(
+  readFileSync(new URL('../data/public-only.json', import.meta.url)),
+).modules;
+const exported = (key) => {
+  const hidden = new Set(publicOnly[key] ?? []);
+  return inventory[key].filter((name) => !hidden.has(name));
+};
+const core = new Set([...exported('Core'), 'ccall']),
+  base = new Set(exported('Base'));
 const builtin = new Map(
   [...base, ...core, 'include', 'eval'].map((name) => [
     name,

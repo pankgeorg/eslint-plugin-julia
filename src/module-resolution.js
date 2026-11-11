@@ -6,7 +6,11 @@ import { createHash } from 'node:crypto';
 import { parseJulia } from './parser/syntax-tree.js';
 import { JuliaSourceCode } from './source-code.js';
 import { getLocalScopeManager, identifierName } from './scope.js';
-import { resolveEnvironment } from './resolver/index.js';
+import { resolveEnvironment, temporaryName } from './resolver/index.js';
+import { MANIFESTS } from './resolver/toml.js';
+import { includesOf } from './orphans.js';
+
+const posixPath = (path) => path.split(sep).join('/');
 
 const inventory = JSON.parse(
   readFileSync(new URL('../data/base-core-exports.json', import.meta.url)),
@@ -14,6 +18,14 @@ const inventory = JSON.parse(
 const stdlibs = JSON.parse(
   readFileSync(new URL('../data/stdlib-exports.json', import.meta.url)),
 ).modules;
+// Names that are `public` but not exported, per inventory key: `using M` doesn't bring them in.
+const publicOnly = JSON.parse(
+  readFileSync(new URL('../data/public-only.json', import.meta.url)),
+).modules;
+const exportedOnly = (key, names) => {
+  const hidden = new Set(publicOnly[key] ?? []);
+  return new Set(names.filter((n) => !hidden.has(n)));
+};
 const factsCache = new Map(),
   graphCache = new Map(),
   tomlCache = new Map();
@@ -106,10 +118,13 @@ function projectFor(file, track) {
 }
 function manifestFor(file, track) {
   for (const dir of upward(file)) {
-    // Project and Manifest can live above a package's own Project.toml.
-    const path = join(dir, 'Manifest.toml');
-    const data = toml(path, track);
-    if (exists(path)) return { path, ...data };
+    // Project and Manifest can live above a package's own Project.toml. Julia 1.13 prefers
+    // its versioned Manifest.
+    for (const name of MANIFESTS) {
+      const path = join(dir, name);
+      const data = toml(path, track);
+      if (exists(path)) return { path, ...data };
+    }
   }
   return null;
 }
@@ -133,8 +148,12 @@ function environmentFor(file, settings, track) {
   }
   if (!projectFile) return null;
   const dir = dirname(projectFile);
-  const manifestFile =
-    ['Manifest-v1.13.toml', 'Manifest.toml'].map((m) => join(dir, m)).find(exists) ?? null;
+  // Both candidates are tracked, present or not: creating or editing either changes the
+  // environment.
+  const candidates = MANIFESTS.map((m) => join(dir, m));
+  for (const candidate of candidates) track.set(candidate, stamp(candidate));
+  track.set(projectFile, stamp(projectFile));
+  const manifestFile = candidates.find(exists) ?? null;
   const result = resolveEnvironment(
     { projectFile, manifestFile, packageName: projectFor(file, track)?.name },
     settings,
@@ -172,13 +191,16 @@ const indexFile = (entry) => {
   const id = [INDEX_VERSION, pluginVersion, stdlibs.julia ?? '', key, entry, variant].join('\0');
   return join(dir, `${hash(id).slice(0, 24)}.json`);
 };
+// Keyed by the index file: the same package source can have different indexes per
+// environment (its re-exports follow the environment's versions) and settings.
 const indexMemo = new Map();
 function loadIndex(entry) {
   if (!indexed.has(entry)) return null;
-  if (indexMemo.has(entry)) return indexMemo.get(entry);
+  const file = indexFile(entry);
+  if (indexMemo.has(file)) return indexMemo.get(file);
   let data;
   try {
-    data = JSON.parse(readFileSync(indexFile(entry), 'utf8'));
+    data = JSON.parse(readFileSync(file, 'utf8'));
   } catch {
     return null;
   }
@@ -194,11 +216,16 @@ function loadIndex(entry) {
   };
   const model =
     data.version === INDEX_VERSION && data.entry === entry ? build(data.module, null) : null;
-  indexMemo.set(entry, model);
+  indexMemo.set(file, model);
   return model;
 }
-function storeIndex(entry, model) {
+// `sources`: the Julia files the solved model was built from. A model that read an editable
+// source (a `path` dependency it re-exports) can change without its entry changing, so it is
+// not indexed.
+function storeIndex(entry, model, sources) {
   if (!indexed.has(entry) || !model) return;
+  const packages = join(dirname(indexed.get(entry).dir), 'depot', 'packages') + sep;
+  if ([...sources].some((p) => p.endsWith('.jl') && !p.startsWith(packages))) return;
   const dump = (m) => ({
     name: m.name,
     exports: [...m.exports],
@@ -209,11 +236,12 @@ function storeIndex(entry, model) {
   try {
     const file = indexFile(entry);
     mkdirSync(dirname(file), { recursive: true });
+    const temporary = temporaryName(file);
     writeFileSync(
-      `${file}.${process.pid}.tmp`,
+      temporary,
       JSON.stringify({ version: INDEX_VERSION, entry, module: dump(model) }),
     );
-    renameSync(`${file}.${process.pid}.tmp`, file);
+    renameSync(temporary, file);
   } catch {
     /* An unwritable cache only costs a re-parse. */
   }
@@ -383,7 +411,8 @@ function facts(source, file) {
         if (identifierName(head)) m.reads.push(identifierName(head));
       }
     }
-    if (m && ['export', 'public'].includes(node.kind) && !macros.length)
+    // Only exported names come in with `using M`; `public` ones need qualification.
+    if (m && node.kind === 'export' && !macros.length)
       m.exports.push(...node.children.map(identifierName).filter(Boolean));
     if (m && ['using', 'import'].includes(node.kind)) {
       for (const clause of node.children) {
@@ -429,6 +458,26 @@ function facts(source, file) {
           !['quote', 'inert'].includes(code?.kind)
         )
           evalInto.push([m, identifierName(node.children[1])]);
+        // `eval(make_def(op))` (or `Core.eval(@__MODULE__, ex)`) outside a function: computed
+        // definitions in this module, as `@eval $(…)`. A literal quote without `$` defines
+        // only what it spells.
+        const hasDollar = (n) => n.kind === '$' || n.children?.some(hasDollar);
+        const self =
+          node.children.length === 2 ||
+          (node.children.length === 3 &&
+            node.children[1].kind === 'macrocall' &&
+            identifierName(node.children[1].children[0]) === '@__MODULE__');
+        let inFunction = false;
+        for (let at = s; at && at.kind !== 'module'; at = at.parent)
+          if (at.kind === 'function') inFunction = true;
+        if (
+          name === 'eval' &&
+          self &&
+          !inFunction &&
+          code &&
+          (!['quote', 'inert'].includes(code.kind) || hasDollar(code))
+        )
+          m.dynamicDefinitions = true;
       }
       if (name === 'include') {
         // `include` evaluates the file at module scope, also from a `@testset`, `let`, loop
@@ -819,7 +868,7 @@ function findModule(path, from, graph, state) {
   }
   const name = parts.shift();
   if (!parts.length && Object.hasOwn(inventory, name))
-    return { exports: new Set(inventory[name]), key: name };
+    return { exports: exportedOnly(name, inventory[name]), key: name };
   // Standard libraries and Base/Core/stdlib submodules (`Base.BinaryPlatforms`, `LinearAlgebra.BLAS`).
   const known = stdlibInventory([name, ...parts].join('.'));
   if (known) return known;
@@ -837,7 +886,7 @@ function findModule(path, from, graph, state) {
       // module that includes files at run time may export anything from them.
       if (at && (name.endsWith('_jll') || at.dynamicIncludes || at.dynamicDefinitions))
         at.unknownExports = true;
-      storeIndex(entry, at);
+      storeIndex(entry, at, dependency.versions.keys());
     }
   }
   for (const part of parts) {
@@ -848,7 +897,7 @@ function findModule(path, from, graph, state) {
   return at ? { exports: at.exports, module: at } : null;
 }
 function stdlibInventory(key) {
-  return Object.hasOwn(stdlibs, key) ? { exports: new Set(stdlibs[key]), key } : null;
+  return Object.hasOwn(stdlibs, key) ? { exports: exportedOnly(key, stdlibs[key]), key } : null;
 }
 function allModules(root) {
   return [root, ...[...root.children.values()].flatMap(allModules)];
@@ -927,7 +976,15 @@ function fragmentOf(file, ownFacts, track) {
     relative(project.dir, file)
       .split(sep)
       .some((part) => part === 'test' || part === 'tests');
-  const harness = harnessEntries(file, project, track)[0] ?? null;
+  const harnesses = harnessEntries(file, project, track);
+  // A harness whose computed include could reach the file (`for f in readdir(@__DIR__)
+  // include(f) end`) runs it: the file is that harness's fragment even if it also imports
+  // its package so it can run alone.
+  const runner = harnesses.find((h) => {
+    const computed = [...includesOf(h).computed];
+    return computed.some((p) => new RegExp(p, 'u').test(posixPath(file)));
+  });
+  const harness = runner ?? harnesses[0] ?? null;
   // A snippet: no imports and no modules of its own, inside an environment (docs examples,
   // scripts run by a harness that `include`s them under a computed path).
   const snippet =
@@ -950,7 +1007,8 @@ function fragmentOf(file, ownFacts, track) {
     const env = nearestProject(file);
     const loadable =
       inTest || !env || dirname(env) === project.dir || toml(env, track).deps.has(project.name);
-    if (!script || snippet) return { project: inSrc || !loadable ? null : project, harness };
+    if (!script || snippet || runner)
+      return { project: inSrc || !loadable ? null : project, harness };
     return null;
   }
   // Without a package, only a harness that could run it makes a snippet a fragment.
@@ -1116,9 +1174,7 @@ export function applyModuleResolution(manager, source, context = {}) {
       !m.unresolvedIncludes;
     manager.moduleResolution.evalNames.set(code, {
       path,
-      names: listed
-        ? new Set([...m.names.keys(), ...m.exports, ...m.children.keys(), m.name])
-        : null,
+      names: listed ? new Set([...m.names.keys(), ...m.children.keys(), m.name]) : null,
     });
   }
 }

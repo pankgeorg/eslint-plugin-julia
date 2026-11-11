@@ -13,7 +13,7 @@ All notable changes to this project are documented here. The format follows
   environment supplies the package's sources. The default backend is a Pkg-in-Wasm
   resolver, installed separately and configured via `settings.julia.pkgjl`; no artifacts
   are downloaded. Resolved packages' exports are kept in a persistent index. See
-  `docs/environment-resolver.md` and `scripts/resolve-env.mjs`.
+  `docs/environment-resolver.md` and the `eslint-plugin-julia-resolve-env` command.
 - Macro signatures (`src/macro-signatures.js`, `settings.julia.macros`): which macro
   arguments are reads, which declare names (`@enum`, `@unpack`, `@variables`, …) and which
   are generated code or symbols. See `docs/macros.md`.

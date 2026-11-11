@@ -14,6 +14,7 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn, spawnSync } from 'node:child_process';
+import { hostname } from 'node:os';
 import { resolveEnvironment } from '../../src/resolver/index.js';
 import { manifestNames, rewritePaths } from '../../src/resolver/toml.js';
 
@@ -338,4 +339,68 @@ test('resolver: input changes get separate keys; packageName does not', (t) => {
   f.request.manifestFile = join(f.dir, 'Manifest.toml');
   writeFileSync(f.request.manifestFile, `[[deps.Foo]]\nuuid = '${uuid}'\n`);
   assert.notEqual(f.run().key, second.key);
+});
+
+test('resolver: a Manifest larger than a command-line argument is resolved', (t) => {
+  const f = fixture(t);
+  f.request.manifestFile = join(f.dir, 'Manifest.toml');
+  const filler = Array.from(
+    { length: 4000 },
+    (_, i) => `[[deps.Pad${i}]]\nuuid = "00000000-0000-4000-8000-${String(i).padStart(12, '0')}"\n`,
+  ).join('\n');
+  assert.ok(filler.length > 200000);
+  writeFileSync(f.request.manifestFile, `[[deps.Foo]]\nuuid = "${uuid}"\n\n${filler}`);
+  const result = f.run();
+  assert.ok(result);
+  assert.equal(result.packages.Foo.uuid, uuid);
+});
+
+test('resolver: relative Manifest paths of two checkouts get separate keys', (t) => {
+  const f = fixture(t);
+  const keys = [];
+  for (const checkout of ['one', 'two']) {
+    const dir = join(f.dir, checkout, 'P');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'Project.toml'), `[deps]\nFoo = "${uuid}"\n`);
+    writeFileSync(join(dir, 'Manifest.toml'), `[[deps.Dep]]\npath = "../Dep"\nuuid = "${uuid}"\n`);
+    const result = resolveEnvironment(
+      { projectFile: join(dir, 'Project.toml'), manifestFile: join(dir, 'Manifest.toml') },
+      f.settings,
+    );
+    assert.ok(result);
+    assert.equal(result.cached, false);
+    keys.push(result.key);
+  }
+  assert.notEqual(keys[0], keys[1]);
+});
+
+test('resolver: a lock whose holder exited is taken over at once; a live one is not', (t) => {
+  const f = fixture(t);
+  const key = createHash('sha256')
+    .update('1.13' + readFileSync(f.request.projectFile, 'utf8'))
+    .digest('hex');
+  const envDir = join(f.settings.julia.cacheDir, 'envs', key.slice(0, 16));
+  mkdirSync(envDir, { recursive: true });
+  const far = Date.now() + 3600000;
+  // A pid that has exited: a finished child process's.
+  const gone = spawnSync(process.execPath, ['-e', '']).pid;
+  writeFileSync(join(envDir, 'lock'), `other ${far} ${hostname()} ${gone}`);
+  const started = Date.now();
+  assert.ok(f.run());
+  assert.ok(Date.now() - started < 8000);
+  rmSync(f.settings.julia.cacheDir, { recursive: true });
+  mkdirSync(envDir, { recursive: true });
+  writeFileSync(join(envDir, 'lock'), `other ${far} ${hostname()} ${process.pid}`);
+  f.settings.julia.resolverTimeout = 0.3;
+  assert.equal(f.run(), null);
+  assert.ok(!existsSync(join(envDir, 'failed.json')), 'waiting on a live lock is not a failure');
+});
+
+test('resolver: a depot it did not create is never pruned', (t) => {
+  const f = fixture(t);
+  const depot = join(f.settings.julia.cacheDir, 'depot');
+  mkdirSync(join(depot, 'packages/Real/xyz'), { recursive: true });
+  writeFileSync(join(depot, 'packages/Real/xyz/README.md'), 'keep me');
+  assert.equal(f.run(), null);
+  assert.equal(readFileSync(join(depot, 'packages/Real/xyz/README.md'), 'utf8'), 'keep me');
 });

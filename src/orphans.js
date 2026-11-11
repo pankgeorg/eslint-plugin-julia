@@ -35,6 +35,8 @@ const mtime = (path) => {
 };
 // Path joiners: `joinpath(a, b)`, `normpath(a, b)`, `abspath(a, b)`, `realpath(a)`.
 const JOINERS = new Set(['joinpath', 'normpath', 'abspath', 'realpath']);
+// Functions whose string arguments are directories: `push!(LOAD_PATH, "fixtures")`, `cd("x")`.
+const DIRECTORY_CALLS = new Set(['push!', 'pushfirst!', 'cd', 'readdir', 'walkdir']);
 const isDirectory = (path) => {
   try {
     return statSync(path).isDirectory();
@@ -166,6 +168,9 @@ function matcher(pieces, file) {
   const head = typeof merged[0] === 'string' ? posix(merged.shift()) : '';
   const cut = head.lastIndexOf('/');
   const dir = posix(resolve(dirname(file), head.slice(0, cut + 1) || '.')).replace(/\/$/u, '');
+  // More than two unknown spans would make the regular expression backtrack badly on long
+  // names; such a path could name any file below its literal directory.
+  if (merged.filter((p) => p === null).length > 2) return { pattern: `^${escape(dir)}/.*$` };
   const body = [head.slice(cut + 1), ...merged]
     .map((p) => (p === null ? '.*' : escape(posix(p))))
     .join('')
@@ -184,10 +189,13 @@ export function includesOf(file) {
   const value = {
     paths: new Set(),
     patterns: new Set(),
+    // The patterns of computed `include` calls alone (not of paths merely named).
+    computed: new Set(),
     unknown: false,
     listed: [],
     unknownInclude: false,
     valueInclude: false,
+    live: false,
   };
   let parsed;
   try {
@@ -221,9 +229,11 @@ function collect(root, file, out, outer = null) {
   // variables over `readdir(dir; join = true)`: their path pieces.
   const assigned = new Map(),
     env = new Map(outer ?? []);
-  const visit = (node, fn) => {
-    fn(node);
-    for (const child of node.children ?? []) visit(child, fn);
+  // `quoted`: inside a quote or a macro definition, code that may never run as written.
+  const visit = (node, fn, quoted = false) => {
+    fn(node, quoted);
+    const inner = quoted || node.kind === 'quote' || node.kind === 'macro';
+    for (const child of node.children ?? []) visit(child, fn, inner);
   };
   visit(root, (node) => {
     let target = null,
@@ -265,12 +275,17 @@ function collect(root, file, out, outer = null) {
       return [null];
     });
   }
+  const directory = (text) => {
+    const path = resolve(dirname(file), text);
+    if (isDirectory(path) && !posix(dirname(file) + sep).startsWith(posix(path + sep)))
+      out.patterns.add(`^${escape(posix(path))}/.*$`);
+  };
   const add = (pieces) => {
     const m = matcher(pieces, file);
     if (m.path) out.paths.add(m.path);
     else out.patterns.add(m.pattern);
   };
-  visit(root, (node) => {
+  visit(root, (node, quoted) => {
     const c = node.children ?? [];
     if (node.kind === 'call' || node.kind === 'dotcall') {
       const head = c[0],
@@ -282,9 +297,17 @@ function collect(root, file, out, outer = null) {
         // `include(M, path)`: the path is the last argument. `include.(paths)` maps over paths.
         const path = args.at(-1);
         const pieces = path && node.kind === 'call' ? pathPieces(path, file, env) : null;
-        if (pieces?.some((p) => p !== null)) add(pieces);
-        else if (pieces) out.unknownInclude = true;
-        else if (path) out.valueInclude = true;
+        if (pieces?.some((p) => p !== null)) {
+          const m = matcher(pieces, file);
+          if (m.pattern && !quoted) out.computed.add(m.pattern);
+          add(pieces);
+        } else if (pieces) {
+          out.unknownInclude = true;
+          if (!quoted) out.live = true;
+        } else if (path) {
+          out.valueInclude = true;
+          if (!quoted) out.live = true;
+        }
       }
       // `readdir(dir)`, `walkdir(dir)`: the directories a computed include may list.
       if (['readdir', 'walkdir'].includes(name) && node.kind === 'call') {
@@ -292,17 +315,23 @@ function collect(root, file, out, outer = null) {
         out.listed.push(dir ? [...pathPieces(dir, file, env), '/', null] : [null]);
       }
     }
-    // A `.jl` path or a directory named anywhere (a list of test files, a script run in a
-    // subprocess, a fixtures directory, a `LOAD_PATH` entry): its files can run.
-    if (node.kind === 'string' || (node.kind === 'call' && JOINERS.has(identifierName(c[0])))) {
+    // A `.jl` path named anywhere (a list of test files, a script run in a subprocess), or a
+    // directory named as a path (a fixtures directory, a `LOAD_PATH` entry): its files can
+    // run. A bare word naming a directory (`@testset "integration"`) is not a path.
+    const callee = node.kind === 'call' ? identifierName(c[0]) : null;
+    if (node.kind === 'string' || JOINERS.has(callee)) {
       const pieces = pathPieces(node, file, env);
       if (pieces.every((p) => p !== null)) {
-        const path = resolve(dirname(file), pieces.join(''));
-        if (path.endsWith('.jl')) out.paths.add(path);
-        else if (isDirectory(path) && !posix(dirname(file) + sep).startsWith(posix(path + sep)))
-          out.patterns.add(`^${escape(posix(path))}/.*$`);
+        const text = pieces.join('');
+        if (text.endsWith('.jl')) out.paths.add(resolve(dirname(file), text));
+        else if (JOINERS.has(callee) || /[\\/]/u.test(text)) directory(text);
       } else if (typeof pieces.at(-1) === 'string' && pieces.at(-1).endsWith('.jl')) add(pieces);
     }
+    if (DIRECTORY_CALLS.has(callee))
+      for (const arg of c.slice(1)) {
+        const pieces = arg.kind === 'string' ? pathPieces(arg, file, env) : [null];
+        if (pieces.every((p) => p !== null)) directory(pieces.join(''));
+      }
     // Command literals aren't parsed into interpolations: their `$(…)` parts and `.jl` words.
     if (node.kind === 'CmdString') {
       const text = String(node.value);
@@ -322,7 +351,10 @@ function collect(root, file, out, outer = null) {
     // `include` passed as a value (`map(include, files)`, `foreach(include, …)`).
     if ((node.kind === 'call' || node.kind === 'dotcall') && !isInfixCall(node))
       for (const arg of c.slice(1))
-        if (arg.kind === 'Identifier' && INCLUDERS.has(arg.value)) out.valueInclude = true;
+        if (arg.kind === 'Identifier' && INCLUDERS.has(arg.value)) {
+          out.valueInclude = true;
+          if (!quoted) out.live = true;
+        }
   });
 }
 // An include of a computed path (`include(f)`, `foreach(include, files)`) reaches the
@@ -331,16 +363,20 @@ function collect(root, file, out, outer = null) {
 // mentions of their own.
 function settle(out, file) {
   if (out.unknownInclude || out.valueInclude) {
-    if (out.listed.length)
-      for (const pieces of out.listed) {
-        const m = matcher(pieces, file);
-        if (m.pattern) out.patterns.add(m.pattern);
-      }
-    else if (out.unknownInclude) out.patterns.add(matcher([null], file).pattern);
+    const patterns = out.listed.length
+      ? out.listed.map((pieces) => matcher(pieces, file).pattern).filter(Boolean)
+      : out.unknownInclude
+        ? [matcher([null], file).pattern]
+        : [];
+    for (const p of patterns) {
+      out.patterns.add(p);
+      if (out.live) out.computed.add(p);
+    }
   }
   delete out.listed;
   delete out.unknownInclude;
   delete out.valueInclude;
+  delete out.live;
   return out;
 }
 
@@ -395,7 +431,11 @@ function ciFiles(dir) {
   return { root, files };
 }
 // The `.jl` files of a package directory, without nested packages or hidden directories.
-function packageFiles(dir, root = dir, out = { files: [], runners: [], dirs: new Map() }) {
+function packageFiles(
+  dir,
+  root = dir,
+  out = { files: [], runners: [], nested: [], dirs: new Map() },
+) {
   out.dirs.set(dir, mtime(dir));
   let entries;
   try {
@@ -407,7 +447,10 @@ function packageFiles(dir, root = dir, out = { files: [], runners: [], dirs: new
     if (e.name.startsWith('.') || e.name === 'node_modules') continue;
     const path = join(dir, e.name);
     if (e.isDirectory()) {
-      if (packageFor(join(path, 'x.jl'))?.dir === path) continue;
+      if (packageFor(join(path, 'x.jl'))?.dir === path) {
+        out.nested.push(packageFor(join(path, 'x.jl')));
+        continue;
+      }
       packageFiles(path, root, out);
     } else if (e.name.endsWith('.jl')) out.files.push(path);
     else if (RUNNER.test(e.name)) out.runners.push(path);
@@ -439,16 +482,18 @@ export function reachable(pkg, options) {
     return cached.value;
   const listing = packageFiles(pkg.dir);
   const rel = (f) => posix(relative(pkg.dir, f));
+  const entriesOf = (p) =>
+    [
+      join(p.dir, 'src', `${p.name}.jl`),
+      join(p.dir, 'test', 'runtests.jl'),
+      ...p.extensions.flatMap((ext) => [
+        join(p.dir, 'ext', `${ext}.jl`),
+        join(p.dir, 'ext', ext, `${ext}.jl`),
+      ]),
+    ].filter((f) => mtime(f));
   const entryRegs = options.entryPoints.map(globRegExp),
     scriptRegs = options.scripts.map(globRegExp);
-  const entries = [
-    join(pkg.dir, 'src', `${pkg.name}.jl`),
-    join(pkg.dir, 'test', 'runtests.jl'),
-    ...pkg.extensions.flatMap((ext) => [
-      join(pkg.dir, 'ext', `${ext}.jl`),
-      join(pkg.dir, 'ext', ext, `${ext}.jl`),
-    ]),
-  ].filter((f) => mtime(f));
+  const entries = entriesOf(pkg);
   const configured = listing.files.filter((f) => entryRegs.some((r) => r.test(rel(f))));
   // Every `runtests.jl` is a test harness (a sub-suite run on its own: `test/trim/runtests.jl`).
   const harnesses = listing.files.filter((f) => basename(f) === 'runtests.jl');
@@ -457,8 +502,19 @@ export function reachable(pkg, options) {
   );
   const versions = new Map(),
     reached = new Set(),
-    queue = [...entries, ...configured, ...harnesses, ...scripts],
+    // A package below this one (a monorepo's `lib/Sub`) may include this one's files
+    // (`include("../../../test/shared/common.jl")`).
+    queue = [
+      ...entries,
+      ...configured,
+      ...harnesses,
+      ...scripts,
+      ...listing.nested.flatMap(entriesOf),
+    ],
     patterns = [];
+  // Its `[extensions]` decide the entry points.
+  const project = join(pkg.dir, 'Project.toml');
+  versions.set(project, mtime(project));
   // Files that CI or a shell script runs by path (`julia --project test/quality.jl`).
   const ci = ciFiles(pkg.dir),
     run = [];
@@ -532,6 +588,13 @@ export function orphan(file, options = {}, text = '') {
   )
     return null;
   if ([...o.entryPoints, ...o.scripts].some((g) => globRegExp(g).test(rel))) return null;
+  // A test harness that names no file (`runtests(Pkg, ARGS)` of a test runner that discovers
+  // the files itself): reachability under `test/` can't be measured.
+  const harness = join(pkg.dir, 'test', 'runtests.jl');
+  if (rel.startsWith('test/') && mtime(harness)) {
+    const named = includesOf(harness);
+    if (!named.unknown && !named.paths.size && !named.patterns.size) return null;
+  }
   const result = reachable(pkg, o);
   // No entry point found: nothing to measure reachability against.
   if (!result.entries.length && !result.configured) return null;

@@ -58,3 +58,6 @@ export function manifestNames(text) {
   }
   return names;
 }
+
+// The Manifests of an environment, in the order Julia 1.13 picks them.
+export const MANIFESTS = ['Manifest-v1.13.toml', 'Manifest.toml'];
