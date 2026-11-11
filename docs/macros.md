@@ -113,3 +113,12 @@ Signatures describe arguments, not expansions: names a macro injects into code a
 (other than through its arguments), definitions generated from computed names, and
 context-dependent nesting (`@series` inside `@recipe`) are not modeled. Package-specific
 DSLs beyond the table may need entries in `settings.julia.macros`.
+
+A head-position name of an unknown macro that nothing defines becomes that macro's binding.
+At module level it is a name of the module, visible to the module's other files too (a DSL
+macro that declares globals in one file and uses them in another). So a misspelled name in
+that position (`@test_opt leaky_name(1)`) also hides reads of the same name elsewhere in the
+module. Describing the macro in `settings.julia.macros` (its arguments as `expr`) removes
+the binding.
+
+`@eval Other code`: the definitions in `code` are also counted in the writing module.

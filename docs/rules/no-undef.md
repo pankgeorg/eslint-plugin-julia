@@ -94,6 +94,13 @@ assignments resolve earlier reads; initialization order belongs to
 no-use-before-define. Module boundaries isolate the unknown-import fallback and
 configured exports, so a using in one nested module cannot silence its sibling.
 
+`using M` brings in the names `M` exports, not the ones it only declares `public`
+(`Base.OneTo`, `Base.Fix1`): those need qualification or `using M: name`. A module that
+evaluates computed code at top level (`eval(make_def(op))`, `@eval $(…)`) gets the narrowed
+check. A test file that its harness includes by a computed path (`for f in readdir(@__DIR__)
+include(f) end`, `include("$name.jl")`) sees the harness's top-level names, at fragment
+confidence, even if it imports its package itself.
+
 This is syntax analysis, not Julia execution. Missing manifests/installations,
 ambiguous installed UUID matches and unsupported import paths retain the
 unknown-module fallback. Macro expansions, generated code, include ordering, eval

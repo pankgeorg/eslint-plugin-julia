@@ -131,6 +131,14 @@ depot, to know which names a package exports. Instantiate the environment first
 (`julia --project -e 'using Pkg; Pkg.instantiate()'`) and set `JULIA_DEPOT_PATH` if you
 use a non-default depot; without it, names from packages are unknown and those rules
 stay quiet about them. See [module-resolution.md](module-resolution.md).
+Package macros the plugin doesn't know can be described with `settings.julia.macros`
+([macros.md](macros.md)). An opt-in, experimental environment resolver can supply sources
+for packages that aren't installed ([environment-resolver.md](environment-resolver.md)).
+
+**Files nothing includes.** `no-orphan-file` reports a package file that no entry point
+(`src/<Name>.jl`, extensions, `test/runtests.jl`) reaches through `include`. Scripts run on
+their own (`docs/`, `bench/`, `examples/`, …) are exempt by default; set the rule's
+`scripts` and `entryPoints` options for others ([no-orphan-file](rules/no-orphan-file.md)).
 
 **Markdown.** To lint ` ```julia ` code blocks in Markdown files, add ESLint's Markdown
 plugin (`npm install --save-dev @eslint/markdown`):
