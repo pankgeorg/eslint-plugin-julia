@@ -57,31 +57,13 @@ async function main(args) {
     if (result.status !== 'ok' || result.report?.status !== true)
       throw new Error(result.report?.error || result.process?.stderr || 'Pkg instantiate failed');
   };
-  try {
-    await instantiate();
-  } catch (error) {
-    if (!args.manifest) throw error;
-    rmSync(manifest, { force: true });
-    await instantiate();
-  }
-  const names = manifestNames(readFileSync(manifest, 'utf8'));
   const packages = Object.create(null),
     roots = new Set();
   const packageRoot = join(depot, 'packages');
   mkdirSync(packageRoot, { recursive: true });
-  for (const [uuid, entry] of Object.entries(backend.locate(target, project))) {
-    if (!entry) continue; // Standard libraries have no source entry in the depot.
-    const name = names.get(uuid);
-    if (!name) throw new Error(`No Manifest name for ${uuid}`);
-    packages[name] = { uuid, entry };
-    const path = relative(packageRoot, entry);
-    const parts = path.split(sep);
-    if (!isAbsolute(path) && parts[0] !== '..' && parts.length >= 3)
-      roots.add(join(packageRoot, parts[0], parts[1]));
-  }
   const stats = {
     seconds: 0,
-    packages: Object.keys(packages).length,
+    packages: 0,
     sourceBytes: 0,
     removedBytes: 0,
     artifactsRemoved: 0,
@@ -105,19 +87,52 @@ async function main(args) {
       }
     }
   }
-  for (const root of roots) prune(root, root);
-  // Pkg also writes cache marker files outside individual package directories.
-  for (const item of readdirSync(packageRoot, { withFileTypes: true }))
-    if (!item.isDirectory()) prune(join(packageRoot, item.name), packageRoot, true);
-  for (const name of ['artifacts', 'clones', 'compiled', 'logs', 'scratchspaces']) {
-    const path = join(depot, name);
-    try {
-      if (name === 'artifacts') stats.artifactsRemoved = readdirSync(path).length;
-      prune(path, path, true);
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
+  // Every package version in the shared depot, not only this environment's: a failed or
+  // interrupted instantiate leaves downloads behind that must not survive as non-source.
+  const pruneDepot = () => {
+    for (const name of readdirSync(packageRoot, { withFileTypes: true }))
+      if (name.isDirectory())
+        for (const slug of readdirSync(join(packageRoot, name.name), { withFileTypes: true }))
+          if (slug.isDirectory()) roots.add(join(packageRoot, name.name, slug.name));
+    for (const root of roots) prune(root, root);
+    // Pkg also writes cache marker files outside individual package directories.
+    for (const item of readdirSync(packageRoot, { withFileTypes: true }))
+      if (!item.isDirectory()) prune(join(packageRoot, item.name), packageRoot, true);
+    for (const name of ['artifacts', 'clones', 'compiled', 'logs', 'scratchspaces']) {
+      const path = join(depot, name);
+      try {
+        if (name === 'artifacts') stats.artifactsRemoved = readdirSync(path).length;
+        prune(path, path, true);
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
     }
+  };
+  try {
+    try {
+      await instantiate();
+    } catch (error) {
+      if (!args.manifest) throw error;
+      rmSync(manifest, { force: true });
+      await instantiate();
+    }
+  } catch (error) {
+    pruneDepot();
+    throw error;
   }
+  const names = manifestNames(readFileSync(manifest, 'utf8'));
+  for (const [uuid, entry] of Object.entries(backend.locate(target, project))) {
+    if (!entry) continue; // Standard libraries have no source entry in the depot.
+    const name = names.get(uuid);
+    if (!name) throw new Error(`No Manifest name for ${uuid}`);
+    packages[name] = { uuid, entry };
+    const path = relative(packageRoot, entry);
+    const parts = path.split(sep);
+    if (!isAbsolute(path) && parts[0] !== '..' && parts.length >= 3)
+      roots.add(join(packageRoot, parts[0], parts[1]));
+  }
+  stats.packages = Object.keys(packages).length;
+  pruneDepot();
   for (const { entry } of Object.values(packages))
     if (!lstatSync(entry).isFile()) throw new Error(`Missing source entry: ${entry}`);
   stats.seconds = (performance.now() - start) / 1000;

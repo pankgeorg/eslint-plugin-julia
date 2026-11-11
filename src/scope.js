@@ -90,6 +90,8 @@ function analyze(source, context, localMacros) {
     imports = [],
     // Macro arguments whose names are not reads (`quote`, `fields`, `symbol`, … roles).
     opaqueMacroArgs = new WeakSet(),
+    // `skip` arguments: not analyzed at all, function bodies inside them included.
+    skippedMacroArgs = new WeakSet(),
     // `$` interpolations in generated code, and the scope they are evaluated in.
     interpolations = new WeakMap(),
     // `@eval M code`: the code node and the module path it is evaluated in.
@@ -592,8 +594,10 @@ function analyze(source, context, localMacros) {
               ? identifierName(c[0].children[1])
               : null);
           const code = c.at(-1);
+          // `Base.eval(ex)`/`Core.eval(ex)` evaluate in Base/Core: only a bare `eval(ex)` or an
+          // explicit `@__MODULE__` target is this module.
           const self =
-            c.length === 2 ||
+            (c.length === 2 && identifierName(c[0]) === 'eval') ||
             (c.length === 3 &&
               c[1]?.kind === 'macrocall' &&
               identifierName(c[1].children[0]) === '@__MODULE__');
@@ -927,6 +931,7 @@ function analyze(source, context, localMacros) {
         // symbol, skip: not checked, but references are kept (so locals read only here
         // still count as read, and `$` interpolations still resolve).
         opaque(arg);
+        if (r === 'skip') skippedMacroArgs.add(arg);
         visit(arg, s, { ...extra, opaque: true, checked: false, skipped: r === 'skip' });
       }
     };
@@ -993,7 +998,7 @@ function analyze(source, context, localMacros) {
               ? `${path(n.children[0])}.${identifierName(n.children[1])}`
               : null);
           const target = path(args[0]);
-          if (target) evalTargets.set(args[1], target);
+          if (target) evalTargets.set(args[1], { path: target, scope: s.module });
         }
         args.forEach((arg, i) => role(arg, args.length === 2 && i === 0 ? 'expr' : 'quote'));
         return;
@@ -1144,6 +1149,7 @@ function analyze(source, context, localMacros) {
     imports,
     globalScope: root,
     opaqueMacroArgs,
+    skippedMacroArgs,
     evalTargets,
     scopeFor: (node) => nodeScopes.get(node),
     referenceFor: (node) =>

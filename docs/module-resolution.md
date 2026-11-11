@@ -14,11 +14,13 @@ Harness scripts in the file's directory or above it, up to the package or reposi
 root, are entries too: `runtests.jl`, and Documenter's `make.jl`/`makedocs.jl`.
 Files outside every include tree that run in someone else's context (a test file that
 doesn't load its package, a package file that doesn't import it, an import-free docs
-snippet) are include fragments: they assume their nearest harness's top level and,
+snippet under a harness) are include fragments: they assume their nearest harness's top level and,
 outside `src/`, `using Package`, and get the narrowed check (see
 [no-undef](rules/no-undef.md)). Other files retain their own context.
 A submodule that its parent fills with computed code (`Core.eval(Sub, ex)`,
 `@eval Sub $ex`) has exports nothing here can list, like a JLL package.
+With an environment resolver, dependencies resolve in the linted file's environment (its
+nearest `Project.toml`), so solved graphs are cached per environment.
 A source-visible, single-parameter macro whose returned quote forwards the
 interpolated parameter directly to `include` is recognized as an include wrapper
 for literal path arguments (for example Pluto's `@timeit_include`). The macro is

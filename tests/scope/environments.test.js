@@ -109,3 +109,28 @@ test('environments: a function resolver is asked once, only for uninstalled pack
   assert.deepEqual(moduleScope(plain, 'P').bareUsing, ['Dep']);
   assert.ok(!existsSync(join(root, 'P/Manifest.toml')));
 });
+
+test('environments: a package graph solved from another environment is not reused', () => {
+  // P depends on Dep, which only the resolver can supply. tools/ has an environment of its
+  // own without Dep; a script there that loads P must not leave P's graph unresolved for P's
+  // own files.
+  const root = tree({
+    'P/Project.toml': `${project('P')}[deps]\nDep = "8f0e7c3a-1111-4222-8333-944455550000"\n`,
+    'P/src/P.jl': 'module P\nusing Dep\nf() = (dep_export, nope)\nend\n',
+    'P/tools/Project.toml': '[deps]\n',
+    'P/tools/script.jl': 'using P\nP.f()\n',
+    'Dep/src/Dep.jl': 'module Dep\nexport dep_export\ndep_export = 1\nend\n',
+  });
+  const settings = {
+    julia: {
+      resolver: (request) =>
+        request.projectFile === join(root, 'P/Project.toml')
+          ? { packages: { Dep: join(root, 'Dep/src/Dep.jl') } }
+          : { packages: {} },
+    },
+  };
+  analyze(join(root, 'P/tools/script.jl'), settings);
+  const m = analyze(join(root, 'P/src/P.jl'), settings);
+  assert.deepEqual(unresolved(m), ['nope']);
+  assert.deepEqual(moduleScope(m, 'P').bareUsing, []);
+});

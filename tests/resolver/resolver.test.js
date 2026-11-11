@@ -72,6 +72,7 @@ function fixture(t, mode = 'ok') {
       for (const [file, text] of Object.entries(files)) {
         const path = join(depot, file); mkdirSync(dirname(path), {recursive:true}); writeFileSync(path, text);
       }
+      if ('${mode}' === 'partial') return {status: 'error', report: {status: false, error: 'failed after downloading'}};
       writeFileSync(join(target.cwd, 'Manifest.toml'), '[[deps.Foo]]\\ndeps = ["Bar"]\\nuuid = "${uuid}"\\n');
       return {status: 'ok', report: {status: true}};
     }
@@ -205,6 +206,19 @@ test('resolver: failures are cached on disk for an hour and forever in process',
   );
 });
 
+test('resolver: a failed instantiate leaves a source-only depot', (t) => {
+  const f = fixture(t, 'partial');
+  assert.equal(f.run(), null);
+  const depot = join(f.settings.julia.cacheDir, 'depot');
+  assert.deepEqual(files(join(depot, 'packages')), [
+    'Foo/AbCdE/JuliaProject.toml',
+    'Foo/AbCdE/Project.toml',
+    'Foo/AbCdE/src/Foo.jl',
+    'Foo/AbCdE/src/nested/child.jl',
+  ]);
+  for (const name of ['artifacts', 'clones', 'compiled', 'logs', 'scratchspaces'])
+    assert.equal(existsSync(join(depot, name)), false, name);
+});
 test('resolver: missing backend, unavailable runtime, exceptions and timeout return null', (t) => {
   for (const mode of ['missing', 'unavailable', 'throw', 'slow']) {
     const f = fixture(t, mode);

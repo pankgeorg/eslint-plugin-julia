@@ -603,6 +603,20 @@ function addFile(graph, file, into, active = new Set()) {
 }
 // Solved graphs depend on the resolver settings of the analysis that built them.
 let variant = '';
+// With an environment resolver, a graph's dependencies resolve in the linted file's
+// environment (its nearest Project.toml): solved graphs are per environment.
+let environmentKey = '';
+function resolverActive(settings) {
+  const j = settings?.julia;
+  if (!j) return false;
+  const r = j.resolver;
+  return typeof r === 'function' || r === 'pkgjl' || (r == null && Boolean(j.pkgjl));
+}
+function nearestProject(file) {
+  for (const dir of upward(file))
+    if (exists(join(dir, 'Project.toml'))) return join(dir, 'Project.toml');
+  return null;
+}
 // The user's macro signatures (`settings.julia.macros`), for dependency and sibling facts.
 let currentMacros;
 const resolverIds = new WeakMap();
@@ -623,7 +637,14 @@ function resolverVariant(settings) {
   ]);
 }
 function graphFor(entries, overlay) {
-  const key = JSON.stringify([entries, depots(), overlay?.file, overlay?.hash, variant]);
+  const key = JSON.stringify([
+    entries,
+    depots(),
+    overlay?.file,
+    overlay?.hash,
+    variant,
+    environmentKey,
+  ]);
   const previous = graphCache.get(key);
   if (previous && [...previous.versions].every(([p, v]) => stamp(p) === v)) return previous;
   const baseEntry = entries.find(
@@ -718,6 +739,7 @@ function findModule(path, from, graph, state) {
         ? findModule(`.${rest.join('.')}`, target.module, graph, state)
         : (stdlibInventory(`${target.key}.${rest.join('.')}`) ?? null);
     }
+    if (at?.dynamicExports) at.unknownExports = true;
     return at ? { exports: at.exports, module: at } : null;
   }
   const name = parts.shift();
@@ -835,10 +857,16 @@ function fragmentOf(file, ownFacts, track) {
     // An unreached file under `src/` belongs inside the package module (or is stale): no
     // `using Package` is assumed for it.
     const inSrc = relative(project.dir, file).split(sep)[0] === 'src';
-    if (!script || snippet) return { project: inSrc ? null : project, harness };
+    // `using Package` is only assumed where the file's environment can load the package:
+    // the package's own, a test environment, or one that lists it.
+    const env = nearestProject(file);
+    const loadable =
+      inTest || !env || dirname(env) === project.dir || toml(env, track).deps.has(project.name);
+    if (!script || snippet) return { project: inSrc || !loadable ? null : project, harness };
     return null;
   }
-  return snippet ? { project: null, harness } : null;
+  // Without a package, only a harness that could run it makes a snippet a fragment.
+  return snippet && harness ? { project: null, harness } : null;
 }
 // The names a fragment's assumed context provides: its harness's top level, and the
 // exports of `using Package`.
@@ -867,6 +895,10 @@ function fragmentContext(fragment, state) {
 }
 export function applyModuleResolution(manager, source, context = {}) {
   variant = resolverVariant(context.settings);
+  environmentKey =
+    resolverActive(context.settings) && !virtual(context.physicalFilename)
+      ? (nearestProject(resolve(context.physicalFilename)) ?? '')
+      : '';
   currentMacros = context.settings?.julia?.macros;
   const file = virtual(context.physicalFilename) ? '<input>' : resolve(context.physicalFilename);
   const ownFacts = facts(source, file);
@@ -931,13 +963,15 @@ export function applyModuleResolution(manager, source, context = {}) {
   for (const s of manager.scopes.filter((s) => s.kind === 'module')) {
     const id = s === manager.globalScope ? -1 : s.node.range[0];
     const models = [...new Set(occurrences.filter((o) => o.id === id).map((o) => o.module))];
-    if (s === manager.globalScope) models.push(...assumed);
-    s.bareUsing = [...new Set(models.flatMap((m) => [...m.unknown]))];
+    // A fragment's assumed context contributes names (and its unknown `using`s), not its
+    // own flags or reads: other rules see only the file's own models.
+    const context = s === manager.globalScope ? assumed : [];
+    s.bareUsing = [...new Set([...models, ...context].flatMap((m) => [...m.unknown]))];
     s.dynamicIncludes = models.some((m) => m.dynamicIncludes);
     s.includeFragment = Boolean(fragment) && s === manager.globalScope;
     s.dynamicDefinitions = models.some((m) => m.dynamicDefinitions);
     manager.moduleResolution.scopes.set(s, models);
-    for (const m of models) {
+    for (const m of [...models, ...context]) {
       if (s === manager.globalScope && m.parent) s.bare = m.bare;
       for (const [name, kind] of m.names) {
         if (kind === 'macro-binding') {
@@ -972,10 +1006,14 @@ export function applyModuleResolution(manager, source, context = {}) {
   }
   // `@eval M code`: the names `M` defines (null when they can't be listed).
   manager.moduleResolution.evalNames = new Map();
-  const top = occurrences.find((o) => o.id === -1)?.module ?? graph.root;
-  for (const [code, path] of manager.evalTargets ?? []) {
-    const local = !path.includes('.') ? top.children.get(path) : null;
-    const target = local ? { module: local } : findModule(path, top, graph, state);
+  for (const [code, { path, scope }] of manager.evalTargets ?? []) {
+    const id = scope === manager.globalScope ? -1 : scope.node.range[0];
+    const from = occurrences.find((o) => o.id === id)?.module ?? graph.root;
+    // A submodule of the enclosing module (or of an outer one) by that name comes first.
+    let local = null;
+    if (!path.includes('.'))
+      for (let at = from; at && !local; at = at.parent) local = at.children.get(path) ?? null;
+    const target = local ? { module: local } : findModule(path, from, graph, state);
     const m = target?.module;
     const listed =
       m &&

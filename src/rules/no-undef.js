@@ -7,6 +7,10 @@ const BODY = new Set(['function', 'macro', '->', 'do']);
 // (`r.checked`); arguments it marks as generated code, symbols or field names are not reads.
 function opaqueRead(reference, source, manager) {
   if (reference.opaque && !reference.checked) return true;
+  // A skipped macro argument (`@test_skip (() -> x)()`) isn't analyzed, bodies included.
+  if (manager.skippedMacroArgs)
+    for (let n = reference.node; n; n = source.getParent(n))
+      if (manager.skippedMacroArgs.has(n)) return true;
   if (reference.checked) return false;
   for (let n = reference.node; n; n = source.getParent(n)) {
     // Written function bodies retain ordinary reads, even inside generated code.
@@ -94,7 +98,11 @@ function injected(scope) {
 function evalTarget(reference, source, manager) {
   const names = manager.moduleResolution?.evalNames;
   if (!names?.size) return undefined;
-  for (let n = reference.node; n; n = source.getParent(n)) if (names.has(n)) return names.get(n);
+  for (let n = reference.node; n; n = source.getParent(n)) {
+    // A `$` interpolation runs where the `@eval` is written, not in `M`.
+    if (n.kind === '$') return undefined;
+    if (names.has(n)) return names.get(n);
+  }
   return undefined;
 }
 // An interpolated name (`"$v!"`) is a value of any length; elsewhere a short name is too

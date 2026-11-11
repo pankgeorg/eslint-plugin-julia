@@ -126,6 +126,11 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     // `@eval M code` runs in `M`.
     'module M; x = 1; end; @eval M g() = x',
     'module M; x = 1; end; @eval M begin g() = x + 1 end',
+    // The module named by `@eval M` is looked up from the enclosing module first.
+    'module M; end\nmodule A\nmodule M\nhelper = 1\nend\n@eval M g() = helper\nend',
+    // A skipped argument is not analyzed, function bodies included.
+    '@test_skip (() -> undefined_x)()',
+    '@test_broken map(x -> x + undefined_y, 1:3) == 1',
   ],
   invalid: [
     {
@@ -242,6 +247,13 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     },
     // `@eval M code` reads `M`'s names: those `M` doesn't define are reported.
     bad('module M; x = 1; end; @eval M g() = x + y_missing', ['y_missing']),
+    // A `$` interpolation runs where `@eval` is written, not in `M`.
+    bad('module M; helper = 1; end\n@eval M g() = $helper', ['helper']),
+    bad('for T in (:A, :B)\n  @eval Base f(::Type{$T}) = $undefined_helper(1)\nend', [
+      'undefined_helper',
+    ]),
+    // `Base.eval(ex)` evaluates in Base, not here.
+    bad('Base.eval(:(const helper_thing = 1))\ng() = helper_thing', ['helper_thing']),
     {
       code: 'import NotLoaded; @eval NotLoaded g() = 1 + mystery_value',
       errors: [

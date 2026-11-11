@@ -61,14 +61,17 @@ helpers share their imports and helpers.
 A file that no entry reaches is an include fragment when its context lies
 elsewhere: a package file that doesn't import the package itself, a test file
 (under `test/` or `tests/`) that doesn't `using` the package itself, and a file
-with no imports and no modules inside an environment (a docs snippet). A
+with no imports and no modules inside an environment that has a harness (a docs
+snippet). A
 fragment is assumed to run after its harness's top level (the nearest
 `runtests.jl`/`make.jl`/`makedocs.jl` above it) and, outside `src/`, after
-`using Package`; what's still unresolved gets the narrowed check (see
+`using Package` (when the file's environment can load it); what's still
+unresolved gets the narrowed check (see
 `fragments`). A test file that loads its package itself, or a script that imports
 it, keeps the full check.
 
-`@eval M code` runs in `M`: a read there resolves against every name `M`
+`@eval M code` runs in `M` (looked up from the module enclosing the `@eval`): a
+read there, except inside a `$` interpolation, resolves against every name `M`
 defines (not only its exports) when `M` is the package, a dependency or a
 submodule whose names can all be listed; otherwise it gets the narrowed check,
 with a message naming `M`.
