@@ -80,7 +80,7 @@ import requireTypedGlobalRule from './rules/require-typed-global.js';
 import useIsnanRule from './rules/use-isnan.js';
 
 const plugin = {
-  meta: { name: 'eslint-plugin-julia', version: `0.2.0+wasm.${manifest.sha256}` },
+  meta: { name: 'eslint-plugin-julia', version: `0.3.0+wasm.${manifest.sha256}` },
   languages: { julia: language },
   rules: {
     'no-collapsible-if': noCollapsibleIfRule,
@@ -167,7 +167,7 @@ const plugin = {
 for (const [name, rule] of Object.entries(plugin.rules))
   rule.meta.docs = {
     ...rule.meta.docs,
-    url: `https://github.com/pankgeorg/eslint-plugin-julia/blob/v0.2.0/docs/rules/${name}.md`,
+    url: `https://github.com/pankgeorg/eslint-plugin-julia/blob/v0.3.0/docs/rules/${name}.md`,
   };
 const config = (rules) => ({
   files: ['**/*.jl'],

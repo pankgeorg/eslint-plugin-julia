@@ -27,7 +27,7 @@ src/stats.jl
 
 ```sh
 npm install --save-dev eslint \
-  https://github.com/pankgeorg/eslint-plugin-julia/releases/download/v0.2.0/eslint-plugin-julia-0.2.0.tgz
+  https://github.com/pankgeorg/eslint-plugin-julia/releases/download/v0.3.0/eslint-plugin-julia-0.3.0.tgz
 ```
 
 ```js

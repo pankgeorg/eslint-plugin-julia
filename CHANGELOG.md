@@ -6,6 +6,34 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-11
+
+`no-undef` is now in `recommended`, and there is a new rule, `no-orphan-file`. On a
+16-repository corpus (4,235 files), `no-undef`'s findings go from 8,969 to 115. An
+independent triage labels 37 of those live bugs, 68 bugs in dead code and 10 false
+positives. Every finding that triage, or the v0.2.0 survey, labelled a real bug is still
+reported (in `strict` at least). #47
+
+### Upgrading from 0.2.0
+
+- `recommended` gains two warning rules, `no-undef` and `no-orphan-file`. A run with
+  `--max-warnings 0` can start failing. To turn one off, set
+  `'julia/no-undef': 'off'` (or `'julia/no-orphan-file': 'off'`) after the preset.
+  - Escape hatches for `no-undef`: `globals`, and `settings.julia.macros` for package
+    macros.
+  - Escape hatches for `no-orphan-file`: `scripts` and `entryPoints`.
+- `strict` sets `no-undef`'s `fragments: "report"`. It also reports names in files whose
+  includer isn't visible, at lower confidence (7,188 findings on the corpus, mostly
+  untriaged).
+- More is reported than before:
+  - `unknownModules: "ignore"` no longer silences a module with an unresolved `using`;
+  - an unresolved bare `import M` no longer makes the module's names unknown;
+  - `using M` no longer brings in names `M` only declares `public` (`OneTo`, `Fix1`).
+- `no-unused-vars` and `no-use-before-define` change too, because macro arguments are now
+  analyzed.
+- `no-orphan-file` reads the package's directories, `.jl` files and CI configuration. Its
+  results depend on the whole package, not only the linted file.
+
 ### Added
 
 - An environment resolver (`settings.julia.resolver`): when a file imports a package that
@@ -42,7 +70,11 @@ All notable changes to this project are documented here. The format follows
   16-repository corpus: 33 files, 32 of which never run (17 test files no harness
   includes). See `docs/rules/no-orphan-file.md`.
 - Export inventories of 112 submodules of Base, Core and the standard libraries
-  (`Base.BinaryPlatforms`, `LinearAlgebra.BLAS`, …).
+  (`Base.BinaryPlatforms`, `LinearAlgebra.BLAS`, …), and `data/public-only.json`: the
+  names that are `public` but not exported, which `using` doesn't bring in.
+- A test file that its harness includes by a computed path (a `readdir` loop,
+  `include("$f.jl")`) sees the harness's top-level names. Computed `eval(ex)` at top level
+  is treated like `@eval $(…)`.
 
 ### Changed
 
@@ -110,6 +142,7 @@ First release, as a GitHub release (not on npm yet).
 - Usage guide (`docs/usage.md`): install from a release or git, CLI, GitHub Actions with
   annotations and code scanning, pre-commit hooks, and editors.
 
-[Unreleased]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pankgeorg/eslint-plugin-julia/releases/tag/v0.1.0
