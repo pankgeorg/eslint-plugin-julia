@@ -22,6 +22,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- `no-undef` is in `recommended`, as a warning. On a 16-repository corpus its findings go
+  from 8,969 to 303.
 - `no-undef` checks macro operands, including string interpolations in logging macros
   (`@info "… $hex …"`, the bug fixed by JuliaLang/Pkg.jl#4909), as the macro's signature
   describes them.
