@@ -45,6 +45,7 @@ const RECOMMENDED = {
   'no-nothing-return-conversion': 'warn',
   'no-debugger': 'warn',
   'no-undef': 'warn',
+  'no-orphan-file': 'warn',
 };
 // strict's options where they differ from recommended: no-undef also reports, at lower
 // confidence, every unresolved read in an include fragment (a file whose includer isn't visible).

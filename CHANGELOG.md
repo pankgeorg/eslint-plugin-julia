@@ -34,6 +34,13 @@ All notable changes to this project are documented here. The format follows
   `@recipe Name`) define their plotting functions; WGLMakie's `@handle`, SymbolicUtils'
   `@number_methods`, Symbolics' `@num_method`, JET's `@analyze_toplevel`.
 - A module's docstring is evaluated inside the module.
+- New rule `no-orphan-file` (in `recommended` as a warning): a package file that no entry
+  point (`src/<Name>.jl`, `ext/`, `test/runtests.jl`, or the `entryPoints` option) reaches
+  through `include` never runs. Files a computed include could reach, scripts (`docs/`,
+  `bench/`, `examples/`, shebang and `ARGS` scripts, files CI runs by path, test items,
+  Pluto notebooks; the `scripts` option) and nested environments are not reported. On the
+  16-repository corpus: 35 files, 32 of which never run (17 test files no harness
+  includes). See `docs/rules/no-orphan-file.md`.
 - Export inventories of 112 submodules of Base, Core and the standard libraries
   (`Base.BinaryPlatforms`, `LinearAlgebra.BLAS`, …).
 
