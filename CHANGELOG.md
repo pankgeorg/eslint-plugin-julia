@@ -22,8 +22,10 @@ All notable changes to this project are documented here. The format follows
   share Documenter's imports.
 - Include fragments assume their context: a test file no include reaches runs after its
   harness's top level and `using Package`; an import-free docs snippet likewise. They get
-  only the narrowed check. New `no-undef` option `fragments: "report"` reports every
-  unresolved read in a fragment, at lower confidence.
+  only the narrowed check in `recommended`. New `no-undef` option `fragments: "report"`
+  (on in `strict`) reports every unresolved read in a fragment, at lower confidence.
+- Generated definitions under a literal prefix (`Symbol(:get_, prop)`) leave only that
+  prefix unknown; a generated `using M: <names(M; all = true)>` imports M's own names.
 - `@eval M code` resolves against every name `M` defines. Literal `eval(:(const x = …))`
   at top level defines `x`. A submodule filled by computed `Core.eval(Sub, ex)` has unknown
   exports.
@@ -38,7 +40,7 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 
 - `no-undef` is in `recommended`, as a warning. On a 16-repository corpus its findings go
-  from 8,969 to 106.
+  from 8,969 to 116 (`recommended`; `strict`, which also reports include fragments in full, 7,189).
 - `no-undef` checks macro operands, including string interpolations in logging macros
   (`@info "… $hex …"`, the bug fixed by JuliaLang/Pkg.jl#4909), as the macro's signature
   describes them.
