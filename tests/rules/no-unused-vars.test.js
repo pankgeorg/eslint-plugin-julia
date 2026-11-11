@@ -6,6 +6,9 @@ const bad = (code, names, options) => ({
 });
 tester.run('no-unused-vars', plugin.rules['no-unused-vars'], {
   valid: [
+    // Generated code (`eval(quote … end)`) and skipped macro options define no locals.
+    'f(ex) = ex; eval(quote let rec = 1; $(f(:x)) end end)',
+    'orig = 1; @analyze_toplevel context = orig begin end',
     'f()=(@gensym x y; (x,y))',
     'f(x, spare)=x',
     'f(x,_spare)=x',

@@ -605,7 +605,14 @@ function analyze(source, context, localMacros) {
             callee === 'eval' &&
             self &&
             code?.kind === 'quote' &&
-            enclosingScope(s).kind === 'module'
+            enclosingScope(s).kind === 'module' &&
+            // Only quoted definitions (`:(const lib = $x)`): other quoted code is data
+            // whose locals the generated code may read.
+            code.children.length === 1 &&
+            ['const', 'global', '=', 'function', 'struct', 'abstract', 'primitive'].includes(
+              (code.children[0].kind === 'parens' ? code.children[0].children[0] : code.children[0])
+                ?.kind,
+            )
           ) {
             s.dynamic = true;
             visit(c[0], s, extra);
@@ -932,7 +939,16 @@ function analyze(source, context, localMacros) {
         // still count as read, and `$` interpolations still resolve).
         opaque(arg);
         if (r === 'skip') skippedMacroArgs.add(arg);
-        visit(arg, s, { ...extra, opaque: true, checked: false, skipped: r === 'skip' });
+        // A skipped `name = value` option (`@analyze_toplevel context = c begin … end`)
+        // defines nothing.
+        const option = r === 'skip' && arg.kind === '=' && identifierName(arg.children[0]) !== null;
+        if (option) mark(arg.children[0], s);
+        visit(option ? arg.children[1] : arg, s, {
+          ...extra,
+          opaque: true,
+          checked: false,
+          skipped: r === 'skip',
+        });
       }
     };
     // `@simd ivdep for …`: a flag, not a variable.

@@ -131,6 +131,7 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     // A skipped argument is not analyzed, function bodies included.
     '@test_skip (() -> undefined_x)()',
     '@test_broken map(x -> x + undefined_y, 1:3) == 1',
+    'orig = 1; @analyze_toplevel context = orig begin undefined_z end',
   ],
   invalid: [
     {
