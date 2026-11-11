@@ -67,15 +67,17 @@ No automatic fix or suggestion: the intended correction requires review. Delete 
 - Entry points are read from disk, not from editor buffers.
 - Paths built at run time by other means (an environment variable, a function's return value whose paths aren't written anywhere) aren't followed.
 - A script kept in `test/` with no run instructions is reported. Add it to `scripts`.
+- A test harness that names no file (a runner that discovers test files itself) leaves `test/` unmeasured.
+- A bare file name (`"Loader.jl"`) reaches a package file of that name when the same file also spells each of its directories (`joinpath(root(), "src", "runner", "Loader.jl")`).
 
-On a 16-repository corpus (4,235 files), the rule reports 35 files. A hand check of every finding found 32 that never run:
+On a 16-repository corpus (4,235 files), the rule reports 33 files. A hand check of every finding found 32 that never run:
 
 - 17 test files no harness includes;
 - 6 source files left out of their package;
 - 6 scratch experiments and prototypes;
 - 3 empty or comment-only stubs.
 
-The other 3 are manual scripts kept in `test/`, with no run instructions. The rule is in `recommended` as a warning.
+The other one is a manual script kept in `test/`, with no run instructions. The rule is in `recommended` as a warning.
 
 ```julia
 # src/Pkg.jl

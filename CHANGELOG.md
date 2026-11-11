@@ -39,7 +39,7 @@ All notable changes to this project are documented here. The format follows
   through `include` never runs. Files a computed include could reach, scripts (`docs/`,
   `bench/`, `examples/`, shebang and `ARGS` scripts, files CI runs by path, test items,
   Pluto notebooks; the `scripts` option) and nested environments are not reported. On the
-  16-repository corpus: 35 files, 32 of which never run (17 test files no harness
+  16-repository corpus: 33 files, 32 of which never run (17 test files no harness
   includes). See `docs/rules/no-orphan-file.md`.
 - Export inventories of 112 submodules of Base, Core and the standard libraries
   (`Base.BinaryPlatforms`, `LinearAlgebra.BLAS`, …).
@@ -47,7 +47,7 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 
 - `no-undef` is in `recommended`, as a warning. On a 16-repository corpus its findings go
-  from 8,969 to 116 (`recommended`; `strict`, which also reports include fragments in full, 7,189).
+  from 8,969 to 115 (`recommended`; `strict`, which also reports include fragments in full, 7,188).
 - `no-undef` checks macro operands, including string interpolations in logging macros
   (`@info "… $hex …"`, the bug fixed by JuliaLang/Pkg.jl#4909), as the macro's signature
   describes them.

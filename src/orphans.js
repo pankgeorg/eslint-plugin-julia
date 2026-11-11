@@ -189,6 +189,10 @@ export function includesOf(file) {
   const value = {
     paths: new Set(),
     patterns: new Set(),
+    // Bare `.jl` file names mentioned, and every literal word (directory names spelled
+    // separately: `joinpath(root(), "src", "runner")`).
+    names: new Set(),
+    words: new Set(),
     // The patterns of computed `include` calls alone (not of paths merely named).
     computed: new Set(),
     unknown: false,
@@ -323,8 +327,14 @@ function collect(root, file, out, outer = null) {
       const pieces = pathPieces(node, file, env);
       if (pieces.every((p) => p !== null)) {
         const text = pieces.join('');
-        if (text.endsWith('.jl')) out.paths.add(resolve(dirname(file), text));
-        else if (JOINERS.has(callee) || /[\\/]/u.test(text)) directory(text);
+        const bare = node.kind === 'string' && !/[\\/]/u.test(text);
+        if (bare) out.words.add(text);
+        if (text.endsWith('.jl')) {
+          out.paths.add(resolve(dirname(file), text));
+          // A bare file name (`joinpath(root(), "src", "runner", "Loader.jl")`) may be a
+          // package file of that name elsewhere.
+          if (bare) out.names.add(text);
+        } else if (JOINERS.has(callee) || /[\\/]/u.test(text)) directory(text);
       } else if (typeof pieces.at(-1) === 'string' && pieces.at(-1).endsWith('.jl')) add(pieces);
     }
     if (DIRECTORY_CALLS.has(callee))
@@ -536,6 +546,14 @@ export function reachable(pkg, options) {
     }
   }
   queue.push(...run);
+  const named = [];
+  // A bare file name reaches a package file of that name when the mentioning file also spells
+  // each directory of its path (`"src", "runner", "Loader.jl"`).
+  const spelled = (f) => {
+    const parts = rel(f).split('/');
+    const dirs = parts.slice(0, -1);
+    return named.some((n) => n.names.has(parts.at(-1)) && dirs.every((d) => n.words.has(d)));
+  };
   const visit = (file) => {
     if (reached.has(file)) return;
     reached.add(file);
@@ -544,12 +562,13 @@ export function reachable(pkg, options) {
     const facts = includesOf(file);
     if (facts.unknown) patterns.push(new RegExp(`^${escape(posix(dirname(file)))}/.*$`, 'u'));
     for (const p of facts.paths) queue.push(p);
+    if (facts.names.size) named.push(facts);
     for (const p of facts.patterns) patterns.push(new RegExp(p, 'u'));
   };
   for (;;) {
     while (queue.length) visit(queue.pop());
     const more = listing.files.filter(
-      (f) => !reached.has(f) && patterns.some((r) => r.test(posix(f))),
+      (f) => !reached.has(f) && (spelled(f) || patterns.some((r) => r.test(posix(f)))),
     );
     if (!more.length) break;
     queue.push(...more);

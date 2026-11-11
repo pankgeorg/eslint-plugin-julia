@@ -301,4 +301,17 @@ describe('no-orphan-file', () => {
       'src/stale.jl',
     ]);
   });
+  it('a bare file name under a computed directory may be any file of that name', async () => {
+    const root = tree({
+      'Project.toml': project('Pkg'),
+      'src/Pkg.jl': 'module Pkg\ninclude("eval/manager.jl")\nend\n',
+      'src/eval/manager.jl': 'loader() = joinpath(root_dir(), "src", "runner", "Loader.jl")\n',
+      'src/runner/Loader.jl': '',
+      'src/runner/Unused.jl': '',
+    });
+    assert.deepEqual(
+      Object.keys(await orphans(root, ['src/runner/Loader.jl', 'src/runner/Unused.jl'])),
+      ['src/runner/Unused.jl'],
+    );
+  });
 });
