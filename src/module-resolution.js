@@ -163,7 +163,7 @@ function packageEntry(name, from, track, state = {}) {
 }
 // The export index of a cached, immutable package source tree: its solved module tree
 // (exports and submodules), so later runs don't parse the package again.
-const INDEX_VERSION = 2;
+const INDEX_VERSION = 3;
 const { version: pluginVersion } = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url)),
 );
@@ -186,6 +186,8 @@ function loadIndex(entry) {
     const m = moduleModel(d.name, parent);
     d.exports.forEach((n) => m.exports.add(n));
     m.unknownExports = Boolean(d.unknownExports);
+    // An index lists exports only, not every name the module defines.
+    m.indexed = true;
     for (const c of d.children) m.children.set(c.name, build(c, m));
     return m;
   };
@@ -199,7 +201,7 @@ function storeIndex(entry, model) {
   const dump = (m) => ({
     name: m.name,
     exports: [...m.exports],
-    unknownExports: m.unknownExports,
+    unknownExports: m.unknownExports || m.dynamicExports,
     children: [...m.children.values()].map(dump),
   });
   try {
@@ -295,6 +297,7 @@ function facts(source, file) {
       unresolvedIncludes: false,
       dynamicIncludes: false,
       dynamicDefinitions: false,
+      dynamicExports: false,
       dynamicEvaluation: false,
     });
   }
@@ -362,8 +365,10 @@ function facts(source, file) {
         if (
           code?.kind === '$' ||
           (code?.kind === 'block' && code.children.some((c) => c.kind === '$'))
-        )
+        ) {
           m.dynamicDefinitions = true;
+          if (node.children.length === 3) evalInto.push([m, identifierName(node.children[1])]);
+        }
         generatedNames(m, node.children.slice(1), source);
       }
       if (head?.kind === 'StrMacroName') m.reads.push(`@${head.value}_str`);
@@ -410,6 +415,15 @@ function facts(source, file) {
       if (['eval', 'include_string'].includes(name)) {
         m.dynamicEvaluation = true;
         generatedNames(m, node.children.slice(1), source);
+        // `Core.eval(Sub, ex)` with computed code: `Sub` gets definitions (and exports)
+        // nothing here can list.
+        const code = node.children.at(-1);
+        if (
+          name === 'eval' &&
+          node.children.length === 3 &&
+          !['quote', 'inert'].includes(code?.kind)
+        )
+          evalInto.push([m, identifierName(node.children[1])]);
       }
       if (name === 'include') {
         // `include` evaluates the file at module scope, also from a `@testset`, `let`, loop
@@ -441,7 +455,15 @@ function facts(source, file) {
     const next = node.kind === 'macrocall' ? [...macros, macro] : macros;
     node.children.forEach((n) => walk(n, next));
   }
+  const evalInto = [];
   walk(source.ast);
+  for (const [m, name] of evalInto) {
+    const target = modules.find((t) => t.parent === m.id && t.name === name);
+    if (target) {
+      target.dynamicDefinitions = true;
+      target.dynamicExports = true;
+    }
+  }
   return modules;
 }
 // The interpolations that name what generated code defines (`@eval $fname(x) = …`,
@@ -528,6 +550,7 @@ function moduleModel(name, parent, bare = false) {
     unresolvedIncludes: false,
     dynamicIncludes: false,
     dynamicDefinitions: false,
+    dynamicExports: false,
     dynamicEvaluation: false,
   };
 }
@@ -556,6 +579,7 @@ function addFile(graph, file, into, active = new Set()) {
     m.unresolvedIncludes ||= fact.unresolvedIncludes;
     m.dynamicIncludes ||= fact.dynamicIncludes;
     m.dynamicDefinitions ||= fact.dynamicDefinitions;
+    m.dynamicExports ||= fact.dynamicExports;
     m.dynamicEvaluation ||= fact.dynamicEvaluation;
     fact.includeMacros.forEach((name) => m.includeMacros.add(name));
     fact.importMacros.forEach((name) => m.importMacros.add(name));
@@ -638,6 +662,9 @@ function entryCandidates(file, context, track) {
     if (parts[0] === 'ext' && parts.length > 2)
       candidates.push([join(project.dir, 'ext', parts[1], `${parts[1]}.jl`)]);
   }
+  // Harness scripts that include the file from a directory above it: `runtests.jl`,
+  // Documenter's `make.jl`/`makedocs.jl`, up to the package or repository root.
+  for (const entry of harnessEntries(file, project, track)) candidates.push([entry]);
   for (const dir of upward(file)) {
     if (basename(dir) === 'base' && exists(join(dir, 'Base.jl'))) {
       candidates.push(
@@ -652,6 +679,19 @@ function entryCandidates(file, context, track) {
       candidates.push([join(dir, 'src', `${basename(dir)}.jl`)]);
   }
   return candidates;
+}
+const HARNESS = ['runtests.jl', 'make.jl', 'makedocs.jl'];
+function harnessEntries(file, project, track) {
+  const entries = [];
+  for (const dir of upward(file)) {
+    for (const name of HARNESS) {
+      const entry = join(dir, name);
+      track.set(entry, stamp(entry));
+      if (entry !== file && exists(entry)) entries.push(entry);
+    }
+    if ((project && dir === project.dir) || exists(join(dir, '.git'))) break;
+  }
+  return entries;
 }
 function findModule(path, from, graph, state) {
   const dots = path.match(/^\.+/u)?.[0].length ?? 0;
@@ -703,7 +743,11 @@ function findModule(path, from, graph, state) {
       storeIndex(entry, at);
     }
   }
-  for (const part of parts) at = at?.children.get(part);
+  for (const part of parts) {
+    at = at?.children.get(part);
+    // A submodule filled by computed code from outside (`Core.eval(Sub, ex)`).
+    if (at?.dynamicExports) at.unknownExports = true;
+  }
   return at ? { exports: at.exports, module: at } : null;
 }
 function stdlibInventory(key) {
@@ -760,6 +804,67 @@ function solve(graph, state) {
   graph.solved = true;
 }
 
+// A file that no entry's include tree reaches but that runs inside another file's context:
+// its includer's imports and definitions are unknown here. Returns the context to assume
+// (the package it belongs to, and the harness that most likely runs it), or null.
+function fragmentOf(file, ownFacts, track) {
+  const project = projectFor(file, track);
+  const top = ownFacts.find((m) => m.id === -1);
+  const own = (imp) =>
+    project && (imp.path === project.name || imp.path.startsWith(`${project.name}.`));
+  const inTest =
+    project &&
+    relative(project.dir, file)
+      .split(sep)
+      .some((part) => part === 'test' || part === 'tests');
+  const harness = harnessEntries(file, project, track)[0] ?? null;
+  // A snippet: no imports and no modules of its own, inside an environment (docs examples,
+  // scripts run by a harness that `include`s them under a computed path).
+  const snippet =
+    ownFacts.length === 1 &&
+    !top?.imports.length &&
+    upward(file).some((dir) => exists(join(dir, 'Project.toml')));
+  if (project && file === join(project.dir, 'src', `${project.name}.jl`)) return null;
+  if (project) {
+    // A package's test file is run by its test harness after `using Package`; a test file
+    // that does `using Package` itself is a script of its own. Elsewhere, any import of the
+    // package marks a script of its own.
+    const script = inTest
+      ? top?.imports.some((imp) => own(imp) && imp.wildcard && imp.kind === 'using')
+      : top?.imports.some(own);
+    // An unreached file under `src/` belongs inside the package module (or is stale): no
+    // `using Package` is assumed for it.
+    const inSrc = relative(project.dir, file).split(sep)[0] === 'src';
+    if (!script || snippet) return { project: inSrc ? null : project, harness };
+    return null;
+  }
+  return snippet ? { project: null, harness } : null;
+}
+// The names a fragment's assumed context provides: its harness's top level, and the
+// exports of `using Package`.
+function fragmentContext(fragment, state) {
+  const models = [];
+  if (fragment.harness) {
+    const harness = graphFor([fragment.harness]);
+    solve(harness, { ...state, file: fragment.harness, active: new Set() });
+    models.push(harness.root);
+  }
+  if (fragment.project) {
+    const m = moduleModel('Main', null);
+    m.imports.push({
+      path: fragment.project.name,
+      kind: 'using',
+      wildcard: true,
+      names: [],
+      sourceNames: [],
+      file: state.file,
+    });
+    const graph = { root: m, files: new Map(), versions: new Map(), entries: [] };
+    solve(graph, { ...state, active: new Set() });
+    models.push(m);
+  }
+  return models;
+}
 export function applyModuleResolution(manager, source, context = {}) {
   variant = resolverVariant(context.settings);
   currentMacros = context.settings?.julia?.macros;
@@ -785,26 +890,13 @@ export function applyModuleResolution(manager, source, context = {}) {
     if (!virtual(file) && factsCache.get(file)?.hash !== overlay.hash)
       graph = graphFor([file], overlay);
     occurrences = graph.files.get(file) ?? [];
-    // A file of a package that no entry's include tree reaches, and that doesn't load the
-    // package itself, is an include fragment: its includer's imports are unknown here.
-    const project = virtual(file) ? null : projectFor(file, discovery);
-    fragment =
-      Boolean(project) &&
-      file !== join(project.dir, 'src', `${project.name}.jl`) &&
-      !ownFacts.some(
-        (m) =>
-          m.id === -1 &&
-          m.imports.some(
-            // Any import of the package itself: a script of its own.
-            (imp) => imp.path === project.name || imp.path.startsWith(`${project.name}.`),
-          ),
-      );
+    fragment = virtual(file) ? null : fragmentOf(file, ownFacts, discovery);
   }
   for (const [p, v] of discovery) graph.versions.set(p, v);
   let environment,
     asked = false;
   const settings = context.settings;
-  solve(graph, {
+  const state = {
     active: new Set(),
     file,
     // Asked lazily: only a package that isn't installed locally starts the resolver.
@@ -828,7 +920,9 @@ export function applyModuleResolution(manager, source, context = {}) {
       }
       return false;
     },
-  });
+  };
+  solve(graph, state);
+  const assumed = fragment ? fragmentContext(fragment, state) : [];
   manager.moduleResolution = {
     entries: graph.entries,
     files: [...graph.files.keys()],
@@ -837,9 +931,10 @@ export function applyModuleResolution(manager, source, context = {}) {
   for (const s of manager.scopes.filter((s) => s.kind === 'module')) {
     const id = s === manager.globalScope ? -1 : s.node.range[0];
     const models = [...new Set(occurrences.filter((o) => o.id === id).map((o) => o.module))];
+    if (s === manager.globalScope) models.push(...assumed);
     s.bareUsing = [...new Set(models.flatMap((m) => [...m.unknown]))];
     s.dynamicIncludes = models.some((m) => m.dynamicIncludes);
-    s.includeFragment = fragment && s === manager.globalScope;
+    s.includeFragment = Boolean(fragment) && s === manager.globalScope;
     s.dynamicDefinitions = models.some((m) => m.dynamicDefinitions);
     manager.moduleResolution.scopes.set(s, models);
     for (const m of models) {
@@ -874,5 +969,27 @@ export function applyModuleResolution(manager, source, context = {}) {
           });
       }
     }
+  }
+  // `@eval M code`: the names `M` defines (null when they can't be listed).
+  manager.moduleResolution.evalNames = new Map();
+  const top = occurrences.find((o) => o.id === -1)?.module ?? graph.root;
+  for (const [code, path] of manager.evalTargets ?? []) {
+    const local = !path.includes('.') ? top.children.get(path) : null;
+    const target = local ? { module: local } : findModule(path, top, graph, state);
+    const m = target?.module;
+    const listed =
+      m &&
+      !m.indexed &&
+      !m.unknownExports &&
+      !m.unknown.size &&
+      !m.dynamicDefinitions &&
+      !m.dynamicIncludes &&
+      !m.unresolvedIncludes;
+    manager.moduleResolution.evalNames.set(code, {
+      path,
+      names: listed
+        ? new Set([...m.names.keys(), ...m.exports, ...m.children.keys(), m.name])
+        : null,
+    });
   }
 }

@@ -92,6 +92,8 @@ function analyze(source, context, localMacros) {
     opaqueMacroArgs = new WeakSet(),
     // `$` interpolations in generated code, and the scope they are evaluated in.
     interpolations = new WeakMap(),
+    // `@eval M code`: the code node and the module path it is evaluated in.
+    evalTargets = new Map(),
     userMacros = context?.settings?.julia?.macros ?? localMacros;
   function scope(kind, node, parent, extra = {}) {
     const s = {
@@ -357,6 +359,14 @@ function analyze(source, context, localMacros) {
           mark(c.at(-1), s);
           return;
         }
+        // A module's docstring is evaluated inside the module (`$(DocStringExtensions.README)`
+        // with DocStringExtensions imported by the module itself).
+        if (c.at(-1)?.kind === 'module') {
+          visit(c.at(-1), s, extra);
+          const inner = scopes.find((x) => x.node === c.at(-1) && x.kind === 'module') ?? s;
+          c.slice(0, -1).forEach((n) => visit(n, inner, extra));
+          return;
+        }
         c.forEach((n) => visit(n, s, extra));
         return;
       case '-->':
@@ -572,6 +582,34 @@ function analyze(source, context, localMacros) {
           mark(c[2], s);
           [c[0], c[1], ...c.slice(3)].forEach((arg) => visit(arg, s, extra));
           return;
+        }
+        // `eval(:(const x = …))`, `Core.eval(@__MODULE__, quote … end)`: literal code, as
+        // with `@eval`.
+        if (node.kind === 'call' && !isInfixCall(node)) {
+          const callee =
+            identifierName(c[0]) ??
+            (c[0]?.kind === '.' && ['Core', 'Base'].includes(identifierName(c[0].children[0]))
+              ? identifierName(c[0].children[1])
+              : null);
+          const code = c.at(-1);
+          const self =
+            c.length === 2 ||
+            (c.length === 3 &&
+              c[1]?.kind === 'macrocall' &&
+              identifierName(c[1].children[0]) === '@__MODULE__');
+          if (
+            callee === 'eval' &&
+            self &&
+            code?.kind === 'quote' &&
+            enclosingScope(s).kind === 'module'
+          ) {
+            s.dynamic = true;
+            visit(c[0], s, extra);
+            if (c.length === 3) visit(c[1], s, extra);
+            mark(code, s);
+            code.children.forEach((n) => evalCode(n, s, extra, true));
+            return;
+          }
         }
         if (
           ['include', 'eval', 'include_string'].includes(identifierName(c[0])) ||
@@ -808,10 +846,42 @@ function analyze(source, context, localMacros) {
     else if (head?.kind === '$') visit(head, s, { ...read, interp: true });
     node.children.slice(1).forEach((n) => visit(n, s, read));
   }
+  // Generated code: names are not read where it is written, except `$` interpolations.
+  // `@eval`/`eval(:(…))` code runs at module scope, where its definitions are kept.
+  function evalCode(arg, s, extra, evaluated) {
+    opaqueMacroArgs.add(arg);
+    const collect = (n, depth) => {
+      if (n.kind === '$') {
+        if (depth === 1) interpolations.set(n, s);
+        else n.children.forEach((child) => collect(child, depth - 1));
+      } else n.children?.forEach((child) => collect(child, depth + (n.kind === 'quote' ? 1 : 0)));
+    };
+    collect(arg, 1);
+    // Only an `@eval` outside functions is visited at module scope: separate `@eval`s in
+    // separate functions shouldn't look like one module-level sequence of definitions.
+    const at = evaluated && enclosingScope(s).kind === 'module' ? s.module : s;
+    visit(arg, at, { ...extra, opaque: true, checked: false, interp: true });
+  }
+  // A name a macro defines in the module without writing it (kept out of `bindings`).
+  function moduleMacroBinding(s, name) {
+    s.module.macroBindings ??= new Map();
+    if (!s.module.macroBindings.has(name))
+      s.module.macroBindings.set(name, {
+        name,
+        kind: 'macro-binding',
+        scope: s.module,
+        definitions: [],
+        references: [],
+        writes: [],
+        constant: false,
+        macro: true,
+      });
+  }
   function macroCall(node, name, s, extra) {
     const args = node.children.slice(1),
       spec = macroSignature(name, userMacros),
-      read = { ...extra, opaque: true, checked: true },
+      // Inside a skipped argument (`@macroexpand @m x`), nested macros' arguments stay unchecked.
+      read = extra.skipped ? { ...extra } : { ...extra, opaque: true, checked: true },
       opaque = (arg) => opaqueMacroArgs.add(arg);
     // An unknown macro used as a statement in a function, with only names and types as
     // arguments (`@unpack_tableau Tab T`), plausibly defines locals the source never writes.
@@ -830,22 +900,8 @@ function analyze(source, context, localMacros) {
       enclosingScope(s).macroInjected = true;
     const role = (arg, r) => {
       if (r === 'expr') visit(arg, s, read);
-      else if (r === 'quote') {
-        opaque(arg);
-        // `@eval` code runs at module scope; its `$` interpolations run here.
-        const collect = (n, depth) => {
-          if (n.kind === '$') {
-            if (depth === 1) interpolations.set(n, s);
-            else n.children.forEach((child) => collect(child, depth - 1));
-          } else
-            n.children?.forEach((child) => collect(child, depth + (n.kind === 'quote' ? 1 : 0)));
-        };
-        collect(arg, 1);
-        // Only an `@eval` outside functions is visited at module scope: separate `@eval`s in
-        // separate functions shouldn't look like one module-level sequence of definitions.
-        const at = spec.form === 'eval' && enclosingScope(s).kind === 'module' ? s.module : s;
-        visit(arg, at, { ...extra, opaque: true, checked: false, interp: true });
-      } else if (r === 'bind' || r === 'maybe')
+      else if (r === 'quote') evalCode(arg, s, extra, spec.form === 'eval');
+      else if (r === 'bind' || r === 'maybe')
         macroHeads(arg, s, r, spec.scope, read, node, true, spec.binding, spec.placeholders);
       else if (r === 'fields') {
         opaque(arg);
@@ -871,7 +927,7 @@ function analyze(source, context, localMacros) {
         // symbol, skip: not checked, but references are kept (so locals read only here
         // still count as read, and `$` interpolations still resolve).
         opaque(arg);
-        visit(arg, s, { ...extra, opaque: true, checked: false });
+        visit(arg, s, { ...extra, opaque: true, checked: false, skipped: r === 'skip' });
       }
     };
     // `@simd ivdep for …`: a flag, not a variable.
@@ -885,23 +941,60 @@ function analyze(source, context, localMacros) {
       args.slice(1).forEach((arg) => role(arg, 'skip'));
       return;
     }
-    // Names the macro defines around its arguments (`plotattributes` in a plot recipe).
-    for (const injected of spec.inject ?? []) {
-      s.module.macroBindings ??= new Map();
-      if (!s.module.macroBindings.has(injected))
-        s.module.macroBindings.set(injected, {
-          name: injected,
-          kind: 'macro-binding',
-          scope: s.module,
-          definitions: [],
-          references: [],
-          writes: [],
-          constant: false,
-          macro: true,
-        });
+    // `@test expr skip=…`/`broken=…`: the expression is expected not to run, or to fail.
+    if (
+      name === '@test' &&
+      args
+        .slice(1)
+        .some((a) => a.kind === '=' && ['skip', 'broken'].includes(identifierName(a.children[0])))
+    ) {
+      role(args[0], 'skip');
+      args.slice(1).forEach((a) => visit(a.kind === '=' ? a.children[1] : a, s, read));
+      return;
     }
+    // Plot-type declarations name the plotting functions they define (`@recipe Violin (x, y)
+    // begin … end` defines `violin` and `violin!`; `@userplot MarginalHist`; `@shorthands
+    // cdensity`).
+    if (spec.form === 'plottype' || (name === '@recipe' && identifierName(args[0]) !== null)) {
+      let head = args[0];
+      if (head?.kind === 'struct') head = head.children[0];
+      if (head?.kind === 'curly') head = head.children[0];
+      const typeName = identifierName(head);
+      if (typeName !== null && /^\p{L}/u.test(typeName)) {
+        const lower = typeName.toLowerCase();
+        const snake = typeName.replace(/(?<=[a-z0-9])([A-Z])/gu, '_$1').toLowerCase();
+        const names = new Set([lower, `${lower}!`, snake, `${snake}!`]);
+        if (typeName !== lower) names.add(typeName);
+        for (const n of names) moduleMacroBinding(s, n);
+      }
+      args.forEach((arg) => role(arg, 'skip'));
+      return;
+    }
+    // `@handle obj.field body`: the accessor's field becomes a variable of the body.
+    if (spec.form === 'accessor') {
+      const [accessor, ...rest] = args;
+      if (accessor?.kind === '.' && identifierName(accessor.children[1]) !== null) {
+        opaque(accessor);
+        visit(accessor.children[0], s, read);
+        macroHead(accessor.children[1], s, 'maybe', spec.scope, node);
+      } else if (accessor) visit(accessor, s, read);
+      rest.forEach((arg) => visit(arg, s, read));
+      return;
+    }
+    // Names the macro defines around its arguments (`plotattributes` in a plot recipe).
+    for (const injected of spec.inject ?? []) moduleMacroBinding(s, injected);
     switch (spec.form) {
       case 'eval':
+        // `@eval M code`: the code runs in module `M` (no-undef resolves it against `M`).
+        if (args.length === 2) {
+          const path = (n) =>
+            identifierName(n) ??
+            (n?.kind === '.' && path(n.children[0])
+              ? `${path(n.children[0])}.${identifierName(n.children[1])}`
+              : null);
+          const target = path(args[0]);
+          if (target) evalTargets.set(args[1], target);
+        }
         args.forEach((arg, i) => role(arg, args.length === 2 && i === 0 ? 'expr' : 'quote'));
         return;
       case 'ccall':
@@ -1051,6 +1144,7 @@ function analyze(source, context, localMacros) {
     imports,
     globalScope: root,
     opaqueMacroArgs,
+    evalTargets,
     scopeFor: (node) => nodeScopes.get(node),
     referenceFor: (node) =>
       nodeReferences.get(node) ??

@@ -224,10 +224,22 @@ test('modules: package test entry shares recursive includes, imports and helpers
   );
   assert.equal(m.lookup('m').kind, 'import');
 });
-test('modules: package tests do not leak into unreachable tests or source files', () => {
-  assert.deepEqual(unresolved(analyze('TestEntry/test/orphan.jl')), ['m', 'test_helper']);
+test('modules: unreached test files assume their harness; source files do not', () => {
+  // A test file no include reaches runs inside the test harness (here, by a macro): it
+  // sees runtests.jl's names, and stays a fragment (only the narrowed check applies).
+  const orphan = analyze('TestEntry/test/orphan.jl');
+  assert.deepEqual(unresolved(orphan), []);
+  assert.equal(orphan.globalScope.includeFragment, true);
   assert.deepEqual(unresolved(analyze('TestEntry/src/orphan.jl')), ['test_helper']);
   assert.deepEqual(unresolved(analyze('TestEntry/test/unknown.jl')), []);
+});
+test('modules: docs harness scripts are entries; docs snippets are fragments', () => {
+  // docs/make.jl includes docs/block.jl, which shares its imports.
+  assert.deepEqual(unresolved(analyze('TestEntry/docs/block.jl')), []);
+  // An import-free snippet nobody includes assumes the harness and `using TestEntry`.
+  const snippet = analyze('TestEntry/docs/src/snippet.jl', 'year; Dates; package_helper; plot');
+  assert.deepEqual(unresolved(snippet), ['plot']);
+  assert.equal(snippet.globalScope.includeFragment, true);
 });
 test('modules: test entry overlays retain the include context', () => {
   assert.deepEqual(

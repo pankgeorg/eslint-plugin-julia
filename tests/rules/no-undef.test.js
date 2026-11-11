@@ -103,6 +103,29 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     'using UnknownModule; f(x) = x + Exported_Constant',
     'using UnknownModule; f(x) = (exported_fn(x); x + exported_fn)',
     'import ..unresolved_function; f() = unresolved_function()',
+    // A module's docstring is evaluated inside the module.
+    '"$(LinearAlgebra.BLAS)"\nmodule M\nimport LinearAlgebra\nend',
+    // Code that is skipped, expanded or expected to fail is not run as written.
+    '@test_skip undefined_name',
+    '@test_broken undefined_name',
+    '@test undefined_name skip=true',
+    '@test undefined_name broken=true',
+    '@macroexpand @testset Undefined_TestSet begin end',
+    // Literal code `eval`ed at module scope defines its names.
+    'eval(:(const lib = 1)); f() = lib',
+    'let path = 1; eval(:(const lazylib = $path)); end; f() = lazylib',
+    // Plot types define their plotting functions.
+    '@shorthands cdensity; cdensity(1); cdensity!(1)',
+    '@userplot MarginalHist; marginalhist(1); marginalhist!(1); MarginalHist',
+    '@userplot struct CornerPlot; args; end; cornerplot(1)',
+    '@recipe Violin (x, y) begin; color = 1; end; violin(1); violin!(1)',
+    '@recipe(ScatterLines, x) do scene; end; scatterlines(1)',
+    // `@handle msg.field body`: the field is a variable of the body.
+    'function f(msg); @handle msg.mousedown begin; mousedown + 1; end; end',
+    'struct Num end; SymbolicUtils.@number_methods(Num, f(a), f(a, b), [+, -])',
+    // `@eval M code` runs in `M`.
+    'module M; x = 1; end; @eval M g() = x',
+    'module M; x = 1; end; @eval M begin g() = x + 1 end',
   ],
   invalid: [
     {
@@ -139,7 +162,7 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     bad('using LinearAlgebra; norm([1,2]); typo()', ['typo'], { unknownModules: 'report' }),
     bad('f()=🐱', ['🐱']),
     bad('include("a.jl"); from_file()', ['from_file']),
-    bad('eval(:(x=1)); x', ['x']),
+    bad('ex = :(x=1); eval(ex); x', ['x']),
     bad('baremodule M; sin(1); end', ['sin']),
     bad('x=1; module M; x; end', ['x']),
     bad('f(a=x,x=1)=a', ['x']),
@@ -187,6 +210,25 @@ tester.run('no-undef', plugin.rules['no-undef'], {
         { messageId: 'undefined', data: { name: 'ab' } },
       ],
     },
+    // A docs snippet: only the narrowed check by default, everything with `fragments: 'report'`.
+    {
+      filename: fileURLToPath(
+        new URL('../fixtures/packages/TestEntry/docs/src/snippet.jl', import.meta.url),
+      ),
+      code: 'plot(scene, x)\nf(x) = x + missing_offset',
+      errors: [{ messageId: 'unresolvedContext', data: { name: 'missing_offset' } }],
+    },
+    {
+      filename: fileURLToPath(
+        new URL('../fixtures/packages/TestEntry/docs/src/snippet.jl', import.meta.url),
+      ),
+      code: 'plot(scene, x)\nf(x) = x + missing_offset',
+      options: [{ fragments: 'report' }],
+      errors: ['plot', 'scene', 'x', 'missing_offset'].map((name) => ({
+        messageId: 'unresolvedContext',
+        data: { name },
+      })),
+    },
     // An unresolved `using` only hides names it could plausibly export.
     {
       code: 'using UnknownModule; f(url) = Timer(2) do t; @info "downloading $url ($hex)"; end',
@@ -198,6 +240,23 @@ tester.run('no-undef', plugin.rules['no-undef'], {
         { messageId: 'unresolvedOnly', data: { name: 'offset_value', module: 'UnknownModule' } },
       ],
     },
+    // `@eval M code` reads `M`'s names: those `M` doesn't define are reported.
+    bad('module M; x = 1; end; @eval M g() = x + y_missing', ['y_missing']),
+    {
+      code: 'import NotLoaded; @eval NotLoaded g() = 1 + mystery_value',
+      errors: [
+        {
+          messageId: 'unresolvedEvalTarget',
+          data: { name: 'mystery_value', module: 'NotLoaded' },
+        },
+      ],
+    },
+    // An interpolated name is a value at any length (`"$v!"` reads `v!`).
+    {
+      code: 'using UnknownModule; fmt(v) = "$v!"',
+      errors: [{ messageId: 'unresolvedOnly', data: { name: 'v!', module: 'UnknownModule' } }],
+    },
+    bad('@test_throws ErrorException undefined_name', ['undefined_name']),
     {
       code: 'using UnknownModule; f(x) = g(x, helper_value)',
       options: [{ unknownModules: 'values' }],

@@ -59,12 +59,16 @@ or `inner` (the last `begin`/`for` argument gets a scope of its own, as `@testse
 `form` selects a handler for shapes roles can't express: `eval` (`@eval [module] code`),
 `kwdef` (field defaults may read earlier fields), `ccall` (`@ccall lib.f(x::Cint)::Cint`:
 `f` is a C symbol; `lib`, arguments and types are read), `deprecate` (`@deprecate old(x)
-new(x)`: `old` is defined globally, only `new` is read) and `doc` (a documented method
-signature is not code).
+new(x)`: `old` is defined globally, only `new` is read), `doc` (a documented method
+signature is not code), `plottype` (`@userplot MarginalHist` and `@shorthands cdensity`
+define `marginalhist`/`marginalhist!` and `cdensity`/`cdensity!`) and `accessor` (`@handle
+msg.mousedown begin … end`: `mousedown` is a variable of the body).
 
 The built-in table (`src/macro-signatures.js`) covers:
 
-- logging, `@test*` and BenchmarkTools macros (`expr`, with keywords);
+- logging, `@test*` and BenchmarkTools macros (`expr`, with keywords); `@test_skip`,
+  `@test_broken`, `@test x skip=…`/`broken=…` and `@macroexpand` (`skip`: not run as
+  written);
 - `@assert`, `@show`, `@time` and the other timing and introspection macros, and the
   pass-through macros (`@inbounds`, `@views`, `@inline`, `@simd`, `@threads`, `@spawn`,
   `@sync`, `@static`, `@atomic`, `@generated`, `@reexport`, …) (`expr`);
@@ -74,7 +78,13 @@ The built-in table (`src/macro-signatures.js`) covers:
 - `@unpack`, `@variables`, `@parameters`, `@constants`, `@syms`, `@named`, `@mtkbuild`
   (`bind`); `@capture` (`pattern`); index notation (`@tensor`, `@tullio`, `@einsum`,
   `@cast`: `skip`); Markdown's `@breaking`/`@trigger` (`decorator`); `@NamedTuple`, `@Kwargs` (`fields`); `@goto`, `@label`
-  (`symbol`); Base.Cartesian's `@nloops`, `@nref`, … (`skip`).
+  (`symbol`); Base.Cartesian's `@nloops`, `@nref`, … (`skip`);
+- plot types: RecipesBase's `@recipe function …` (reads `plotattributes`), Makie's
+  `@recipe Violin (x, y) begin … end` (defines `violin`, `violin!`), `@userplot`,
+  `@shorthands` (`plottype`);
+- package macros seen in the wild: WGLMakie's `@handle` (`accessor`), SymbolicUtils'
+  `@number_methods` and Symbolics' `@num_method` (templates over placeholder names:
+  `skip`), JET's `@analyze_toplevel` (code to analyze: `skip`).
 
 Macros are matched by name, without their module (`Base.@kwdef` is `@kwdef`).
 

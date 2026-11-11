@@ -34,7 +34,8 @@
 // (`@gensym x`, Pluto's `@bind x widget`) instead of macro bindings. A `kw` role applies
 // from the second argument on. Forms: `signature` (`@register_symbolic f(x::Real)` defines the global `f`; its
 // arguments are parameter names), `doc` (a documented signature is not code), `eval` (`@eval [module] code`: the code is
-// `quote`d).
+// `quote`d), `plottype` (`@userplot Name` defines `name` and `name!`), `accessor` (`@m a.b body`
+// makes `b` a variable of `body`).
 
 const EXPR = { rest: 'expr', kw: 'expr' };
 const CODE = { rest: 'expr' };
@@ -64,8 +65,6 @@ const table = {
       '@debug',
       '@logmsg',
       '@test',
-      '@test_broken',
-      '@test_skip',
       '@test_throws',
       '@test_logs',
       '@test_warn',
@@ -101,8 +100,6 @@ const table = {
       '@edit',
       '@less',
       '@functionloc',
-      '@macroexpand',
-      '@macroexpand1',
       '@invoke',
       '@invokelatest',
       '@cfunction',
@@ -226,6 +223,21 @@ const table = {
 };
 // `@isdefined x` asks whether `x` exists: it never reads it.
 table['@isdefined'] = { rest: 'skip' };
+// Code that is expanded, skipped or expected to fail, not run as written.
+for (const m of ['@macroexpand', '@macroexpand1', '@test_skip', '@test_broken'])
+  table[m] = { rest: 'skip' };
+// SymbolicUtils' operator generator: `a`, `b` and `f` in its templates are placeholders.
+table['@number_methods'] = { args: ['expr'], rest: 'skip' };
+// JET's test harness: code to analyze, not code to run.
+table['@analyze_toplevel'] = { rest: 'skip' };
+// Symbolics' `@num_method f (… a … b …) Domain`: the same placeholders.
+table['@num_method'] = { args: ['expr', 'skip'], rest: 'expr' };
+// Plot types (Makie's `@recipe Name (args) begin … end`, RecipesBase's `@userplot`,
+// `@shorthands`) define their plotting functions; see scope.js.
+table['@userplot'] = { form: 'plottype' };
+table['@shorthands'] = { form: 'plottype' };
+// WGLMakie's event handlers: `@handle msg.mousedown begin … end` binds `mousedown`.
+table['@handle'] = { form: 'accessor' };
 
 const normalize = (spec) => (typeof spec === 'string' ? { rest: spec } : spec);
 const cache = new WeakMap();

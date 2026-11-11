@@ -10,7 +10,15 @@ package entry. The package's `test/runtests.jl` is a separate entry: recursively
 included tests inherit its imports, aliases, definitions and sibling helpers. A
 package extension's `ext/<Ext>/<Ext>.jl` is the entry of the files under
 `ext/<Ext>/`.
-Source files and tests outside that include tree retain their own context.
+Harness scripts in the file's directory or above it, up to the package or repository
+root, are entries too: `runtests.jl`, and Documenter's `make.jl`/`makedocs.jl`.
+Files outside every include tree that run in someone else's context (a test file that
+doesn't load its package, a package file that doesn't import it, an import-free docs
+snippet) are include fragments: they assume their nearest harness's top level and,
+outside `src/`, `using Package`, and get the narrowed check (see
+[no-undef](rules/no-undef.md)). Other files retain their own context.
+A submodule that its parent fills with computed code (`Core.eval(Sub, ex)`,
+`@eval Sub $ex`) has exports nothing here can list, like a JLL package.
 A source-visible, single-parameter macro whose returned quote forwards the
 interpolated parameter directly to `include` is recognized as an include wrapper
 for literal path arguments (for example Pluto's `@timeit_include`). The macro is

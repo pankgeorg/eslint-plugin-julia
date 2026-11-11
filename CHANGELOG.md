@@ -17,19 +17,35 @@ All notable changes to this project are documented here. The format follows
 - Macro signatures (`src/macro-signatures.js`, `settings.julia.macros`): which macro
   arguments are reads, which declare names (`@enum`, `@unpack`, `@variables`, …) and which
   are generated code or symbols. See `docs/macros.md`.
+- Harness entries: `runtests.jl`, `make.jl` and `makedocs.jl` in a file's directory or
+  above it (up to the package or repository root) are include-tree entries, so docs helpers
+  share Documenter's imports.
+- Include fragments assume their context: a test file no include reaches runs after its
+  harness's top level and `using Package`; an import-free docs snippet likewise. They get
+  only the narrowed check. New `no-undef` option `fragments: "report"` reports every
+  unresolved read in a fragment, at lower confidence.
+- `@eval M code` resolves against every name `M` defines. Literal `eval(:(const x = …))`
+  at top level defines `x`. A submodule filled by computed `Core.eval(Sub, ex)` has unknown
+  exports.
+- Macro signatures: `@test_skip`, `@test_broken`, `@test … skip=`/`broken=`,
+  `@macroexpand` (not run as written); plot types (`@userplot`, `@shorthands`, Makie's
+  `@recipe Name`) define their plotting functions; WGLMakie's `@handle`, SymbolicUtils'
+  `@number_methods`, Symbolics' `@num_method`, JET's `@analyze_toplevel`.
+- A module's docstring is evaluated inside the module.
 - Export inventories of 112 submodules of Base, Core and the standard libraries
   (`Base.BinaryPlatforms`, `LinearAlgebra.BLAS`, …).
 
 ### Changed
 
 - `no-undef` is in `recommended`, as a warning. On a 16-repository corpus its findings go
-  from 8,969 to 303.
+  from 8,969 to 107.
 - `no-undef` checks macro operands, including string interpolations in logging macros
   (`@info "… $hex …"`, the bug fixed by JuliaLang/Pkg.jl#4909), as the macro's signature
   describes them.
 - `no-undef`'s `unknownModules: "ignore"` no longer silences the whole module: value reads
   inside function bodies of names an unresolved `using` can't plausibly export are still
-  reported, with their own message. New option value `"values"`.
+  reported, with their own message (interpolated names at any length). New option value
+  `"values"`.
 - An unresolved `import M`/`import ..f` binds only the written name; only `using` can bring
   in unknown names. `..M` follows the parent module's `import M`.
 - Package extensions (`ext/<Ext>/<Ext>.jl`) are include-tree entries. A module that

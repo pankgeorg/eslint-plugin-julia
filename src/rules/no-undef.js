@@ -89,6 +89,21 @@ function injected(scope) {
     if (at.macroInjected) return true;
   return false;
 }
+// The module that the `@eval M code` around a reference runs in: `{ path, names }`, with
+// `names` null when the module's names can't be listed; undefined outside such code.
+function evalTarget(reference, source, manager) {
+  const names = manager.moduleResolution?.evalNames;
+  if (!names?.size) return undefined;
+  for (let n = reference.node; n; n = source.getParent(n)) if (names.has(n)) return names.get(n);
+  return undefined;
+}
+// An interpolated name (`"$v!"`) is a value of any length; elsewhere a short name is too
+// likely to be an imported one (`im`, `pi`, `I`).
+function narrowName(reference, source) {
+  if (source.getParent(reference.node)?.kind === 'string')
+    return /^[a-z][A-Za-z0-9_!]*$/u.test(reference.name);
+  return /^[a-z][A-Za-z0-9_!]{2,}$/u.test(reference.name);
+}
 function insideBody(reference) {
   for (let at = reference.scope; at && at.kind !== 'module'; at = at.parent)
     if (at.kind === 'function') return true;
@@ -109,6 +124,7 @@ export default defineRule({
           },
           unknownModules: { enum: ['ignore', 'values', 'report'] },
           unknownGlobals: { enum: ['ignore', 'report'] },
+          fragments: { enum: ['narrow', 'report'] },
         },
         additionalProperties: false,
       },
@@ -121,6 +137,8 @@ export default defineRule({
         '"{{name}}" is not defined in this function or file; it could only come from the file that includes this one (no entry of the package includes it).',
       unresolvedEval:
         '"{{name}}" is not defined in this function or module; it could only be defined by code this module generates with `@eval` under a computed name.',
+      unresolvedEvalTarget:
+        '"{{name}}" is not defined here; this code runs in `{{module}}` (by `@eval {{module}}`), whose names could not all be listed.',
       unresolvedInclude:
         '"{{name}}" is not defined in this function or module; it could only come from a file this module includes at run time or by a computed path.',
     },
@@ -159,21 +177,42 @@ export default defineRule({
             injected(r.scope)
           )
             continue;
+          // `@eval M code` runs in `M`: its names are `M`'s.
+          const target = evalTarget(r, source, m);
+          if (target?.names?.has(r.name)) continue;
           // Module boundaries isolate both known exports and unknown-module fallbacks.
           const wildcards = r.scope.module.bareUsing;
           if (wildcards.some((n) => moduleExports[n]?.includes(r.name))) continue;
-          const unknown = wildcards.filter((n) => !Object.hasOwn(moduleExports, n));
+          const unknown = target ? [] : wildcards.filter((n) => !Object.hasOwn(moduleExports, n));
+          const evaluated = Boolean(target) && !target.names;
           const generated =
-            r.scope.module.dynamicIncludes ||
-            r.scope.module.dynamicDefinitions ||
-            r.scope.module.includeFragment;
+            evaluated ||
+            (!target &&
+              (r.scope.module.dynamicIncludes ||
+                r.scope.module.dynamicDefinitions ||
+                r.scope.module.includeFragment));
+          // `fragments: 'report'`: every unresolved read in a file whose includer isn't
+          // visible, at lower confidence (its own message).
+          if (
+            o.fragments === 'report' &&
+            r.scope.module.includeFragment &&
+            !evaluated &&
+            o.unknownModules !== 'report'
+          ) {
+            context.report({
+              node: r.node,
+              messageId: 'unresolvedContext',
+              data: { name: r.name },
+            });
+            continue;
+          }
           if ((unknown.length || generated) && o.unknownModules !== 'report') {
             // An unresolved `using` could export any name. Only a value read inside a
             // function body of a lowercase, non-trivial name that the module never uses
             // the way imported names are used is reported.
             if (
               !insideBody(r) ||
-              !/^[a-z][A-Za-z0-9_!]{2,}$/u.test(r.name) ||
+              !narrowName(r, source) ||
               !valuePosition(r.node, source, o.unknownModules === 'values') ||
               exportishIn(r.scope.module).has(r.name)
             )
@@ -182,12 +221,14 @@ export default defineRule({
               node: r.node,
               messageId: unknown.length
                 ? 'unresolvedOnly'
-                : r.scope.module.dynamicIncludes
-                  ? 'unresolvedInclude'
-                  : r.scope.module.dynamicDefinitions
-                    ? 'unresolvedEval'
-                    : 'unresolvedContext',
-              data: { name: r.name, module: unknown[0] },
+                : evaluated
+                  ? 'unresolvedEvalTarget'
+                  : r.scope.module.dynamicIncludes
+                    ? 'unresolvedInclude'
+                    : r.scope.module.dynamicDefinitions
+                      ? 'unresolvedEval'
+                      : 'unresolvedContext',
+              data: { name: r.name, module: evaluated ? target.path : unknown[0] },
             });
             continue;
           }
