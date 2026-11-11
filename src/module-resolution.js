@@ -1007,8 +1007,14 @@ function fragmentOf(file, ownFacts, track) {
     const env = nearestProject(file);
     const loadable =
       inTest || !env || dirname(env) === project.dir || toml(env, track).deps.has(project.name);
+    // A script a harness's loop also runs keeps its own imports' treatment: it gets the
+    // harness's names, not the report-everything tier of `fragments: "report"`.
     if (!script || snippet || runner)
-      return { project: inSrc || !loadable ? null : project, harness };
+      return {
+        project: inSrc || !loadable ? null : project,
+        harness,
+        script: Boolean(script && !snippet),
+      };
     return null;
   }
   // Without a package, only a harness that could run it makes a snippet a fragment.
@@ -1115,6 +1121,7 @@ export function applyModuleResolution(manager, source, context = {}) {
     s.bareUsing = [...new Set([...models, ...context].flatMap((m) => [...m.unknown]))];
     s.dynamicIncludes = models.some((m) => m.dynamicIncludes);
     s.includeFragment = Boolean(fragment) && s === manager.globalScope;
+    s.fragmentScript = Boolean(fragment?.script) && s === manager.globalScope;
     s.dynamicDefinitions = models.some((m) => m.dynamicDefinitions);
     s.generatedPrefixes = [
       ...new Set([...models, ...context].flatMap((m) => [...(m.generatedPrefixes ?? [])])),

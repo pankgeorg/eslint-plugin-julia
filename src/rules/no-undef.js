@@ -195,6 +195,7 @@ export default defineRule({
             !r.maybe &&
             (r.binding?.macro || r.binding?.kind === 'macro-binding') &&
             r.scope.module.includeFragment &&
+            !r.scope.module.fragmentScript &&
             !opaqueRead(r, source, m) &&
             !globals.has(r.name)
           ) {
@@ -238,6 +239,7 @@ export default defineRule({
           if (
             o.fragments === 'report' &&
             r.scope.module.includeFragment &&
+            !r.scope.module.fragmentScript &&
             !evaluated &&
             o.unknownModules !== 'report'
           ) {

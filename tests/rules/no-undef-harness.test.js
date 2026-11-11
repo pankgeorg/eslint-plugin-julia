@@ -17,8 +17,8 @@ function tree(files) {
   return root;
 }
 const project = 'name = "Pk"\nuuid = "7b1e0a3e-0000-4000-8000-000000000001"\n';
-async function undef(root, file) {
-  const eslint = engine({ 'julia/no-undef': 'warn' }, { cwd: root });
+async function undef(root, file, options) {
+  const eslint = engine({ 'julia/no-undef': options ? ['warn', options] : 'warn' }, { cwd: root });
   const [result] = await eslint.lintFiles([join(root, file)]);
   return result.messages.map((m) => m.message);
 }
@@ -51,5 +51,14 @@ describe('no-undef: test files a harness includes by a computed path', () => {
     const messages = await undef(root, 'test/t1.jl');
     assert.equal(messages.length, 1);
     assert.match(messages[0], /"not_anywhere" is not defined in this function or file/u);
+  });
+  it('a script the loop runs keeps its own unresolved imports, also in strict', async () => {
+    const root = tree({
+      'Project.toml': project,
+      'src/Pk.jl': 'module Pk\nend\n',
+      'test/runtests.jl': 'for f in readdir(@__DIR__)\n    f == "runtests.jl" || include(f)\nend\n',
+      'test/plots.jl': 'using Pk, NotInstalled\nfig = heatmap(rand(2, 2))\n',
+    });
+    assert.deepEqual(await undef(root, 'test/plots.jl', { fragments: 'report' }), []);
   });
 });
