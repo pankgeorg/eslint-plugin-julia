@@ -9,7 +9,7 @@ Lint Julia code with [ESLint](https://eslint.org).
 - **Julia's own parser.** JuliaSyntax from Julia 1.13.2, compiled to WebAssembly and
   bundled. It parses exactly what Julia parses, and needs no Julia installation, only
   Node.js.
-- **76 rules** for likely bugs (`x == NaN`, a `return` inside `finally`, duplicate
+- **77 rules** for likely bugs (`x == NaN`, a `return` inside `finally`, duplicate
   keyword arguments, unreachable code, …), scope problems (undefined and unused names,
   with `include` and `using` resolved through your Manifest) and performance pitfalls.
   A conservative `recommended` preset, and `strict` for everything.
@@ -27,7 +27,7 @@ src/stats.jl
 
 ```sh
 npm install --save-dev eslint \
-  https://github.com/pankgeorg/eslint-plugin-julia/releases/download/v0.2.0/eslint-plugin-julia-0.2.0.tgz
+  https://github.com/pankgeorg/eslint-plugin-julia/releases/download/v0.3.0/eslint-plugin-julia-0.3.0.tgz
 ```
 
 ```js
@@ -55,7 +55,7 @@ covers the rest:
 | preset                      | what it turns on                                                                                                               |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `julia.configs.recommended` | Likely bugs with near-zero false positives: errors when Julia rejects the code or the check can never be right, else warnings. |
-| `julia.configs.strict`      | `recommended` plus every other rule as a warning (style, performance, scope rules such as `no-undef`).                         |
+| `julia.configs.strict`      | `recommended` plus every other rule as a warning (style, performance, scope rules such as `no-unused-vars`).                   |
 | `julia.configs.style`       | The opt-in style rules only, as warnings; combine with `recommended`.                                                          |
 | `julia.configs.all`         | Every rule as an error.                                                                                                        |
 
@@ -105,6 +105,7 @@ and _Suggestions_ are quick fixes offered in editors.
 | [no-loss-of-float-integer-precision](docs/rules/no-loss-of-float-integer-precision.md) | Off (strict: warn) | None              |
 | [no-nothing-return-conversion](docs/rules/no-nothing-return-conversion.md)             | Warn               | None              |
 | [no-obvious-type-piracy](docs/rules/no-obvious-type-piracy.md)                         | Off (strict: warn) | None              |
+| [no-orphan-file](docs/rules/no-orphan-file.md)                                         | Warn               | None              |
 | [no-overwritten-literal-index](docs/rules/no-overwritten-literal-index.md)             | Off (strict: warn) | None              |
 | [no-reassigned-capture](docs/rules/no-reassigned-capture.md)                           | Off (strict: warn) | None              |
 | [no-redundant-type-assertion](docs/rules/no-redundant-type-assertion.md)               | Off (strict: warn) | Fix               |
@@ -120,7 +121,7 @@ and _Suggestions_ are quick fixes offered in editors.
 | [no-string-growth-in-loop](docs/rules/no-string-growth-in-loop.md)                     | Off (strict: warn) | None              |
 | [no-throw-literal](docs/rules/no-throw-literal.md)                                     | Off (strict: warn) | Suggestions       |
 | [no-unbound-type-parameters](docs/rules/no-unbound-type-parameters.md)                 | Off (strict: warn) | None              |
-| [no-undef](docs/rules/no-undef.md)                                                     | Off (strict: warn) | None              |
+| [no-undef](docs/rules/no-undef.md)                                                     | Warn               | None              |
 | [no-undefined-exports](docs/rules/no-undefined-exports.md)                             | Off (strict: warn) | None              |
 | [no-uninitialized-ref-read](docs/rules/no-uninitialized-ref-read.md)                   | Error              | None              |
 | [no-unreachable](docs/rules/no-unreachable.md)                                         | Error              | None              |

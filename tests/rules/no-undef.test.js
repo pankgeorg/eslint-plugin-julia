@@ -6,6 +6,10 @@ const bad = (code, names, options) => ({
 });
 tester.run('no-undef', plugin.rules['no-undef'], {
   valid: [
+    'using Base: OneTo; f() = (OneTo(3), Base.Fix1(+, 1), Iterators.flatten(1))',
+    // Computed `eval` definitions (Fable S1): names it generates aren't reported.
+    'for op in (:foo, :bar)\n  eval(make_def(op))\nend\nmake_def(op) = :($op() = 1)\nuse() = foo() + bar()',
+    'Core.eval(@__MODULE__, Expr(:(=), :gen, 1)); f() = gen()',
     {
       filename: fileURLToPath(
         new URL('../fixtures/packages/TestEntry/test/nested/leaf.jl', import.meta.url),
@@ -20,8 +24,6 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     'f(widget)=(@bind x widget; x); x',
     'let widget=1; @bind selected widget; end; selected',
     '@bind var"a b" 1; var"a b"',
-    '@dsl [unknown for i in xs]',
-    '@dsl for i in xs; unknown; end',
     '@isdefined(x)',
     'f() = @isdefined(local_name)',
     'using Dates; year(now())',
@@ -45,7 +47,49 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     'f(x)=g(;key=x); g(;key)=key',
     'f(x)=(; key=x)',
     '@enum Shade light dark',
-    '@show x',
+    // Macro signatures: declarations bind, generated code and symbols are not reads.
+    'using LinearAlgebra; @enum Fruit apple pear; apple',
+    '@enum Shade light dark; light',
+    'f(s) = (@unpack a, b = s; a + b)',
+    '@variables t x(t); x + t',
+    'f() = (@variables a b; a * b)',
+    'using JuMP; m = Model(); @variable(m, 0 <= x[i = 1:3] <= 1); @constraint(m, c, sum(x) <= 1); @objective(m, Min, x[1]); c',
+    'f() = (@mydsl a b c; a + b + c)',
+    'f() = (@mydsl y = 1; y)',
+    'Normal() = 1; f(x) = (@mydsl x ~ Normal(); x)',
+    'Base.@kwdef struct P; a::Int = 1; b::Int = a + 1; end',
+    'for name in (:f, :g); @eval $name(x) = x; end',
+    'let; @eval function generated_fn(x); x; end; end; generated_fn(1)',
+    'function f(op); @eval g() = $op; end',
+    '@eval begin; generated_name; end',
+    'const libc = "libc"; f(x) = @ccall libc.strlen(x::Cstring)::Csize_t',
+    'f() = @ccall strlen("a"::Cstring)::Csize_t',
+    'const NT = @NamedTuple{a::Int, b::Float64}',
+    'f() = (@label top; @goto top)',
+    '@deprecate old_api(x) new_api(x); new_api(x) = x; old_api(1)',
+    '@doc "documented" g(x); g(y) = y',
+    'f(ex) = (@capture(ex, h_(args__)) && (h, args))',
+    'f(x) = (@info "value" x key=x; nothing)',
+    'function f(); try; conn = 1; finally; @isdefined(conn) && close(conn); end; end',
+    'f(z) = (@simd ivdep for i in eachindex(z); z[i] = 0; end)',
+    '"Documented signature." g(x)',
+    'm = 1; @constraint(m, [loc in 1:3], loc <= 1)',
+    'x = 1; @test x == Containers.@container(y[j = 1:2; isodd(j)], j)',
+    '@test_throws UndefVarError NotDefinedAnywhere',
+    '@recipe function f(x); plotattributes[:a] = 1; x; end',
+    '@match x begin; Foo(a, b) => a + b; end',
+    '@compiler_options compile=min infer=no',
+    'struct Trio; a; b; c; end; @layer Trio trainable=(a, b)',
+    'f(A, B) = @tensor C[i, k] := A[i, j] * B[j, k]',
+    'f() = ccall((:GlobalFree, "kernel32"), stdcall, Cint, ())',
+    '@breaking true -> function rule(stream); stream; end; const F = [rule]',
+    'function step(tab); @unpack_tableau tab Float64; a21 * c2; end',
+    'mutable struct S; @atomic closed::Bool; "documented" count::Int; end',
+    'cases = []; @testset "$name" for (name, f) in cases; f(name); end',
+    '@testset "$a and $b" for a in xs, b in xs; end; xs = 1',
+    'using RecipesBase: @recipe; @recipe function f(x); seriestype --> :path; xguide := "x"; x; end',
+    'macro recipe(x) end; @recipe function f(x); seriestype --> 1; end',
+    'using RecipesBase; @recipe function f(x); seriestype --> 1; end',
     'quote x; end',
     'x=1; :($x)',
     'var"a b"=1; var"a b"',
@@ -56,6 +100,50 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     },
     { code: 'f()=project_name', options: [{ globals: ['project_name'] }] },
     { code: 'unknown()', options: [{ unknownGlobals: 'ignore' }] },
+    // Names an unresolved `using` could export: calls, types, call arguments, top level.
+    'using UnknownModule; f(x) = exported_fn(x)',
+    'using UnknownModule; f(x::ExportedType) = x',
+    'using UnknownModule; f(x) = g(x, exported_value)',
+    'using UnknownModule; top_level_value + 1',
+    'using UnknownModule; f(x) = x * im',
+    'using UnknownModule; f(x) = x + Exported_Constant',
+    'using UnknownModule; f(x) = (exported_fn(x); x + exported_fn)',
+    'import ..unresolved_function; f() = unresolved_function()',
+    // A module's docstring is evaluated inside the module.
+    '"$(LinearAlgebra.BLAS)"\nmodule M\nimport LinearAlgebra\nend',
+    // Code that is skipped, expanded or expected to fail is not run as written.
+    '@test_skip undefined_name',
+    '@test_broken undefined_name',
+    '@test undefined_name skip=true',
+    '@test undefined_name broken=true',
+    '@macroexpand @testset Undefined_TestSet begin end',
+    // Literal code `eval`ed at module scope defines its names.
+    'eval(:(const lib = 1)); f() = lib',
+    'let path = 1; eval(:(const lazylib = $path)); end; f() = lazylib',
+    // Plot types define their plotting functions.
+    'using RecipesBase: @shorthands; @shorthands cdensity; cdensity(1); cdensity!(1)',
+    'using RecipesBase; @userplot MarginalHist; marginalhist(1); marginalhist!(1); MarginalHist',
+    'macro userplot(x) end; @userplot Corner; corner(1)',
+    'Plots.@userplot Corner; corner(1)',
+    'using RecipesBase: @userplot; @userplot struct CornerPlot; args; end; cornerplot(1)',
+    'using Makie: @recipe; @recipe Violin (x, y) begin; color = 1; end; violin(1); violin!(1)',
+    'using Makie: @recipe; @recipe(ScatterLines, x) do scene; end; scatterlines(1)',
+    // `@handle msg.field body`: the field is a variable of the body.
+    'function f(msg); @handle msg.mousedown begin; mousedown + 1; end; end',
+    'struct Num end; SymbolicUtils.@number_methods(Num, f(a), f(a, b), [+, -])',
+    // `@eval M code` runs in `M`.
+    'module M; x = 1; end; @eval M g() = x',
+    'module M; x = 1; end; @eval M begin g() = x + 1 end',
+    // The module named by `@eval M` is looked up from the enclosing module first.
+    'module M; end\nmodule A\nmodule M\nhelper = 1\nend\n@eval M g() = helper\nend',
+    // A skipped argument is not analyzed, function bodies included.
+    '@test_skip (() -> undefined_x)()',
+    '@test_broken map(x -> x + undefined_y, 1:3) == 1',
+    'orig = 1; @analyze_toplevel context = orig begin undefined_z end',
+    '@enumx Fruit begin\n  "doc"\n  apple\n  banana\nend\nFruit',
+    'Moshi.Data.@data Guess begin\n  Constant(Int)\n  Other(Int)\nend\nConstant(1); Guess',
+    'struct Guess end; Moshi.Derive.@derive Guess[Show, Eq]',
+    '@static if @isdefined(SomePackage)\n  OnlyThere(1)\nend',
   ],
   invalid: [
     {
@@ -64,11 +152,20 @@ tester.run('no-undef', plugin.rules['no-undef'], {
       ),
       ...bad('m.package_helper(); missing_test_helper()', ['missing_test_helper']),
     },
+    // A package file no entry includes, and that doesn't load the package, is an include
+    // fragment: only names its includer can't plausibly supply are reported.
     {
       filename: fileURLToPath(
         new URL('../fixtures/packages/TestEntry/test/orphan.jl', import.meta.url),
       ),
-      ...bad('m; test_helper', ['m', 'test_helper']),
+      code: 'm; test_helper; f(x) = x + missing_offset',
+      errors: [{ messageId: 'unresolvedContext', data: { name: 'missing_offset' } }],
+    },
+    {
+      filename: fileURLToPath(
+        new URL('../fixtures/packages/TestEntry/test/orphan.jl', import.meta.url),
+      ),
+      ...bad('using TestEntry; m; test_helper', ['m', 'test_helper']),
     },
     bad('f()=(@gensym x; x); x', ['x']),
     bad('@gensym x; y', ['y']),
@@ -77,16 +174,20 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     bad('module A; @bind x 1; end; x', ['x']),
     bad('function f(x); x+offest; end', ['offest']),
     bad('f()=missing_helper(1)', ['missing_helper']),
-    bad('using LinearAlgebra; @enum Fruit apple pear; apple', ['apple']),
     bad('module A; using UnknownModule; mystery; end; module B; typo; end', ['typo']),
     bad('module A; using Dates; end; module B; year; end', ['year']),
     bad('using UnknownModule; typo', ['typo'], { unknownModules: 'report' }),
     bad('using LinearAlgebra; norm([1,2]); typo()', ['typo'], { unknownModules: 'report' }),
-    bad('@enum Shade light dark; light', ['light']),
     bad('f()=🐱', ['🐱']),
     bad('include("a.jl"); from_file()', ['from_file']),
-    bad('eval(:(x=1)); x', ['x']),
+    {
+      // Computed `eval` code defines names nothing can list: the narrowed check.
+      code: 'ex = :(x=1); eval(ex); f() = 1 + xyz',
+      errors: [{ messageId: 'unresolvedEval', data: { name: 'xyz' } }],
+    },
     bad('baremodule M; sin(1); end', ['sin']),
+    // Public but not exported (`names(Base)` lists them): `using Base` doesn't bring them in.
+    bad('f() = (OneTo(3), Fix1(+, 1), notnothing(1))', ['OneTo', 'Fix1', 'notnothing']),
     bad('x=1; module M; x; end', ['x']),
     bad('f(a=x,x=1)=a', ['x']),
     bad('f()=(let x=x; x; end)', ['x']),
@@ -97,6 +198,128 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     bad('f()=:(a+$b)', ['b']),
     bad('@inline f(x)=x+unknown', ['unknown']),
     bad('using M; bad()', ['bad'], { moduleExports: { M: ['good'] } }),
+    // Macro operands are reads (Pkg.jl#4909: `$hex` in a logging message).
+    bad('f(url) = Timer(2) do t; @info "downloading $url ($hex)"; end', ['hex']),
+    bad('f() = @warn "x" value=missing_value', ['missing_value']),
+    bad('f(x) = @test x ≈ expected', ['expected']),
+    bad('f() = @show undefined_thing', ['undefined_thing']),
+    bad('f(x) = @inbounds x[idx]', ['idx']),
+    bad('f() = @mydsl g(typo_arg)', ['typo_arg']),
+    bad('f() = @mydsl "$typo_interp"', ['typo_interp']),
+    bad('function f(a); @mylog a; return b + 1; end', ['b']),
+    bad('function step(tab); @unpack_tableau tab g(x); a21; end', ['x', 'a21']),
+    bad('@dsl [unknown for i in xs]', ['unknown', 'xs']),
+    bad('@dsl for i in xs; unknown; end', ['xs', 'unknown']),
+    bad('for n in (:a,); @eval f() = $missing_name; end', ['missing_name']),
+    // A default can read only the fields before it.
+    bad('Base.@kwdef struct Q; a::Int = later; later::Int = 1; b = nothing_here; end', [
+      'later',
+      'nothing_here',
+    ]),
+    bad('f() = @ccall strlen(undefined_arg::Cstring)::Csize_t', ['undefined_arg']),
+    {
+      // A user signature also applies to the module's facts (no maybe-binding for xyz).
+      code: '@foo xyz; f() = xyz + 1',
+      settings: { julia: { macros: { '@foo': 'expr' } } },
+      errors: [
+        { messageId: 'undefined', data: { name: 'xyz' } },
+        { messageId: 'undefined', data: { name: 'xyz' } },
+      ],
+    },
+    {
+      code: 'f() = (@thing ab; ab)',
+      settings: { julia: { macros: { '@thing': 'expr' } } },
+      errors: [
+        { messageId: 'undefined', data: { name: 'ab' } },
+        { messageId: 'undefined', data: { name: 'ab' } },
+      ],
+    },
+    // A docs snippet: only the narrowed check by default, everything with `fragments: 'report'`.
+    {
+      filename: fileURLToPath(
+        new URL('../fixtures/packages/TestEntry/docs/src/snippet.jl', import.meta.url),
+      ),
+      code: 'plot(scene, x)\nf(x) = x + missing_offset',
+      errors: [{ messageId: 'unresolvedContext', data: { name: 'missing_offset' } }],
+    },
+    {
+      filename: fileURLToPath(
+        new URL('../fixtures/packages/TestEntry/docs/src/snippet.jl', import.meta.url),
+      ),
+      code: 'plot(scene, x)\nf(x) = x + missing_offset',
+      options: [{ fragments: 'report' }],
+      errors: ['plot', 'scene', 'x', 'missing_offset'].map((name) => ({
+        messageId: 'unresolvedContext',
+        data: { name },
+      })),
+    },
+    // `fragments: 'report'`: in a fragment, names only a macro binds are reported too.
+    {
+      filename: fileURLToPath(
+        new URL('../fixtures/packages/TestEntry/docs/src/snippet.jl', import.meta.url),
+      ),
+      code: 'function g(p)\n  @extract p (npoints,)\n  return npoints + 1\nend',
+      options: [{ fragments: 'report' }],
+      errors: [{ messageId: 'unresolvedContext', data: { name: 'npoints' } }],
+    },
+    // An unresolved `using` only hides names it could plausibly export.
+    {
+      code: 'using UnknownModule; f(url) = Timer(2) do t; @info "downloading $url ($hex)"; end',
+      errors: [{ messageId: 'unresolvedOnly', data: { name: 'hex', module: 'UnknownModule' } }],
+    },
+    {
+      code: 'using UnknownModule; f(x) = x + offset_value',
+      errors: [
+        { messageId: 'unresolvedOnly', data: { name: 'offset_value', module: 'UnknownModule' } },
+      ],
+    },
+    // `@eval M code` reads `M`'s names: those `M` doesn't define are reported.
+    bad('module M; x = 1; end; @eval M g() = x + y_missing', ['y_missing']),
+    // A `$` interpolation runs where `@eval` is written, not in `M`.
+    bad('module M; helper = 1; end\n@eval M g() = $helper', ['helper']),
+    bad('for T in (:A, :B)\n  @eval Base f(::Type{$T}) = $undefined_helper(1)\nend', [
+      'undefined_helper',
+    ]),
+    // `Base.eval(ex)` evaluates in Base, not here.
+    bad('Base.eval(:(const helper_thing = 1))\ng() = helper_thing', ['helper_thing']),
+    {
+      code: 'import NotLoaded; @eval NotLoaded g() = 1 + mystery_value',
+      errors: [
+        {
+          messageId: 'unresolvedEvalTarget',
+          data: { name: 'mystery_value', module: 'NotLoaded' },
+        },
+      ],
+    },
+    // An interpolated name is a value at any length (`"$v!"` reads `v!`).
+    {
+      code: 'using UnknownModule; fmt(v) = "$v!"',
+      errors: [{ messageId: 'unresolvedOnly', data: { name: 'v!', module: 'UnknownModule' } }],
+    },
+    bad('@test_throws ErrorException undefined_name', ['undefined_name']),
+    // Names generated under a literal prefix (`Symbol(:get_, p)`) leave only that prefix
+    // unknown: the module is otherwise checked in full.
+    bad(
+      'PROPS = [:a, :b]\nfor p in PROPS\n  fname = Symbol(:get_, p)\n  @eval $fname(x) = x\nend\nf() = (get_a(1), get_b(2), helper_missing())',
+      ['helper_missing'],
+    ),
+    // The theme function of `@recipe(Name) do scene … end` is ordinary code.
+    bad('using Makie: @recipe\n@recipe(RoundedRect) do scene\n  undefined_theme()\nend', [
+      'undefined_theme',
+    ]),
+    // Without `@recipe`, `markersize --> 50` is an ordinary call that reads `markersize`.
+    bad('module M\nusing LinearAlgebra\n@recipe function f(x)\n  markersize --> 50\nend\nend', [
+      'markersize',
+    ]),
+    // A plot type declared with a macro this (fully known) module doesn't have defines nothing.
+    bad('module PkgDeps\nusing LinearAlgebra\n@userplot DepsGraph\nf() = depsgraph(1)\nend', [
+      'depsgraph',
+    ]),
+    {
+      code: 'using UnknownModule; f(x) = g(x, helper_value)',
+      options: [{ unknownModules: 'values' }],
+      errors: [{ messageId: 'unresolvedOnly' }],
+    },
   ],
 });
 

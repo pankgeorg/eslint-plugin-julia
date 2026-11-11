@@ -6,6 +6,8 @@ const bad = (code, names, options) => ({
 });
 tester.run('no-undefined-exports', plugin.rules['no-undefined-exports'], {
   valid: [
+    // `@enum` defines its type and instances (macro signature table).
+    '@enum Color red; export Color, red',
     '@data Shape begin export Circle; Circle(); end',
     '@eval module M; export generated; end',
     'export f; function f end',
@@ -31,7 +33,6 @@ tester.run('no-undefined-exports', plugin.rules['no-undefined-exports'], {
     bad('module M; export helper; module Inner; helper()=1; end; end', ['helper']),
     bad('public 🐱', ['🐱']),
     bad('export var"a b"', ['a b']),
-    bad('@enum Color red; export red', ['red']),
     bad('baremodule M; export sin; end', ['sin']),
     bad('module M; include("a.jl"); export x; end', ['x'], { includes: 'report' }),
     bad('using M; export x', ['x'], { unknownModules: 'report' }),

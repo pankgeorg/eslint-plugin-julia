@@ -82,6 +82,7 @@ Installing the package never builds anything.
 
 1. Update `version` in `package.json` and add the section to `CHANGELOG.md`.
 2. Run `node scripts/gen-registry.mjs`: rule documentation links point at the version tag.
+   Update the install URLs in `README.md` and `docs/usage.md`.
 3. Merge to `main` with CI green.
 4. Tag the merge, `git tag v<version> && git push origin v<version>`.
 5. Run `npm pack`, then `gh release create v<version> eslint-plugin-julia-<version>.tgz`

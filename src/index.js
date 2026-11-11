@@ -32,6 +32,7 @@ import noIsdefinedLocalCallRule from './rules/no-isdefined-local-call.js';
 import noLossOfFloatIntegerPrecisionRule from './rules/no-loss-of-float-integer-precision.js';
 import noNothingReturnConversionRule from './rules/no-nothing-return-conversion.js';
 import noObviousTypePiracyRule from './rules/no-obvious-type-piracy.js';
+import noOrphanFileRule from './rules/no-orphan-file.js';
 import noOverwrittenLiteralIndexRule from './rules/no-overwritten-literal-index.js';
 import noReassignedCaptureRule from './rules/no-reassigned-capture.js';
 import noRedundantTypeAssertionRule from './rules/no-redundant-type-assertion.js';
@@ -79,7 +80,7 @@ import requireTypedGlobalRule from './rules/require-typed-global.js';
 import useIsnanRule from './rules/use-isnan.js';
 
 const plugin = {
-  meta: { name: 'eslint-plugin-julia', version: `0.2.0+wasm.${manifest.sha256}` },
+  meta: { name: 'eslint-plugin-julia', version: `0.3.0+wasm.${manifest.sha256}` },
   languages: { julia: language },
   rules: {
     'no-collapsible-if': noCollapsibleIfRule,
@@ -113,6 +114,7 @@ const plugin = {
     'no-loss-of-float-integer-precision': noLossOfFloatIntegerPrecisionRule,
     'no-nothing-return-conversion': noNothingReturnConversionRule,
     'no-obvious-type-piracy': noObviousTypePiracyRule,
+    'no-orphan-file': noOrphanFileRule,
     'no-overwritten-literal-index': noOverwrittenLiteralIndexRule,
     'no-reassigned-capture': noReassignedCaptureRule,
     'no-redundant-type-assertion': noRedundantTypeAssertionRule,
@@ -165,7 +167,7 @@ const plugin = {
 for (const [name, rule] of Object.entries(plugin.rules))
   rule.meta.docs = {
     ...rule.meta.docs,
-    url: `https://github.com/pankgeorg/eslint-plugin-julia/blob/v0.2.0/docs/rules/${name}.md`,
+    url: `https://github.com/pankgeorg/eslint-plugin-julia/blob/v0.3.0/docs/rules/${name}.md`,
   };
 const config = (rules) => ({
   files: ['**/*.jl'],
@@ -198,6 +200,8 @@ const RECOMMENDED = {
   'no-duplicate-dict-keys': 'warn',
   'no-nothing-return-conversion': 'warn',
   'no-debugger': 'warn',
+  'no-undef': 'warn',
+  'no-orphan-file': 'warn',
 };
 plugin.configs.recommended = config(
   Object.fromEntries(Object.entries(RECOMMENDED).map(([n, level]) => [`julia/${n}`, level])),
@@ -209,9 +213,10 @@ plugin.configs.style = config({
 });
 // strict: recommended plus every other rule as a warning (style, policy and the scope rules that
 // need a complete environment: no-undef, no-unused-vars, …).
+const STRICT = { 'no-undef': ['warn', { fragments: 'report' }] };
 plugin.configs.strict = config(
   Object.fromEntries(
-    Object.keys(plugin.rules).map((n) => [`julia/${n}`, RECOMMENDED[n] ?? 'warn']),
+    Object.keys(plugin.rules).map((n) => [`julia/${n}`, STRICT[n] ?? RECOMMENDED[n] ?? 'warn']),
   ),
 );
 plugin.configs.all = config(

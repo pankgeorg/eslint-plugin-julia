@@ -44,6 +44,13 @@ const RECOMMENDED = {
   'no-duplicate-dict-keys': 'warn',
   'no-nothing-return-conversion': 'warn',
   'no-debugger': 'warn',
+  'no-undef': 'warn',
+  'no-orphan-file': 'warn',
+};
+// strict's options where they differ from recommended: no-undef also reports, at lower
+// confidence, every unresolved read in an include fragment (a file whose includer isn't visible).
+const STRICT = {
+  'no-undef': ['warn', { fragments: 'report' }],
 };
 const STYLE = {
   'prefer-identity-nothing': 'warn',
@@ -84,7 +91,8 @@ plugin.configs.style = config(${JSON.stringify(
   .replaceAll(':', ': ')});
 // strict: recommended plus every other rule as a warning (style, policy and the scope rules that
 // need a complete environment: no-undef, no-unused-vars, …).
-plugin.configs.strict = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [\`julia/\${n}\`, RECOMMENDED[n] ?? 'warn'])));
+const STRICT = ${JSON.stringify(STRICT).replaceAll('"', "'")};
+plugin.configs.strict = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [\`julia/\${n}\`, STRICT[n] ?? RECOMMENDED[n] ?? 'warn'])));
 plugin.configs.all = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [\`julia/\${n}\`, 'error'])));
 export default plugin;
 export { JuliaSourceCode } from './source-code.js';
@@ -95,7 +103,7 @@ const tests = readdirSync(new URL('tests/', root))
   .sort()
   .filter((f) => f.endsWith('.test.js'))
   .map((f) => `./${f}`);
-for (const dir of ['rules', 'scope', 'parser', 'integration'])
+for (const dir of ['rules', 'scope', 'parser', 'integration', 'resolver'])
   for (const f of readdirSync(new URL(`tests/${dir}/`, root)).sort())
     if (f.endsWith('.test.js')) tests.push(`./${dir}/${f}`);
 await writeFileSync(
