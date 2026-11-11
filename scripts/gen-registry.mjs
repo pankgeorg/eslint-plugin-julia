@@ -46,6 +46,11 @@ const RECOMMENDED = {
   'no-debugger': 'warn',
   'no-undef': 'warn',
 };
+// strict's options where they differ from recommended: no-undef also reports, at lower
+// confidence, every unresolved read in an include fragment (a file whose includer isn't visible).
+const STRICT = {
+  'no-undef': ['warn', { fragments: 'report' }],
+};
 const STYLE = {
   'prefer-identity-nothing': 'warn',
   'no-empty-catch': 'warn',
@@ -85,7 +90,8 @@ plugin.configs.style = config(${JSON.stringify(
   .replaceAll(':', ': ')});
 // strict: recommended plus every other rule as a warning (style, policy and the scope rules that
 // need a complete environment: no-undef, no-unused-vars, …).
-plugin.configs.strict = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [\`julia/\${n}\`, RECOMMENDED[n] ?? 'warn'])));
+const STRICT = ${JSON.stringify(STRICT).replaceAll('"', "'")};
+plugin.configs.strict = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [\`julia/\${n}\`, STRICT[n] ?? RECOMMENDED[n] ?? 'warn'])));
 plugin.configs.all = config(Object.fromEntries(Object.keys(plugin.rules).map(n => [\`julia/\${n}\`, 'error'])));
 export default plugin;
 export { JuliaSourceCode } from './source-code.js';

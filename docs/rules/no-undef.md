@@ -45,7 +45,8 @@ Options:
 - `fragments: "narrow"` (default): an include fragment (below) gets the narrowed
   check above, with the message "it could only come from the file that includes
   this one". `"report"` reports every unresolved read in a fragment, with that
-  same lower-confidence message; `strict` uses it.
+  same lower-confidence message, and also reads that only a macro binds (whether a
+  fragment's macros exist is as unknown as its includer); `strict` uses it.
 
 These options suppress reports and never invent bindings. Includes with
 literal paths contribute ordinary module names, recursively and cycle-safely.
@@ -70,6 +71,14 @@ unresolved gets the narrowed check (see
 `fragments`). A test file that loads its package itself, or a script that imports
 it, keeps the full check.
 
+Generated definitions under a literal prefix (`fname = Symbol(:get_, prop)` then
+`@eval $fname(sys) = …`) leave only names with that prefix unknown, in the module and
+in modules that import from it, instead of every name. A generated
+`using M: <names(M; all = true)>` imports M's own definitions (not the names M itself
+imports). Where `@recipe` isn't available in a module whose names are all known,
+`markersize --> 50` is an ordinary call and `markersize` a read; likewise a plot type
+declared with an unavailable `@userplot` defines nothing.
+
 `@eval M code` runs in `M` (looked up from the module enclosing the `@eval`): a
 read there, except inside a `$` interpolation, resolves against every name `M`
 defines (not only its exports) when `M` is the package, a dependency or a
@@ -78,7 +87,7 @@ with a message naming `M`.
 
 Macro operands are reads as the macro's signature describes them; see
 [macros](../macros.md) for the built-in table, the rule for unknown macros, and
-`settings.julia.macros`. An `@isdefined` argument is not a read. Quote
+`settings.julia.macros`. An `@isdefined` argument is not a read, and code guarded by an `@isdefined` test (`if @isdefined(M) … end`, `@isdefined(x) && …`) isn't checked: it runs only where more names exist. Quote
 interpolation is executable; literal quoted names are data. Properties, keyword
 labels, named-tuple keys and field declarations are excluded. Later local
 assignments resolve earlier reads; initialization order belongs to

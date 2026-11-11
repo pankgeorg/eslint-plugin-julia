@@ -210,9 +210,10 @@ plugin.configs.style = config({
 });
 // strict: recommended plus every other rule as a warning (style, policy and the scope rules that
 // need a complete environment: no-undef, no-unused-vars, …).
+const STRICT = { 'no-undef': ['warn', { fragments: 'report' }] };
 plugin.configs.strict = config(
   Object.fromEntries(
-    Object.keys(plugin.rules).map((n) => [`julia/${n}`, RECOMMENDED[n] ?? 'warn']),
+    Object.keys(plugin.rules).map((n) => [`julia/${n}`, STRICT[n] ?? RECOMMENDED[n] ?? 'warn']),
   ),
 );
 plugin.configs.all = config(

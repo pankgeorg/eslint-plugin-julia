@@ -83,7 +83,9 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     'mutable struct S; @atomic closed::Bool; "documented" count::Int; end',
     'cases = []; @testset "$name" for (name, f) in cases; f(name); end',
     '@testset "$a and $b" for a in xs, b in xs; end; xs = 1',
-    '@recipe function f(x); seriestype --> :path; xguide := "x"; x; end',
+    'using RecipesBase: @recipe; @recipe function f(x); seriestype --> :path; xguide := "x"; x; end',
+    'macro recipe(x) end; @recipe function f(x); seriestype --> 1; end',
+    'using RecipesBase; @recipe function f(x); seriestype --> 1; end',
     'quote x; end',
     'x=1; :($x)',
     'var"a b"=1; var"a b"',
@@ -115,11 +117,13 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     'eval(:(const lib = 1)); f() = lib',
     'let path = 1; eval(:(const lazylib = $path)); end; f() = lazylib',
     // Plot types define their plotting functions.
-    '@shorthands cdensity; cdensity(1); cdensity!(1)',
-    '@userplot MarginalHist; marginalhist(1); marginalhist!(1); MarginalHist',
-    '@userplot struct CornerPlot; args; end; cornerplot(1)',
-    '@recipe Violin (x, y) begin; color = 1; end; violin(1); violin!(1)',
-    '@recipe(ScatterLines, x) do scene; end; scatterlines(1)',
+    'using RecipesBase: @shorthands; @shorthands cdensity; cdensity(1); cdensity!(1)',
+    'using RecipesBase; @userplot MarginalHist; marginalhist(1); marginalhist!(1); MarginalHist',
+    'macro userplot(x) end; @userplot Corner; corner(1)',
+    'Plots.@userplot Corner; corner(1)',
+    'using RecipesBase: @userplot; @userplot struct CornerPlot; args; end; cornerplot(1)',
+    'using Makie: @recipe; @recipe Violin (x, y) begin; color = 1; end; violin(1); violin!(1)',
+    'using Makie: @recipe; @recipe(ScatterLines, x) do scene; end; scatterlines(1)',
     // `@handle msg.field body`: the field is a variable of the body.
     'function f(msg); @handle msg.mousedown begin; mousedown + 1; end; end',
     'struct Num end; SymbolicUtils.@number_methods(Num, f(a), f(a, b), [+, -])',
@@ -132,6 +136,10 @@ tester.run('no-undef', plugin.rules['no-undef'], {
     '@test_skip (() -> undefined_x)()',
     '@test_broken map(x -> x + undefined_y, 1:3) == 1',
     'orig = 1; @analyze_toplevel context = orig begin undefined_z end',
+    '@enumx Fruit begin\n  "doc"\n  apple\n  banana\nend\nFruit',
+    'Moshi.Data.@data Guess begin\n  Constant(Int)\n  Other(Int)\nend\nConstant(1); Guess',
+    'struct Guess end; Moshi.Derive.@derive Guess[Show, Eq]',
+    '@static if @isdefined(SomePackage)\n  OnlyThere(1)\nend',
   ],
   invalid: [
     {
@@ -235,6 +243,15 @@ tester.run('no-undef', plugin.rules['no-undef'], {
         data: { name },
       })),
     },
+    // `fragments: 'report'`: in a fragment, names only a macro binds are reported too.
+    {
+      filename: fileURLToPath(
+        new URL('../fixtures/packages/TestEntry/docs/src/snippet.jl', import.meta.url),
+      ),
+      code: 'function g(p)\n  @extract p (npoints,)\n  return npoints + 1\nend',
+      options: [{ fragments: 'report' }],
+      errors: [{ messageId: 'unresolvedContext', data: { name: 'npoints' } }],
+    },
     // An unresolved `using` only hides names it could plausibly export.
     {
       code: 'using UnknownModule; f(url) = Timer(2) do t; @info "downloading $url ($hex)"; end',
@@ -270,6 +287,24 @@ tester.run('no-undef', plugin.rules['no-undef'], {
       errors: [{ messageId: 'unresolvedOnly', data: { name: 'v!', module: 'UnknownModule' } }],
     },
     bad('@test_throws ErrorException undefined_name', ['undefined_name']),
+    // Names generated under a literal prefix (`Symbol(:get_, p)`) leave only that prefix
+    // unknown: the module is otherwise checked in full.
+    bad(
+      'PROPS = [:a, :b]\nfor p in PROPS\n  fname = Symbol(:get_, p)\n  @eval $fname(x) = x\nend\nf() = (get_a(1), get_b(2), helper_missing())',
+      ['helper_missing'],
+    ),
+    // The theme function of `@recipe(Name) do scene … end` is ordinary code.
+    bad('using Makie: @recipe\n@recipe(RoundedRect) do scene\n  undefined_theme()\nend', [
+      'undefined_theme',
+    ]),
+    // Without `@recipe`, `markersize --> 50` is an ordinary call that reads `markersize`.
+    bad('module M\nusing LinearAlgebra\n@recipe function f(x)\n  markersize --> 50\nend\nend', [
+      'markersize',
+    ]),
+    // A plot type declared with a macro this (fully known) module doesn't have defines nothing.
+    bad('module PkgDeps\nusing LinearAlgebra\n@userplot DepsGraph\nf() = depsgraph(1)\nend', [
+      'depsgraph',
+    ]),
     {
       code: 'using UnknownModule; f(x) = g(x, helper_value)',
       options: [{ unknownModules: 'values' }],

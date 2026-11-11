@@ -65,12 +65,11 @@ function exportLike(node, source) {
   if (['curly', 'where'].includes(parent.kind)) return true;
   return false;
 }
-// `@isdefined(x) && f(x)`, `if @isdefined(x) … end`: a guarded read.
+// `@isdefined(x) && f(x)`, `if @isdefined(x) … end`: a guarded read. Any `@isdefined`
+// guard counts (`@static if @isdefined(ModelingToolkit) TearingState(sys) end`: the
+// branch is for an environment that has more names).
 function guarded(reference, source) {
-  const isdef = (n) =>
-    n?.kind === 'macrocall' &&
-    identifierName(n.children[0]) === '@isdefined' &&
-    identifierName(n.children[1]) === reference.name;
+  const isdef = (n) => n?.kind === 'macrocall' && identifierName(n.children[0]) === '@isdefined';
   for (
     let at = reference.node, parent = source.getParent(at);
     parent;
@@ -173,7 +172,39 @@ export default defineRule({
           }
           return exportish.get(module);
         };
+        // A module whose names are all known.
+        const known = (module) =>
+          !module.bareUsing.length &&
+          !module.dynamicIncludes &&
+          !module.dynamicDefinitions &&
+          !module.includeFragment;
+        // `markersize --> 50` where `@recipe` isn't available: an ordinary call reading
+        // `markersize`.
+        for (const a of m.recipeAttributes ?? []) {
+          if (!known(a.scope.module) || m.lookup('@recipe', a.scope.module)) continue;
+          if (m.lookup(a.name, a.scope) || globals.has(a.name)) continue;
+          context.report({ node: a.node, messageId: 'undefined', data: { name: a.name } });
+        }
+        const fragmentsReport = o.fragments === 'report' && o.unknownModules !== 'report';
         for (const r of m.references) {
+          // In a fragment, whether its macros exist is unknown too: with `fragments: 'report'`
+          // a name only a macro binds (`@extract p (x,)`, `@recipe(Bezier, …)`) is reported.
+          if (
+            fragmentsReport &&
+            r.read &&
+            !r.maybe &&
+            (r.binding?.macro || r.binding?.kind === 'macro-binding') &&
+            r.scope.module.includeFragment &&
+            !opaqueRead(r, source, m) &&
+            !globals.has(r.name)
+          ) {
+            context.report({
+              node: r.node,
+              messageId: 'unresolvedContext',
+              data: { name: r.name },
+            });
+            continue;
+          }
           if (
             r.binding ||
             !r.read ||
@@ -184,6 +215,9 @@ export default defineRule({
             guarded(r, source) ||
             injected(r.scope)
           )
+            continue;
+          // A name a module generates under a known prefix (`Symbol(:get_, prop)`).
+          if (r.scope.module.generatedPrefixes?.some((prefix) => r.name.startsWith(prefix)))
             continue;
           // `@eval M code` runs in `M`: its names are `M`'s.
           const target = evalTarget(r, source, m);

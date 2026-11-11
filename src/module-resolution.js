@@ -163,7 +163,7 @@ function packageEntry(name, from, track, state = {}) {
 }
 // The export index of a cached, immutable package source tree: its solved module tree
 // (exports and submodules), so later runs don't parse the package again.
-const INDEX_VERSION = 3;
+const INDEX_VERSION = 4;
 const { version: pluginVersion } = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url)),
 );
@@ -188,6 +188,7 @@ function loadIndex(entry) {
     m.unknownExports = Boolean(d.unknownExports);
     // An index lists exports only, not every name the module defines.
     m.indexed = true;
+    (d.generatedPrefixes ?? []).forEach((prefix) => m.generatedPrefixes.add(prefix));
     for (const c of d.children) m.children.set(c.name, build(c, m));
     return m;
   };
@@ -202,6 +203,7 @@ function storeIndex(entry, model) {
     name: m.name,
     exports: [...m.exports],
     unknownExports: m.unknownExports || m.dynamicExports,
+    generatedPrefixes: [...m.generatedPrefixes],
     children: [...m.children.values()].map(dump),
   });
   try {
@@ -299,6 +301,7 @@ function facts(source, file) {
       dynamicDefinitions: false,
       dynamicExports: false,
       dynamicEvaluation: false,
+      generatedPrefixes: [],
     });
   }
   const byId = new Map(modules.map((m) => [m.id, m]));
@@ -362,14 +365,16 @@ function facts(source, file) {
       ) {
         m.dynamicEvaluation = true;
         const code = node.children.at(-1);
-        if (
+        const own = code?.kind === '$' ? namesImport(node, source, m) : null;
+        if (own) m.imports.push({ ...own, file });
+        else if (
           code?.kind === '$' ||
           (code?.kind === 'block' && code.children.some((c) => c.kind === '$'))
         ) {
           m.dynamicDefinitions = true;
           if (node.children.length === 3) evalInto.push([m, identifierName(node.children[1])]);
         }
-        generatedNames(m, node.children.slice(1), source);
+        generatedNames(m, node.children.slice(1), source, node);
       }
       if (head?.kind === 'StrMacroName') m.reads.push(`@${head.value}_str`);
       else if (identifierName(head)) m.reads.push(identifierName(head));
@@ -414,7 +419,7 @@ function facts(source, file) {
         identifierName(head) ?? (head?.kind === '.' ? identifierName(head.children.at(-1)) : null);
       if (['eval', 'include_string'].includes(name)) {
         m.dynamicEvaluation = true;
-        generatedNames(m, node.children.slice(1), source);
+        generatedNames(m, node.children.slice(1), source, node);
         // `Core.eval(Sub, ex)` with computed code: `Sub` gets definitions (and exports)
         // nothing here can list.
         const code = node.children.at(-1);
@@ -466,6 +471,46 @@ function facts(source, file) {
   }
   return modules;
 }
+// `let names = names(M; all = true) … ex = Expr(:using, …) … @eval Mod $ex end`: a generated
+// `using M: <every name M defines>`. `names(M; all = true)` lists M's own definitions, not
+// the names M imports.
+function namesImport(node, source, m) {
+  const call = (n, name) =>
+    n.kind === 'call' &&
+    (identifierName(n.children[0]) === name ||
+      (n.children[0]?.kind === '.' && identifierName(n.children[0].children.at(-1)) === name));
+  for (let at = source.getParent(node); at; at = source.getParent(at)) {
+    if (['module', 'function', 'macro'].includes(at.kind)) return null;
+    if (at.kind !== 'let') continue;
+    let target = null,
+      using = false;
+    const scan = (n) => {
+      if (call(n, 'names') && /\ball\s*=\s*true\b/u.test(source.getText(n)))
+        target ??= textOf(source, n.children[1]);
+      if (
+        call(n, 'Expr') &&
+        n.children[1]?.kind === 'quote' &&
+        identifierName(n.children[1].children[0]) === 'using'
+      )
+        using = true;
+      n.children?.forEach(scan);
+    };
+    scan(at);
+    if (!target || !using || !/^[\p{L}_][\p{L}\p{N}_.!]*$/u.test(target)) return null;
+    const alias = m.imports.find((imp) => imp.alias === target);
+    return {
+      path: alias ? alias.path : target,
+      kind: 'using',
+      alias: null,
+      wildcard: false,
+      ownNames: true,
+      reexport: false,
+      names: [],
+      sourceNames: [],
+    };
+  }
+  return null;
+}
 // The interpolations that name what generated code defines (`@eval $fname(x) = …`,
 // `function $(Symbol(:get_, p))(…)`, `const $name = …`).
 function interpolatedNames(node, out = []) {
@@ -503,10 +548,37 @@ function loopSymbols(interpolation, source) {
   return null;
 }
 // Generated code under interpolated names: literal-loop names are defined, others unknowable.
-function generatedNames(m, args, source) {
+// `fname = Symbol(:get_, prop)` before `@eval $fname(…) = …`: generated names that all start
+// with `get_`. Only names with that prefix are unknown.
+function symbolPrefix(interpolation, source, from) {
+  const variable = identifierName(interpolation.children[0]);
+  if (!variable) return null;
+  for (let at = source.getParent(from); at; at = source.getParent(at)) {
+    if (['module', 'function', 'macro'].includes(at.kind)) return null;
+    if (!['for', 'let', 'block'].includes(at.kind)) continue;
+    for (const statement of at.children) {
+      if (statement.kind !== '=' || identifierName(statement.children[0]) !== variable) continue;
+      const value = statement.children[1];
+      if (value?.kind !== 'call' || identifierName(value.children[0]) !== 'Symbol') return null;
+      const first = value.children[1];
+      const text =
+        first?.kind === 'quote' && first.children.length === 1
+          ? identifierName(first.children[0])
+          : first?.kind === 'string' && first.children.every((c) => c.kind === 'String')
+            ? first.children.map((c) => c.value).join('')
+            : null;
+      // A prefix too short to say anything (`Symbol(:_, x)`) is as good as unknown.
+      return text && text.length >= 3 && value.children.length > 2 ? text : null;
+    }
+  }
+  return null;
+}
+function generatedNames(m, args, source, from) {
   for (const interpolation of args.flatMap((c) => interpolatedNames(c))) {
     const names = loopSymbols(interpolation, source);
+    const prefix = names || !from ? null : symbolPrefix(interpolation, source, from);
     if (names) m.names.push(...names.map((name) => ({ name, kind: 'function' })));
+    else if (prefix) m.generatedPrefixes.push(prefix);
     else m.dynamicDefinitions = true;
   }
 }
@@ -552,6 +624,8 @@ function moduleModel(name, parent, bare = false) {
     dynamicDefinitions: false,
     dynamicExports: false,
     dynamicEvaluation: false,
+    // Generated definitions known only by a prefix (`get_…`), own or brought in by imports.
+    generatedPrefixes: new Set(),
   };
 }
 function addFile(graph, file, into, active = new Set()) {
@@ -580,6 +654,7 @@ function addFile(graph, file, into, active = new Set()) {
     m.dynamicIncludes ||= fact.dynamicIncludes;
     m.dynamicDefinitions ||= fact.dynamicDefinitions;
     m.dynamicExports ||= fact.dynamicExports;
+    fact.generatedPrefixes.forEach((prefix) => m.generatedPrefixes.add(prefix));
     m.dynamicEvaluation ||= fact.dynamicEvaluation;
     fact.includeMacros.forEach((name) => m.includeMacros.add(name));
     fact.importMacros.forEach((name) => m.importMacros.add(name));
@@ -794,19 +869,32 @@ function solve(graph, state) {
       m.unknown.clear();
       for (const imp of m.imports) {
         const target = findModule(imp.path, m, graph, { ...state, file: imp.file });
-        const uncertain = !target || target.module?.unknownExports;
+        const uncertain =
+          !target ||
+          target.module?.unknownExports ||
+          (imp.ownNames && (!target.module || target.module.indexed));
         imp.resolvedExports = uncertain ? undefined : target.exports;
         if (uncertain) {
           // Only `using M` can bring in unknown names: an unresolved `import M`/`import ..f`
           // binds just the written name (and may not even be a module).
-          if (imp.wildcard && imp.kind !== 'import') m.unknown.add(imp.path);
+          if ((imp.wildcard || imp.ownNames) && imp.kind !== 'import') m.unknown.add(imp.path);
           if (imp.reexport && !m.unknownExports) {
             m.unknownExports = true;
             changed = true;
           }
         }
-        if (!target) continue;
-        const names = imp.wildcard ? target.exports : imp.names;
+        if (!target || (uncertain && imp.ownNames)) continue;
+        // A generated name (`get_…`) may be among what's imported.
+        for (const prefix of target.module?.generatedPrefixes ?? [])
+          if (!m.generatedPrefixes.has(prefix)) {
+            m.generatedPrefixes.add(prefix);
+            changed = true;
+          }
+        const names = imp.wildcard
+          ? target.exports
+          : imp.ownNames
+            ? [...target.module.names].filter(([, kind]) => kind !== 'import').map(([n]) => n)
+            : imp.names;
         if (target.module && !imp.wildcard)
           imp.sourceNames.forEach((name) => target.module.reads.add(name));
         for (const name of names) {
@@ -970,6 +1058,9 @@ export function applyModuleResolution(manager, source, context = {}) {
     s.dynamicIncludes = models.some((m) => m.dynamicIncludes);
     s.includeFragment = Boolean(fragment) && s === manager.globalScope;
     s.dynamicDefinitions = models.some((m) => m.dynamicDefinitions);
+    s.generatedPrefixes = [
+      ...new Set([...models, ...context].flatMap((m) => [...(m.generatedPrefixes ?? [])])),
+    ];
     manager.moduleResolution.scopes.set(s, models);
     for (const m of [...models, ...context]) {
       if (s === manager.globalScope && m.parent) s.bare = m.bare;

@@ -96,6 +96,8 @@ function analyze(source, context, localMacros) {
     interpolations = new WeakMap(),
     // `@eval M code`: the code node and the module path it is evaluated in.
     evalTargets = new Map(),
+    // `name --> value` left-hand sides: attribute names inside `@recipe`.
+    recipeAttributes = [],
     userMacros = context?.settings?.julia?.macros ?? localMacros;
   function scope(kind, node, parent, extra = {}) {
     const s = {
@@ -374,7 +376,12 @@ function analyze(source, context, localMacros) {
       case '-->':
       case ':=':
         // Plot-recipe attribute arrows (`seriestype --> :path`, `xguide := "x"`): the
-        // left-hand side names an attribute, not a variable.
+        // left-hand side names an attribute, not a variable. Kept aside: where `@recipe`
+        // isn't available, the arrow is an ordinary call that reads it (see no-undef).
+        if (node.kind === '-->' && identifierName(c[0]) !== null) {
+          mark(c[0], s);
+          recipeAttributes.push({ node: c[0], name: identifierName(c[0]), scope: s });
+        }
         c.slice(1).forEach((n) => visit(n, s, extra));
         return;
       case 'module': {
@@ -874,7 +881,8 @@ function analyze(source, context, localMacros) {
     visit(arg, at, { ...extra, opaque: true, checked: false, interp: true });
   }
   // A name a macro defines in the module without writing it (kept out of `bindings`).
-  function moduleMacroBinding(s, name) {
+  // `via`: the unqualified macro that declares it (dropped where that macro isn't bound).
+  function moduleMacroBinding(s, name, via) {
     s.module.macroBindings ??= new Map();
     if (!s.module.macroBindings.has(name))
       s.module.macroBindings.set(name, {
@@ -886,6 +894,7 @@ function analyze(source, context, localMacros) {
         writes: [],
         constant: false,
         macro: true,
+        ...(via ? { via } : {}),
       });
   }
   function macroCall(node, name, s, extra) {
@@ -986,9 +995,11 @@ function analyze(source, context, localMacros) {
         const snake = typeName.replace(/(?<=[a-z0-9])([A-Z])/gu, '_$1').toLowerCase();
         const names = new Set([lower, `${lower}!`, snake, `${snake}!`]);
         if (typeName !== lower) names.add(typeName);
-        for (const n of names) moduleMacroBinding(s, n);
+        const via = node.children[0]?.kind === '.' ? null : name;
+        for (const n of names) moduleMacroBinding(s, n, via);
       }
-      args.forEach((arg) => role(arg, 'skip'));
+      // `@recipe(Name, args...) do scene … end`: the theme function is ordinary code.
+      args.forEach((arg) => (arg.kind === 'do' ? visit(arg, s, read) : role(arg, 'skip')));
       return;
     }
     // `@handle obj.field body`: the accessor's field becomes a variable of the body.
@@ -1167,6 +1178,7 @@ function analyze(source, context, localMacros) {
     opaqueMacroArgs,
     skippedMacroArgs,
     evalTargets,
+    recipeAttributes,
     scopeFor: (node) => nodeScopes.get(node),
     referenceFor: (node) =>
       nodeReferences.get(node) ??
@@ -1269,6 +1281,15 @@ function analyze(source, context, localMacros) {
   if (context) {
     applyModuleResolution(manager, source, context);
     for (const record of [...definitions, ...references]) owners.set(record.node, manager);
+    // In a module whose names are all known, a plot type declared with a macro the module
+    // doesn't have (`@userplot DepsGraph` without RecipesBase) defines nothing.
+    for (const m of scopes.filter((x) => x.kind === 'module' && x.macroBindings)) {
+      const known =
+        !m.bareUsing.length && !m.dynamicIncludes && !m.dynamicDefinitions && !m.includeFragment;
+      if (!known) continue;
+      for (const [name, b] of m.macroBindings)
+        if (b.via && !m.bindings.has(b.via) && !builtin.has(b.via)) m.macroBindings.delete(name);
+    }
   }
   const resolveReference = (r) => {
     const declaration = r.scope.declarations.get(r.name);

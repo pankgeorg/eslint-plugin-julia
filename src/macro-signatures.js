@@ -228,6 +228,11 @@ for (const m of ['@macroexpand', '@macroexpand1', '@test_skip', '@test_broken'])
   table[m] = { rest: 'skip' };
 // SymbolicUtils' operator generator: `a`, `b` and `f` in its templates are placeholders.
 table['@number_methods'] = { args: ['expr'], rest: 'skip' };
+// Moshi: `@derive T[Show, Eq]` names traits; `@data T begin Variant(Fields) … end` declares
+// a type and its variants. EnumX: `@enumx T begin a; b end` declares T (values are `T.a`).
+table['@derive'] = { rest: 'skip' };
+table['@data'] = { rest: 'bind', scope: 'global' };
+table['@enumx'] = { args: ['bind'], rest: 'skip', scope: 'global' };
 // JET's test harness: code to analyze, not code to run.
 table['@analyze_toplevel'] = { rest: 'skip' };
 // Symbolics' `@num_method f (… a … b …) Domain`: the same placeholders.

@@ -134,3 +134,35 @@ test('environments: a package graph solved from another environment is not reuse
   assert.deepEqual(unresolved(m), ['nope']);
   assert.deepEqual(moduleScope(m, 'P').bareUsing, []);
 });
+
+test("environments: a generated `using M: <names(M; all = true)>` imports M's own names", () => {
+  // `names(M; all = true)` lists what M defines, not what M imports.
+  const root = tree({
+    'P/Project.toml': `${project('P')}[deps]\nDep = "8f0e7c3a-1111-4222-8333-944455550000"\n`,
+    'P/src/P.jl': [
+      'module P',
+      'import Dep as D',
+      'let allnames = names(D; all = true)',
+      '    ex = Expr(:using, Expr(:(:), Expr(:., :Dep)))',
+      '    for n in allnames',
+      '        push!(ex.args[1].args, Expr(:., n))',
+      '    end',
+      '    @eval P $ex',
+      'end',
+      'f() = (own_dep(), imported_by_dep(), nope())',
+      'end',
+    ].join('\n'),
+    'Dep/src/Dep.jl':
+      'module Dep\nusing LinearAlgebra: norm as imported_by_dep\nown_dep() = 1\nend\n',
+  });
+  const settings = {
+    julia: { resolver: () => ({ packages: { Dep: join(root, 'Dep/src/Dep.jl') } }) },
+  };
+  const m = analyze(join(root, 'P/src/P.jl'), settings);
+  assert.deepEqual(
+    unresolved(m).filter((n) => /_dep|nope/u.test(n)),
+    ['imported_by_dep', 'nope'],
+  );
+  assert.deepEqual(moduleScope(m, 'P').bareUsing, []);
+  assert.equal(moduleScope(m, 'P').dynamicDefinitions, false);
+});

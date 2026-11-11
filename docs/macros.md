@@ -84,7 +84,9 @@ The built-in table (`src/macro-signatures.js`) covers:
   `@shorthands` (`plottype`);
 - package macros seen in the wild: WGLMakie's `@handle` (`accessor`), SymbolicUtils'
   `@number_methods` and Symbolics' `@num_method` (templates over placeholder names:
-  `skip`), JET's `@analyze_toplevel` (code to analyze: `skip`).
+  `skip`), JET's `@analyze_toplevel` (code to analyze: `skip`), Moshi's `@data`
+  (declarations) and `@derive` (trait names: `skip`), EnumX's `@enumx` (declares the type;
+  its values are `T.value`).
 
 Macros are matched by name, without their module (`Base.@kwdef` is `@kwdef`).
 
