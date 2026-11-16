@@ -66,7 +66,7 @@ export function getScopeManager(sourceCode, context = {}) {
     typeof context.settings?.julia?.resolver === 'function'
       ? 'function'
       : context.settings?.julia?.resolver,
-    context.settings?.julia?.pkgjl,
+    context.settings?.julia?.pkgResolver,
     context.settings?.julia?.cacheDir,
     process.env.JULIA_DEPOT_PATH,
   ]);

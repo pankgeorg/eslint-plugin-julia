@@ -18,7 +18,7 @@ import { rewritePaths } from './toml.js';
 const memo = new Map(),
   failures = new Set();
 const sleep = new Int32Array(new SharedArrayBuffer(4));
-const child = fileURLToPath(new URL('./pkgjl-child.mjs', import.meta.url));
+const child = fileURLToPath(new URL('./pkg-child.mjs', import.meta.url));
 function cached(envDir, key) {
   try {
     const version = statSync(join(envDir, 'env.json')).mtimeMs;
@@ -113,7 +113,7 @@ export function resolveEnvironment(request, settings = {}) {
   const locks = [];
   try {
     const options = settings.julia ?? {};
-    const resolver = options.resolver ?? (options.pkgjl ? 'pkgjl' : 'none');
+    const resolver = options.resolver ?? (options.pkgResolver ? 'pkg' : 'none');
     if (typeof resolver === 'function') {
       const result = resolver(request);
       if (!result?.packages || result.then) return null;
@@ -125,7 +125,7 @@ export function resolveEnvironment(request, settings = {}) {
       );
       return exclude({ ...result, packages }, request.packageName);
     }
-    if (resolver !== 'pkgjl') return null;
+    if (resolver !== 'pkg') return null;
     const project = rewritePaths(readFileSync(request.projectFile, 'utf8'), request.projectFile);
     // The key hashes what the child receives: relative `path` entries are made absolute, so
     // two checkouts with the same Manifest don't share an environment.
@@ -184,7 +184,7 @@ export function resolveEnvironment(request, settings = {}) {
         envDir,
         project,
         manifest,
-        pkgjl: options.pkgjl && home(options.pkgjl),
+        pkgResolver: options.pkgResolver && home(options.pkgResolver),
         pkgWasm: options.pkgWasm && home(options.pkgWasm),
       }),
       stdio: ['pipe', 'ignore', 'pipe'],

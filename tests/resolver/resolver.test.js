@@ -82,7 +82,7 @@ function fixture(t, mode = 'ok') {
   const request = { projectFile, manifestFile: null };
   const settings = {
     julia: {
-      pkgjl: backend,
+      pkgResolver: backend,
       pkgWasm: 'expected',
       cacheDir: join(dir, 'cache'),
       resolverTimeout: 10,

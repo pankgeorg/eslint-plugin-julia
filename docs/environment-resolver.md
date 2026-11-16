@@ -2,7 +2,7 @@
 
 When a linted file imports a package that [module resolution](module-resolution.md) can't find (no Manifest entry, or not installed in any depot), the plugin can ask an environment resolver for it. The resolver prepares a throwaway, cached, source-only copy of the file's environment (the nearest `Project.toml`, and its `Manifest-v1.13.toml` or `Manifest.toml` when there is one, the one Julia 1.13 picks) and returns each package's entry file. Module resolution then reads those sources exactly as it reads an installed package. It asks once per linted environment, lazily: files whose imports all resolve locally never start it, and a dependency's own imports are looked up in the same environment.
 
-The default backend runs stock Pkg compiled to WebAssembly under Node: a Pkg-in-Wasm resolver, installed separately and configured via `settings.julia.pkgjl`. It never runs a native `julia`, and never touches the project's own files or the user's depot. **This backend is experimental:** the plugin expects its layout and API (`dist/index.js`, `dist/withjuliapkg.js`), and no public package provides it yet. `resolver: fn` (below) is the stable interface.
+The default backend runs stock Pkg compiled to WebAssembly under Node: a Pkg-in-Wasm resolver, installed separately and configured via `settings.julia.pkgResolver`. It never runs a native `julia`, and never touches the project's own files or the user's depot. **This backend is experimental:** the plugin expects its layout and API (`dist/index.js`, `dist/withjuliapkg.js`), and no public package provides it yet. `resolver: fn` (below) is the stable interface.
 
 `src/resolver/index.js` exports the synchronous `resolveEnvironment(request, settings)`.
 
@@ -14,22 +14,22 @@ A successful result contains `packages: { Name: { uuid, entry } }`, `key`, `envD
 
 All settings live under ESLint `settings.julia`:
 
-| Setting           | Default                                                                         | Meaning                                                                                                                                                                                                                             |
-| ----------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `resolver`        | `"pkgjl"` if `pkgjl` is set, otherwise `"none"`                                 | `"pkgjl"`, `"none"`, or a synchronous function `fn(request)` returning `{ packages: { Name: entryFileOrObject } }` or `null`. Entry objects have `entry` and optionally `uuid`.                                                     |
-| `pkgjl`           | unset                                                                           | Directory containing a separately installed Pkg-in-Wasm resolver (configured via `settings.julia.pkgjl`). Its `dist/index.js` and `dist/withjuliapkg.js` are dynamically imported only in the child. It is not a plugin dependency. |
-| `pkgWasm`         | unset                                                                           | Directory passed to `configurePkgWasm({ dir })`. When unset, the backend finds its own Wasm files.                                                                                                                                  |
-| `node`            | `process.execPath`                                                              | Node executable for the child. Use Node 24 or newer with JSPI, even when ESLint itself runs on Node 22. The backend is unavailable on Windows.                                                                                      |
-| `cacheDir`        | `$XDG_CACHE_HOME/eslint-plugin-julia`, otherwise `~/.cache/eslint-plugin-julia` | Cache root. A leading `~` is the home directory. Its `depot/` must be one this plugin created (marked with `.eslint-plugin-julia`): an existing depot is refused, never pruned.                                                     |
-| `resolverTimeout` | `600`                                                                           | Maximum seconds spent waiting for locks and running the child.                                                                                                                                                                      |
-| `offline`         | `false`                                                                         | Only use complete cached environments; never start the backend. Applies to the `"pkgjl"` resolver.                                                                                                                                  |
+| Setting           | Default                                                                         | Meaning                                                                                                                                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolver`        | `"pkg"` if `pkgResolver` is set, otherwise `"none"`                             | `"pkg"`, `"none"`, or a synchronous function `fn(request)` returning `{ packages: { Name: entryFileOrObject } }` or `null`. Entry objects have `entry` and optionally `uuid`.                                                             |
+| `pkgResolver`     | unset                                                                           | Directory containing a separately installed Pkg-in-Wasm resolver (configured via `settings.julia.pkgResolver`). Its `dist/index.js` and `dist/withjuliapkg.js` are dynamically imported only in the child. It is not a plugin dependency. |
+| `pkgWasm`         | unset                                                                           | Directory passed to `configurePkgWasm({ dir })`. When unset, the backend finds its own Wasm files.                                                                                                                                        |
+| `node`            | `process.execPath`                                                              | Node executable for the child. Use Node 24 or newer with JSPI, even when ESLint itself runs on Node 22. The backend is unavailable on Windows.                                                                                            |
+| `cacheDir`        | `$XDG_CACHE_HOME/eslint-plugin-julia`, otherwise `~/.cache/eslint-plugin-julia` | Cache root. A leading `~` is the home directory. Its `depot/` must be one this plugin created (marked with `.eslint-plugin-julia`): an existing depot is refused, never pruned.                                                           |
+| `resolverTimeout` | `600`                                                                           | Maximum seconds spent waiting for locks and running the child.                                                                                                                                                                            |
+| `offline`         | `false`                                                                         | Only use complete cached environments; never start the backend. Applies to the `"pkg"` resolver.                                                                                                                                          |
 
 For example:
 
 ```js
 settings: {
   julia: {
-    pkgjl: '/opt/pkg-resolver',
+    pkgResolver: '/opt/pkg-resolver',
     pkgWasm: '/opt/pkg-wasm',
     node: '/opt/node24/bin/node',
     resolverTimeout: 600,
@@ -69,7 +69,7 @@ Install a Pkg-in-Wasm resolver separately, then run the CLI with a JSPI-capable 
 
 ```sh
 npx eslint-plugin-julia-resolve-env Project.toml \
-  --pkgjl /opt/pkg-resolver --pkg-wasm /opt/pkg-wasm --cache .cache/julia-resolver
+  --pkg-resolver /opt/pkg-resolver --pkg-wasm /opt/pkg-wasm --cache .cache/julia-resolver
 ```
 
 `--pkg-wasm` and `--cache` are optional. The CLI picks the sibling Manifest as lint does (`Manifest-v1.13.toml`, then `Manifest.toml`), so it warms the key lint looks up; it prints Result JSON, and exits unsuccessfully on `null`. Save the cache as a CI artifact and set ESLint's `cacheDir` to the same location. Use `offline: true` during linting if network access is undesirable. Failed cache records can be removed to retry immediately in a new process.
@@ -80,7 +80,7 @@ The solved export tree of each package read from the resolver's cache depot (its
 
 ## Trust
 
-Enable the resolver only on repositories you trust, as you would `Pkg.instantiate`. With `settings.julia.pkgjl` set, the plugin starts a Node child process, which imports the configured backend, downloads a registry and package sources, and writes to the cache directory. The linted repository decides what is fetched: `[sources]` URLs, Manifest `repo-url` entries, and `path` entries (absolute, or relative ones that may point outside the repository). Packages' `deps/build.jl` scripts are not part of what the plugin asks for (it instantiates sources and prunes everything else, with precompilation off), but what the backend's `instantiate` runs is up to the backend. A cold resolve blocks linting for up to `resolverTimeout`: in editors, use `offline: true` with a cache warmed in CI.
+Enable the resolver only on repositories you trust, as you would `Pkg.instantiate`. With `settings.julia.pkgResolver` set, the plugin starts a Node child process, which imports the configured backend, downloads a registry and package sources, and writes to the cache directory. The linted repository decides what is fetched: `[sources]` URLs, Manifest `repo-url` entries, and `path` entries (absolute, or relative ones that may point outside the repository). Packages' `deps/build.jl` scripts are not part of what the plugin asks for (it instantiates sources and prunes everything else, with precompilation off), but what the backend's `instantiate` runs is up to the backend. A cold resolve blocks linting for up to `resolverTimeout`: in editors, use `offline: true` with a cache warmed in CI.
 
 ## Measured
 
