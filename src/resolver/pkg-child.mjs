@@ -32,10 +32,11 @@ async function main(args) {
   const manifest = join(project, 'Manifest.toml');
   rmSync(manifest, { force: true });
   if (args.manifest) writeFileSync(manifest, args.manifest);
-  if (!args.pkgjl) throw new Error('Configure a Pkg-in-Wasm resolver via settings.julia.pkgjl');
-  const backend = await import(pathToFileURL(resolve(args.pkgjl, 'dist/index.js')).href);
+  if (!args.pkgResolver)
+    throw new Error('Configure a Pkg-in-Wasm resolver via settings.julia.pkgResolver');
+  const backend = await import(pathToFileURL(resolve(args.pkgResolver, 'dist/index.js')).href);
   const { juliaPkg } = await import(
-    pathToFileURL(resolve(args.pkgjl, 'dist/withjuliapkg.js')).href
+    pathToFileURL(resolve(args.pkgResolver, 'dist/withjuliapkg.js')).href
   );
   if (args.pkgWasm) backend.configurePkgWasm({ dir: args.pkgWasm });
   if (!backend.pkgWasmAvailable())

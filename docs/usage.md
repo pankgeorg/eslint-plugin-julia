@@ -23,20 +23,11 @@ so it needs Node.js but no Julia installation.
 
 ## Install
 
-The plugin is published as GitHub releases (not yet on npm). Install the release tarball:
-
 ```sh
-npm install --save-dev eslint \
-  https://github.com/pankgeorg/eslint-plugin-julia/releases/download/v0.3.0/eslint-plugin-julia-0.3.0.tgz
+npm install --save-dev eslint eslint-plugin-julia
 ```
 
-or the tagged commit from git:
-
-```sh
-npm install --save-dev eslint github:pankgeorg/eslint-plugin-julia#v0.3.0
-```
-
-Both pin an exact version in `package.json`. Nothing is built or downloaded during
+Nothing is built or downloaded during
 installation: the parser binary is in the package and its hash is checked at load time.
 
 ## A Julia project without Node yet

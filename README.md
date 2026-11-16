@@ -26,8 +26,7 @@ src/stats.jl
 ## Quick start
 
 ```sh
-npm install --save-dev eslint \
-  https://github.com/pankgeorg/eslint-plugin-julia/releases/download/v0.3.0/eslint-plugin-julia-0.3.0.tgz
+npm install --save-dev eslint eslint-plugin-julia
 ```
 
 ```js

@@ -12,7 +12,7 @@ What the plugin does when ESLint runs it:
   directories and reads its `.jl` files, shell scripts and CI configuration.
 - It never runs Julia and never evaluates the code it lints.
 - By default it starts no processes and makes no network requests. The opt-in environment
-  resolver (`settings.julia.pkgjl`, see `docs/environment-resolver.md`) does: it starts a
+  resolver (`settings.julia.pkgResolver`, see `docs/environment-resolver.md`) does: it starts a
   Node child process that imports the configured backend, downloads a registry and the
   package sources the linted repository's Project and Manifest name, and writes to its cache
   directory. Enable it only on repositories you trust.

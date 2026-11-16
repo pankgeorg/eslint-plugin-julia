@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-16
+
+First release on npm: `npm install --save-dev eslint eslint-plugin-julia`.
+
+### Changed
+
+- The environment resolver's settings are renamed: `settings.julia.pkgjl` is now
+  `settings.julia.pkgResolver`, `resolver: "pkgjl"` is now `resolver: "pkg"`, and the
+  `eslint-plugin-julia-resolve-env` flag `--pkgjl` is now `--pkg-resolver`.
+
 ## [0.3.0] - 2026-11-11
 
 `no-undef` is now in `recommended`, and there is a new rule, `no-orphan-file`. On a
@@ -39,7 +49,7 @@ reported (in `strict` at least). #47
 - An environment resolver (`settings.julia.resolver`): when a file imports a package that
   isn't in a manifest or installed, a throwaway, cached, source-only copy of its
   environment supplies the package's sources. The default backend is a Pkg-in-Wasm
-  resolver, installed separately and configured via `settings.julia.pkgjl`; no artifacts
+  resolver, installed separately and configured via `settings.julia.pkgResolver`; no artifacts
   are downloaded. Resolved packages' exports are kept in a persistent index. See
   `docs/environment-resolver.md` and the `eslint-plugin-julia-resolve-env` command.
 - Macro signatures (`src/macro-signatures.js`, `settings.julia.macros`): which macro
@@ -142,7 +152,8 @@ First release, as a GitHub release (not on npm yet).
 - Usage guide (`docs/usage.md`): install from a release or git, CLI, GitHub Actions with
   annotations and code scanning, pre-commit hooks, and editors.
 
-[Unreleased]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/pankgeorg/eslint-plugin-julia/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pankgeorg/eslint-plugin-julia/releases/tag/v0.1.0

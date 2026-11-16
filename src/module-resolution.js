@@ -734,7 +734,7 @@ function resolverActive(settings) {
   const j = settings?.julia;
   if (!j) return false;
   const r = j.resolver;
-  return typeof r === 'function' || r === 'pkgjl' || (r == null && Boolean(j.pkgjl));
+  return typeof r === 'function' || r === 'pkg' || (r == null && Boolean(j.pkgResolver));
 }
 function nearestProject(file) {
   for (const dir of upward(file))
@@ -754,7 +754,7 @@ function resolverVariant(settings) {
   }
   return JSON.stringify([
     resolver,
-    j.pkgjl ?? null,
+    j.pkgResolver ?? null,
     j.cacheDir ?? null,
     j.offline ?? null,
     j.macros ?? null,

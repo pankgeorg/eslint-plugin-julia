@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 // Warms the resolver cache for an environment, as lint would resolve it (for CI):
-//   npx eslint-plugin-julia-resolve-env Project.toml --pkgjl DIR [--pkg-wasm DIR] [--cache DIR]
+//   npx eslint-plugin-julia-resolve-env Project.toml --pkg-resolver DIR [--pkg-wasm DIR] [--cache DIR]
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { resolveEnvironment } from './index.js';
 import { MANIFESTS } from './toml.js';
 
 const [file, ...flags] = process.argv.slice(2);
-const options = { '--pkgjl': 'pkgjl', '--pkg-wasm': 'pkgWasm', '--cache': 'cacheDir' };
+const options = { '--pkg-resolver': 'pkgResolver', '--pkg-wasm': 'pkgWasm', '--cache': 'cacheDir' };
 const julia = {};
 if (!file || flags.length % 2 || flags.some((flag, i) => i % 2 === 0 && !options[flag])) {
   console.error(
-    'Usage: eslint-plugin-julia-resolve-env <Project.toml> [--pkgjl P] [--pkg-wasm DIR] [--cache DIR]',
+    'Usage: eslint-plugin-julia-resolve-env <Project.toml> [--pkg-resolver P] [--pkg-wasm DIR] [--cache DIR]',
   );
   process.exitCode = 1;
 } else {

@@ -1,7 +1,6 @@
 {
   "name": "eslint-plugin-julia",
-  "version": "0.3.0",
-  "private": true,
+  "version": "0.3.1",
   "description": "ESLint language plugin for Julia, using Julia's own parser (JuliaSyntax) compiled to WebAssembly",
   "keywords": [
     "eslint",
