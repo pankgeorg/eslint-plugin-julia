@@ -25,7 +25,7 @@
   "main": "./src/index.js",
   "types": "./types/index.d.ts",
   "bin": {
-    "eslint-plugin-julia-resolve-env": "./src/resolver/warm.mjs"
+    "eslint-plugin-julia-resolve-env": "src/resolver/warm.mjs"
   },
   "exports": {
     ".": {
