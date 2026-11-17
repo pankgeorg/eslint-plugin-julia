@@ -1,0 +1,111 @@
+# Syntactic module resolution
+
+`getScopeManager(sourceCode, context)` accepts an ESLint rule context. Pass
+`context.physicalFilename` and `context.settings` when calling it outside a rule.
+The filesystem-free extraction pass is internal. No Julia process, package loader,
+macro expansion, or ESLint run on dependency files is involved.
+
+The nearest ancestor `Project.toml` with a `name` supplies `src/<name>.jl` as the
+package entry. The package's `test/runtests.jl` is a separate entry: recursively
+included tests inherit its imports, aliases, definitions and sibling helpers. A
+package extension's `ext/<Ext>/<Ext>.jl` is the entry of the files under
+`ext/<Ext>/`.
+Harness scripts in the file's directory or above it, up to the package or repository
+root, are entries too: `runtests.jl`, and Documenter's `make.jl`/`makedocs.jl`.
+Files outside every include tree that run in someone else's context (a test file that
+doesn't load its package, a package file that doesn't import it, an import-free docs
+snippet under a harness) are include fragments: they assume their nearest harness's top level and,
+outside `src/`, `using Package`, and get the narrowed check (see
+[no-undef](rules/no-undef.md)). Other files retain their own context.
+A submodule that its parent fills with computed code (`Core.eval(Sub, ex)`,
+`@eval Sub $ex`) has exports nothing here can list, like a JLL package.
+With an environment resolver, dependencies resolve in the linted file's environment (its
+nearest `Project.toml`), so solved graphs are cached per environment.
+A source-visible, single-parameter macro whose returned quote forwards the
+interpolated parameter directly to `include` is recognized as an include wrapper
+for literal path arguments (for example Pluto's `@timeit_include`). The macro is
+not executed; computed arguments and unrelated macros remain unresolved.
+The resolver also recognizes Julia's `base/Base.jl`,
+`Base_compiler.jl`, `sysimg.jl` and the older `compiler/compiler.jl`, and `stdlib/<name>/src/<name>.jl` layouts.
+Additional entry files can be configured (relative paths resolve from the Node
+process's working directory):
+
+```js
+settings: {
+  julia: {
+    entryFiles: ['/project/scripts/entry.jl'];
+  }
+}
+```
+
+Starting at each entry, the resolver follows top-level `include("file.jl")`,
+`include(joinpath(@__DIR__, "file.jl"))` and
+`include(joinpath("directory", "file.jl"))`, recursively. Nested modules own their
+includes. All ordinary module definitions and imports across sibling files are
+available, including forward references. A path already on the include stack is
+not followed again. Base bootstrap include paths can also resolve from `base/`
+when the per-file path is absent. A file outside every entry's include tree is analyzed alone;
+its own literal includes still contribute definitions. A file included into several
+modules conservatively receives the union of those module environments.
+
+Bare `using M` **and `import M`** bind M and bring in M's exported/public names,
+as requested by this plugin's binding model. This deliberately gives bare import
+the same wildcard treatment as using, when M resolves. An unresolved bare `import`
+(`import ..set_readonly`, which may not even name a module) binds only the written
+name and never makes the module's names unknown; only an unresolved `using` does.
+Explicit imports and aliases bind only the written names. Relative modules (`.Sub`,
+`..Parent`) resolve against module syntax; `..TOML`, where the parent module did
+`import TOML` or `using TOML`, follows that import. `export` and `public` declare the exported-name inventory; exports do not
+create definitions in the declaring module.
+
+Base/Core names come from `data/base-core-exports.json`. The 62 standard-library
+inventories in `data/stdlib-exports.json`, and those of 112 submodules of Base, Core
+and the standard libraries under dotted names (`Base.BinaryPlatforms`,
+`Base.Threads`, `LinearAlgebra.BLAS`, `Pkg.Types`), were generated on Julia 1.13.2
+with `scripts/stdlib-exports.jl`; no Julia installation is needed by consumers.
+Package exports are collected from the package entry and its includes. The
+nearest ancestor `Manifest.toml` supplies dependency metadata (Manifest v1 and
+v2 scalar name/uuid/path fields). A `path` entry resolves relative to the
+manifest. Otherwise the resolver scans `$JULIA_DEPOT_PATH/packages/<name>/*`
+(default `~/.julia`) for a matching Project UUID. This is the UUID-scan alternative
+to computing Julia's five-character version slug. Multiple installed matches or
+multiple manifest records for a name are unresolved rather than guessed.
+Dependency imports resolve using that dependency's own ancestor manifest. When a
+package is neither in a manifest nor installed, an
+[environment resolver](environment-resolver.md), if configured, supplies a cached,
+source-only copy of the linted file's environment.
+
+If a wildcard module cannot be resolved (missing manifest, missing installation,
+ambiguous UUID, unsupported relative path), its module scope retains `bareUsing`.
+Diagnostic rules can retain their existing “unknown names may come from this
+module” fallback or opt into reporting. Unresolved explicit imports still bind
+the names written in source. Missing/nonliteral includes and eval contribute no
+new names. Files with syntax errors or unreadable dependency files contribute no
+dependency facts. Common literal escapes are decoded; interpolated strings,
+computed paths, include mapping functions and `include(module, path)` are not
+resolved. Dynamic dispatch and definitions generated by macros remain unknowable.
+
+Macro-generated exports do not count (bindings that macros declare in their
+arguments, such as `@enum`'s, are the scope pass's: see [macros](macros.md)). The
+sole special case is `@reexport using X`: import X's exports and add them to the containing module's
+exports. An unresolved reexport leaves the export inventory incomplete, so
+consumers retain the unknown-module fallback as well. Relative reexport cycles converge by adding names until stable. Written
+ordinary Julia definitions inside macros obey the scope pass's
+[macro signatures](macros.md).
+
+Module-wide import use tracking also recognizes string macros: `md"text"`
+reads `@md_str`, and `r"pattern"` reads `@r_str`. A qualified string macro reads
+its module receiver instead. Literal quoted calls contribute no reads.
+
+File facts, project metadata and module models are cached per process by absolute
+path and modification time (also ctime and size). Models are shared between linted
+files; cached models retain compact facts, not dependency syntax trees. Editing,
+removing or creating an include invalidates affected models on the next analysis.
+Changed lint text is treated as an overlay, including unsaved editor buffers.
+ESLint workers each have a separate process-local cache.
+
+As with eslint-plugin-import, ESLint's `--cache` only decides whether to relint the
+file itself: editing an included/imported file does not relint its users. Prefer
+`--cache-strategy content` for reliable file-content checks, **and clear the ESLint
+cache when dependency files, manifests, depot installations or export inventories
+change**. Content strategy alone does not track dependency edges.

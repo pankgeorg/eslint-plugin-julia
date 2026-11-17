@@ -1,0 +1,8 @@
+f(a=1,a=2)
+$(Expr(:error, "keyword argument \"a\" repeated in call to \"f\""))
+f(;a=1,a=2)
+$(Expr(:error, "keyword argument \"a\" repeated in call to \"f\""))
+f(a=1;a=2)
+$(Expr(:error, "keyword argument \"a\" repeated in call to \"f\""))
+struct S; x; x; end
+$(Expr(:error, "duplicate field name: \"x\" is not unique"))

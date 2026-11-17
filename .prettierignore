@@ -1,0 +1,10 @@
+# Built or vendored artifacts
+wasm/
+data/
+package-lock.json
+coverage/
+*.sarif
+*.tgz
+# Test inputs: exact bytes matter (fixtures, recorded parser output)
+tests/fixtures/
+tests/.tmp-*/

@@ -1,0 +1,78 @@
+{
+  "name": "eslint-plugin-julia",
+  "version": "0.3.1",
+  "description": "ESLint language plugin for Julia, using Julia's own parser (JuliaSyntax) compiled to WebAssembly",
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin",
+    "julia",
+    "juliasyntax",
+    "linter",
+    "webassembly"
+  ],
+  "homepage": "https://github.com/pankgeorg/eslint-plugin-julia#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pankgeorg/eslint-plugin-julia.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pankgeorg/eslint-plugin-julia/issues"
+  },
+  "license": "MIT",
+  "author": "Panagiotis Georgakopoulos",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./types/index.d.ts",
+  "bin": {
+    "eslint-plugin-julia-resolve-env": "src/resolver/warm.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./ast": {
+      "types": "./types/ast.d.ts",
+      "import": "./src/parser/flags.js"
+    },
+    "./scope": {
+      "types": "./types/scope.d.ts",
+      "import": "./src/scope.js"
+    },
+    "./resolver": {
+      "import": "./src/resolver/index.js"
+    }
+  },
+  "files": [
+    "src/",
+    "data/",
+    "types/",
+    "wasm/",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node scripts/verify-artifact.mjs && node tests/run.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "smoke:pack": "node scripts/smoke-pack.mjs"
+  },
+  "peerDependencies": {
+    "eslint": "^9.39.0 || ^10.0.0"
+  },
+  "dependencies": {
+    "@eslint/plugin-kit": "^0.7.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@microsoft/eslint-formatter-sarif": "3.1.0",
+    "eslint": "^10.14.0",
+    "eslint-plugin-n": "^18.5.0",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1"
+  }
+}
